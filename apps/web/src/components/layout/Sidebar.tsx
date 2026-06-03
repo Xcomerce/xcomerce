@@ -17,7 +17,7 @@ export function Sidebar({ config }: { config: RoleNavConfig }) {
           K
         </div>
         <div>
-          <p className="font-display text-sm font-semibold">Keve B2B</p>
+          <p className="font-display text-sm font-semibold">Keven B2b</p>
           <p className="text-xs text-muted-foreground">Marketplace</p>
         </div>
       </Link>

@@ -10,7 +10,7 @@ export function PublicLayout() {
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-dark text-sm font-bold text-white">
               K
             </div>
-            <span className="font-display text-lg font-semibold">Keve B2B</span>
+            <span className="font-display text-lg font-semibold">Keven B2b</span>
           </Link>
           <nav className="hidden items-center gap-6 text-sm md:flex">
             <Link to="/para-compradores" className="text-muted-foreground hover:text-foreground">
@@ -38,7 +38,7 @@ export function PublicLayout() {
       </main>
       <footer className="border-t py-8">
         <div className="mx-auto max-w-7xl px-4 text-center text-sm text-muted-foreground lg:px-6">
-          © {new Date().getFullYear()} Keve Marketplace B2B · Termos · Privacidade
+          © {new Date().getFullYear()} Keven B2b · Termos · Privacidade
         </div>
       </footer>
     </div>

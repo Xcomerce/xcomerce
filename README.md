@@ -37,7 +37,7 @@ docs/           # Documentação (módulos, design system, edge functions)
    cp apps/web/.env.example apps/web/.env.local
    ```
 
-3. Ajuste `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` em `apps/web/.env.local`.
+3. Ajuste `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` em `apps/web/.env.local` (projeto do [Dashboard](https://supabase.com/dashboard) — não depende do MCP do Cursor). Ver [docs/SUPABASE-ENV.md](docs/SUPABASE-ENV.md).
 
 4. (Opcional) Suba o Supabase local e aplique migrations:
 

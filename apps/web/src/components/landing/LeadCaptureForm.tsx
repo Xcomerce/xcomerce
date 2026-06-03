@@ -59,7 +59,7 @@ export function LeadCaptureForm({ defaultProfileType, source = 'landing' }: Prop
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Fale com a Keve</CardTitle>
+        <CardTitle>Fale com a Keven</CardTitle>
         <CardDescription>Deixe seus dados e nossa equipe comercial retorna em até 24h.</CardDescription>
       </CardHeader>
       <CardContent>

@@ -48,7 +48,7 @@ export function LoginPage() {
     <Card>
       <CardHeader>
         <CardTitle className="font-display">Entrar</CardTitle>
-        <CardDescription>Acesse sua conta Keve B2B</CardDescription>
+        <CardDescription>Acesse sua conta Keven B2b</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>

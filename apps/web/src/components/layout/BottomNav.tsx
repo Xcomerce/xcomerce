@@ -7,22 +7,24 @@ export function BottomNav({ config }: { config: RoleNavConfig }) {
   const { left, right, fab } = config.bottomNav
 
   return (
-    <nav className="glass-bottomnav fixed bottom-0 left-0 right-0 z-40 px-2 pb-safe-bottom lg:hidden">
-      <div className="mx-auto flex max-w-md items-center justify-center gap-2 py-2">
-        <div className="flex items-center gap-1">
+    <nav className="glass-bottomnav fixed bottom-0 left-0 right-0 z-40 lg:hidden">
+      <div className="relative mx-auto grid h-[4.5rem] max-w-lg grid-cols-[1fr_auto_1fr] items-end px-2 pb-safe-bottom">
+        <div className="flex items-center justify-end gap-0.5 pb-2">
           {left.map((item) => (
             <BottomNavItem key={item.to} {...item} />
           ))}
         </div>
+
         <button
           type="button"
           onClick={() => navigate(fab.to)}
-          className="-mt-6 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-accent-foreground shadow-lg transition-transform hover:scale-105"
+          className="relative -top-5 flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground shadow-lg transition-transform hover:scale-105"
           aria-label={fab.label}
         >
           <fab.icon size={24} strokeWidth={2.5} />
         </button>
-        <div className="flex items-center gap-1">
+
+        <div className="flex items-center justify-start gap-0.5 pb-2">
           {right.map((item) => (
             <BottomNavItem key={item.to} {...item} />
           ))}

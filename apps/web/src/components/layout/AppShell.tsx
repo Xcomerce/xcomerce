@@ -1,28 +1,80 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { UserRole } from '@keve/shared'
 import { NAV_BY_ROLE } from '@/config/navigation'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { MobileSidebar } from '@/components/layout/MobileSidebar'
 import { Header } from '@/components/layout/Header'
 import { BottomNav } from '@/components/layout/BottomNav'
-import { Outlet } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
+import { cn } from '@/lib/utils'
+
+const FULL_HEIGHT_LAYOUT_PATHS = ['/buyer/demands/new', '/buyer/dashboard']
+const FULL_WIDTH_LAYOUT_PATHS = ['/buyer/demands/new', '/buyer/feed', '/buyer/dashboard']
 
 export function AppShell({ role }: { role: UserRole }) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const config = NAV_BY_ROLE[role]
+  const { pathname } = useLocation()
+  const isFullHeightLayout = FULL_HEIGHT_LAYOUT_PATHS.includes(pathname)
+  const isFullWidthLayout = FULL_WIDTH_LAYOUT_PATHS.includes(pathname)
+
+  useEffect(() => {
+    if (!isFullHeightLayout) return
+    const html = document.documentElement
+    const mq = window.matchMedia('(min-width: 1024px)')
+
+    function lockPageScroll() {
+      if (mq.matches) {
+        html.style.overflow = 'hidden'
+        document.body.style.overflow = 'hidden'
+      } else {
+        html.style.overflow = ''
+        document.body.style.overflow = ''
+      }
+    }
+
+    lockPageScroll()
+    mq.addEventListener('change', lockPageScroll)
+    return () => {
+      mq.removeEventListener('change', lockPageScroll)
+      html.style.overflow = ''
+      document.body.style.overflow = ''
+    }
+  }, [isFullHeightLayout])
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className={cn('bg-background', isFullHeightLayout ? 'lg:overflow-hidden' : 'min-h-screen')}>
       <Sidebar config={config} />
       <MobileSidebar open={mobileOpen} onClose={() => setMobileOpen(false)} config={config} />
-      <div className="lg:pl-60">
-        <Header onMenuClick={() => setMobileOpen(true)} />
-        <main className="pb-24 lg:pb-8">
-          <div className="mx-auto max-w-7xl p-4 lg:p-6">
+
+      <div
+        className={cn(
+          'lg:pl-60',
+          isFullHeightLayout && 'lg:flex lg:h-dvh lg:flex-col lg:overflow-hidden',
+        )}
+      >
+        <Header onMenuClick={() => setMobileOpen(true)} className={isFullHeightLayout ? 'shrink-0' : undefined} />
+
+        <main
+          className={cn(
+            'pb-24 lg:pb-8',
+            isFullHeightLayout && 'min-h-0 flex-1 overflow-hidden pb-0 lg:pb-0',
+          )}
+        >
+          <div
+            className={cn(
+              isFullHeightLayout
+                ? 'h-full min-h-0 w-full overflow-hidden p-0'
+                : isFullWidthLayout
+                  ? 'w-full max-w-none p-4 lg:p-6'
+                  : 'mx-auto max-w-7xl p-4 lg:p-6',
+            )}
+          >
             <Outlet />
           </div>
         </main>
       </div>
+
       <BottomNav config={config} />
     </div>
   )

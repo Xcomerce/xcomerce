@@ -41,7 +41,7 @@ export function MobileSidebar({ open, onClose, config }: MobileSidebarProps) {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-dark text-xs font-bold text-white">
               K
             </div>
-            <span className="font-display font-semibold">Keve B2B</span>
+            <span className="font-display font-semibold">Keven B2b</span>
           </Link>
           <button type="button" onClick={onClose} className="flex h-10 w-10 items-center justify-center rounded-xl hover:bg-secondary/50">
             <X size={20} />

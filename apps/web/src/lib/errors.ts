@@ -10,6 +10,18 @@ const MESSAGES: Record<string, string> = {
   'JWT expired': 'Sessão expirada. Faça login novamente.',
 }
 
+export function formatSupabaseError(error: unknown): string {
+  if (error instanceof Error) {
+    return translateSupabaseError(error.message)
+  }
+  if (error && typeof error === 'object') {
+    const e = error as { message?: string; details?: string; hint?: string; code?: string }
+    const parts = [e.message, e.details, e.hint, e.code ? `(${e.code})` : ''].filter(Boolean)
+    if (parts.length > 0) return translateSupabaseError(parts.join(' — '))
+  }
+  return 'Erro ao comunicar com o Supabase.'
+}
+
 export function translateSupabaseError(message: string): string {
   for (const [key, pt] of Object.entries(MESSAGES)) {
     if (message.includes(key)) return pt
@@ -19,6 +31,15 @@ export function translateSupabaseError(message: string): string {
   }
   if (message.includes('CONTACT_INFO_BLOCKED')) {
     return 'Não é permitido compartilhar dados de contato antes da revelação.'
+  }
+  if (
+    message.includes('does not exist') ||
+    (message.includes('relation') && message.includes('demands'))
+  ) {
+    return 'Tabela ou schema ausente no Supabase. Rode as migrations no projeto do .env.local (supabase link + db push).'
+  }
+  if (message.includes('infinite recursion') || message.includes('500')) {
+    return 'Erro no banco (500). Confira se as migrations foram aplicadas no projeto configurado em .env.local.'
   }
   return message
 }

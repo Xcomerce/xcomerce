@@ -13,15 +13,16 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { useAuth } from '@/contexts/auth-context'
 import { usePageTitle } from '@/hooks/use-page-title'
 import { useUnreadNotificationCount } from '@/hooks/use-notifications'
-import { getInitials } from '@/lib/utils'
+import { cn, getInitials } from '@/lib/utils'
 import { ROLE_LABELS } from '@/config/navigation'
 import { getDashboardForRole } from '@keve/shared'
 
 type HeaderProps = {
   onMenuClick: () => void
+  className?: string
 }
 
-export function Header({ onMenuClick }: HeaderProps) {
+export function Header({ onMenuClick, className }: HeaderProps) {
   const pageTitle = usePageTitle()
   const { theme, setTheme } = useTheme()
   const navigate = useNavigate()
@@ -29,7 +30,12 @@ export function Header({ onMenuClick }: HeaderProps) {
   const { data: unreadCount = 0 } = useUnreadNotificationCount()
 
   return (
-    <header className="glass-navbar sticky top-0 z-30 flex h-14 items-center justify-between px-4 lg:px-6">
+    <header
+      className={cn(
+        'glass-navbar sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between px-4 lg:px-6',
+        className,
+      )}
+    >
       <div className="flex min-w-0 items-center gap-3">
         <button
           type="button"

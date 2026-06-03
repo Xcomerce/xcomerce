@@ -140,11 +140,78 @@
     scrollbar-color: hsl(var(--border)) transparent;
   }
 
+  .scrollbar-kanban-board {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--primary) / 0.45) hsl(var(--muted) / 0.8);
+  }
+
+  .scrollbar-kanban-board::-webkit-scrollbar {
+    height: 10px;
+  }
+
+  .scrollbar-kanban-board::-webkit-scrollbar-track {
+    margin: 0 0.5rem;
+    border-radius: 9999px;
+    background: hsl(var(--muted) / 0.65);
+  }
+
+  .scrollbar-kanban-board::-webkit-scrollbar-thumb {
+    border-radius: 9999px;
+    background: linear-gradient(
+      90deg,
+      hsl(var(--primary) / 0.55),
+      hsl(var(--primary) / 0.85)
+    );
+  }
+
+  .scrollbar-kanban-board::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary));
+  }
+
+  .scrollbar-kanban-column {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--primary) / 0.35) transparent;
+  }
+
+  .scrollbar-kanban-column::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .scrollbar-kanban-column::-webkit-scrollbar-track {
+    margin: 0.25rem 0;
+    border-radius: 9999px;
+    background: transparent;
+  }
+
+  .scrollbar-kanban-column::-webkit-scrollbar-thumb {
+    border-radius: 9999px;
+    background: hsl(var(--primary) / 0.35);
+  }
+
+  .scrollbar-kanban-column::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary) / 0.6);
+  }
+
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
   .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+
+  @keyframes supplier-radar {
+    0% {
+      transform: scale(0.65);
+      opacity: 0.7;
+    }
+    70% {
+      transform: scale(1);
+      opacity: 0.15;
+    }
+    100% {
+      transform: scale(1.05);
+      opacity: 0;
+    }
   }
 }
