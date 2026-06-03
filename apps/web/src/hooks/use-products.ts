@@ -8,6 +8,7 @@ export const productKeys = {
   list: (supplierId: string) => [...productKeys.all, 'list', supplierId] as const,
   detail: (id: string) => [...productKeys.all, 'detail', id] as const,
   count: (supplierId: string) => [...productKeys.all, 'count', supplierId] as const,
+  feed: (filters?: object) => [...productKeys.all, 'feed', filters ?? {}] as const,
 }
 
 export function useProducts() {
@@ -79,5 +80,12 @@ export function useDeleteProduct() {
         queryClient.invalidateQueries({ queryKey: productKeys.count(user.id) })
       }
     },
+  })
+}
+
+export function useFeedProducts(filters?: { categoryId?: string; search?: string; uf?: string }) {
+  return useQuery({
+    queryKey: productKeys.feed(filters),
+    queryFn: () => products.fetchFeedProducts(filters),
   })
 }

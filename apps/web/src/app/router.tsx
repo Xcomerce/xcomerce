@@ -77,9 +77,11 @@ export const router = createBrowserRouter([
           {
             element: <BuyerAppLayout />,
             children: [
+              { path: 'buyer/feed', element: buyerPages.feed },
               { path: 'buyer/dashboard', element: buyerPages.dashboard },
               { path: 'buyer/demands/new', element: buyerPages.newDemand },
               { path: 'buyer/demands/:id', element: buyerPages.demandDetail },
+              { path: 'buyer/demands/:id/auction', element: buyerPages.offerAuction },
               { path: 'buyer/orders', element: buyerPages.orders },
               { path: 'buyer/orders/:id', element: buyerPages.orderDetail },
             ],
@@ -131,4 +133,8 @@ export const router = createBrowserRouter([
     ],
   },
   { path: '*', element: <Navigate to="/" replace /> },
-])
+], {
+  future: {
+    v7_relativeSplatPath: true,
+  },
+})

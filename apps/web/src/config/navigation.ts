@@ -53,6 +53,7 @@ export const buyerNav: RoleNavConfig = {
     {
       title: 'Principal',
       items: [
+        { to: '/buyer/feed', label: 'Feed', icon: LayoutGrid },
         { to: '/buyer/dashboard', label: 'Minhas demandas', icon: LayoutList },
         { to: '/buyer/demands/new', label: 'Nova demanda', icon: PlusCircle },
         { to: '/buyer/orders', label: 'Pedidos', icon: Package },
@@ -69,6 +70,7 @@ export const buyerNav: RoleNavConfig = {
   ],
   bottomNav: {
     left: [
+      { to: '/buyer/feed', icon: LayoutGrid, label: 'Feed' },
       { to: '/buyer/dashboard', icon: LayoutList, label: 'Demandas' },
       { to: '/buyer/orders', icon: Package, label: 'Pedidos' },
     ],

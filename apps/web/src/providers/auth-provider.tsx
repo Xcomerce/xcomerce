@@ -40,6 +40,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setProfile(null)
       setRoles([])
       setSupplierStatus(null)
+      // Se há sessão ativa mas o perfil não foi encontrado (ex: migração para novo BD),
+      // fazemos o logout automático para limpar os dados locais e evitar travamentos.
+      supabase.auth.signOut()
       return
     }
     setProfile(bundle.profile)

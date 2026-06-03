@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   Check,
   Eye,
+  Gavel,
   Loader2,
   MapPin,
   MessageSquare,
@@ -111,6 +112,14 @@ export function DemandDetailPage() {
         {canEdit && (
           <Button asChild variant="outline">
             <Link to={`/buyer/demands/new?id=${demand.id}`}>Editar rascunho</Link>
+          </Button>
+        )}
+        {!canEdit && (
+          <Button asChild variant="accent" className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm">
+            <Link to={`/buyer/demands/${demand.id}/auction`}>
+              <Gavel className="h-4 w-4" />
+              Ver leilão de ofertas
+            </Link>
           </Button>
         )}
       </div>

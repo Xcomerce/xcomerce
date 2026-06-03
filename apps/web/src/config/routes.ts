@@ -9,6 +9,7 @@ export const PAGE_TITLES: Record<string, string> = {
   '/auth/forgot-password': 'Recuperar senha',
   '/auth/reset-password': 'Nova senha',
   '/auth/select-role': 'Escolher perfil',
+  '/buyer/feed': 'Feed de Produtos',
   '/buyer/dashboard': 'Minhas demandas',
   '/buyer/demands/new': 'Nova demanda',
   '/buyer/orders': 'Pedidos',
@@ -28,6 +29,7 @@ export const PAGE_TITLES: Record<string, string> = {
 
 export function resolvePageTitle(pathname: string): string {
   if (PAGE_TITLES[pathname]) return PAGE_TITLES[pathname]
+  if (pathname.startsWith('/buyer/demands/') && pathname.endsWith('/auction')) return 'Leilão de Ofertas'
   if (pathname.startsWith('/buyer/demands/')) return 'Detalhe da demanda'
   if (pathname.startsWith('/buyer/orders/')) return 'Detalhe do pedido'
   if (pathname.startsWith('/supplier/offers/')) return 'Proposta'

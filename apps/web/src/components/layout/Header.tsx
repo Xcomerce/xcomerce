@@ -15,6 +15,7 @@ import { usePageTitle } from '@/hooks/use-page-title'
 import { useUnreadNotificationCount } from '@/hooks/use-notifications'
 import { getInitials } from '@/lib/utils'
 import { ROLE_LABELS } from '@/config/navigation'
+import { getDashboardForRole } from '@keve/shared'
 
 type HeaderProps = {
   onMenuClick: () => void
@@ -87,7 +88,13 @@ export function Header({ onMenuClick }: HeaderProps) {
             )}
             <DropdownMenuSeparator />
             {roles.map((role) => (
-              <DropdownMenuItem key={role} onClick={() => setActiveRole(role)}>
+              <DropdownMenuItem
+                key={role}
+                onClick={() => {
+                  setActiveRole(role)
+                  navigate(getDashboardForRole(role))
+                }}
+              >
                 Usar como {ROLE_LABELS[role]}
               </DropdownMenuItem>
             ))}

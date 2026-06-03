@@ -3,7 +3,7 @@ import type { UserRole } from '../types/roles'
 export const ROLE_DASHBOARD: Record<UserRole, string> = {
   buyer: '/buyer/dashboard',
   supplier: '/supplier/board',
-  commercial: '/commercial',
+  commercial: '/admin/metrics',
   admin: '/admin/metrics',
 }
 

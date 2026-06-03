@@ -8,8 +8,10 @@ import { OfferDetailPage } from '@/pages/supplier/OfferDetailPage'
 import { SupplierOrdersPage } from '@/pages/supplier/SupplierOrdersPage'
 import { SupplierOrderDetailPage } from '@/pages/supplier/SupplierOrderDetailPage'
 import { BuyerDashboardPage } from '@/pages/buyer/BuyerDashboardPage'
+import { BuyerFeedPage } from '@/pages/buyer/BuyerFeedPage'
 import { NewDemandPage } from '@/pages/buyer/NewDemandPage'
 import { DemandDetailPage } from '@/pages/buyer/DemandDetailPage'
+import { OfferAuctionPage } from '@/pages/buyer/OfferAuctionPage'
 import { BuyerOrdersPage } from '@/pages/buyer/BuyerOrdersPage'
 import { BuyerOrderDetailPage } from '@/pages/buyer/BuyerOrderDetailPage'
 import { ApprovalsPage } from '@/pages/admin/ApprovalsPage'
@@ -20,9 +22,11 @@ import { NotificationsPage } from '@/pages/shared/NotificationsPage'
 import { PublicProfilePage } from '@/pages/shared/PublicProfilePage'
 
 export const buyerPages = {
+  feed: <BuyerFeedPage />,
   dashboard: <BuyerDashboardPage />,
   newDemand: <NewDemandPage />,
   demandDetail: <DemandDetailPage />,
+  offerAuction: <OfferAuctionPage />,
   orders: <BuyerOrdersPage />,
   orderDetail: <BuyerOrderDetailPage />,
 }

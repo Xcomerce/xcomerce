@@ -23,41 +23,58 @@ export function SelectRolePage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="text-center">
-        <h1 className="font-display text-2xl font-semibold">Escolha como deseja continuar</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Sua conta possui acesso a múltiplos perfis</p>
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        {roles.map((role) => {
-          const Icon = ROLE_ICONS[role]
-          return (
-            <button
-              key={role}
-              type="button"
-              onClick={() => handleSelect(role)}
-              className="text-left transition-transform hover:scale-[1.02]"
-            >
-              <Card className={cn('h-full cursor-pointer hover:border-primary/50')}>
-                <CardHeader>
-                  <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <Icon size={20} />
-                  </div>
-                  <CardTitle className="font-display text-lg">{ROLE_LABELS[role]}</CardTitle>
-                  <CardDescription>
-                    {role === 'buyer' && 'Publique demandas e gerencie propostas'}
-                    {role === 'supplier' && 'Veja oportunidades e envie propostas'}
-                    {role === 'admin' && 'Administre aprovações e métricas'}
-                    {role === 'commercial' && 'Área comercial (em breve)'}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <span className="text-sm font-medium text-primary">Continuar →</span>
-                </CardContent>
-              </Card>
-            </button>
-          )
-        })}
+    <div className="flex min-h-[85vh] flex-col items-center justify-center px-4 py-8 md:py-12">
+      <div className="w-full max-w-4xl space-y-8">
+        <div className="text-center space-y-2">
+          <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+            Escolha como deseja continuar
+          </h1>
+          <p className="text-sm text-muted-foreground sm:text-base">
+            Sua conta possui acesso a múltiplos perfis
+          </p>
+        </div>
+
+        <div className={cn(
+          "grid gap-6 w-full mx-auto justify-center",
+          roles.length === 1 && "max-w-md grid-cols-1",
+          roles.length === 2 && "max-w-3xl grid-cols-1 sm:grid-cols-2",
+          roles.length === 3 && "max-w-4xl grid-cols-1 sm:grid-cols-3",
+          roles.length >= 4 && "max-w-5xl grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
+        )}>
+          {roles.map((role) => {
+            const Icon = ROLE_ICONS[role]
+            return (
+              <button
+                key={role}
+                type="button"
+                onClick={() => handleSelect(role)}
+                className="group text-left transition-all duration-200 hover:scale-[1.02] focus:outline-none w-full h-full"
+              >
+                <Card className="h-full flex flex-col justify-between cursor-pointer border border-border bg-card text-card-foreground shadow-sm transition-all duration-200 group-hover:border-primary/50 group-hover:shadow-md">
+                  <CardHeader className="space-y-3 pb-6">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+                      <Icon size={24} />
+                    </div>
+                    <div className="space-y-1">
+                      <CardTitle className="font-display text-lg font-semibold leading-none">{ROLE_LABELS[role]}</CardTitle>
+                    </div>
+                    <CardDescription className="text-sm text-muted-foreground leading-relaxed">
+                      {role === 'buyer' && 'Publique demandas e gerencie propostas'}
+                      {role === 'supplier' && 'Veja oportunidades e envie propostas'}
+                      {role === 'admin' && 'Administre aprovações e métricas'}
+                      {role === 'commercial' && 'Área comercial (em breve)'}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <span className="inline-flex items-center text-sm font-medium text-primary transition-colors">
+                      Continuar <span className="ml-1 transition-transform group-hover:translate-x-1">→</span>
+                    </span>
+                  </CardContent>
+                </Card>
+              </button>
+            )
+          })}
+        </div>
       </div>
     </div>
   )
