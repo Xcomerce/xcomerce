@@ -69,6 +69,7 @@ export const router = createBrowserRouter([
           { path: 'settings/billing', element: sharedPages.billing },
           { path: 'notifications', element: sharedPages.notifications },
           { path: 'profile/:userId', element: sharedPages.publicProfile },
+          { path: 'support', element: sharedPages.support },
         ],
       },
       {

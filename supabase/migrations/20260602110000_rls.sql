@@ -571,12 +571,6 @@ create policy demands_select on public.demands
   using (
     buyer_id = (select auth.uid())
     or public.is_demand_matched_supplier(id)
-    or exists (
-      select 1
-      from public.offers o
-      where o.demand_id = demands.id
-        and o.supplier_id = (select auth.uid())
-    )
     or public.is_staff()
   );
 
@@ -584,13 +578,7 @@ create policy demands_insert on public.demands
   for insert to authenticated
   with check (
     buyer_id = (select auth.uid())
-    and (
-      public.has_role('buyer')
-      or exists (
-        select 1 from public.buyer_profiles bp
-        where bp.user_id = (select auth.uid())
-      )
-    )
+    and public.has_role('buyer')
   );
 
 create policy demands_update on public.demands
@@ -624,7 +612,7 @@ create policy demand_matches_select on public.demand_matches
   for select to authenticated
   using (
     supplier_id = (select auth.uid())
-    or public.is_demand_buyer(demand_id)
+    or public.has_role('buyer')
     or public.is_staff()
   );
 

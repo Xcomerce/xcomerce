@@ -3,6 +3,7 @@ import {
   Boxes,
   CreditCard,
   FileText,
+  Headset,
   LayoutGrid,
   LayoutList,
   Package,
@@ -53,8 +54,8 @@ export const buyerNav: RoleNavConfig = {
     {
       title: 'Principal',
       items: [
-        { to: '/buyer/feed', label: 'Feed de ofertas', icon: LayoutGrid },
-        { to: '/buyer/dashboard', label: 'Leilão de ofertas', icon: LayoutList },
+        { to: '/buyer/feed', label: 'Feed', icon: LayoutGrid },
+        { to: '/buyer/dashboard', label: 'Ofertas', icon: LayoutList },
         { to: '/buyer/demands/new', label: 'Solicitar oferta', icon: PlusCircle },
         { to: '/buyer/orders', label: 'Pedidos', icon: Package },
       ],
@@ -62,6 +63,7 @@ export const buyerNav: RoleNavConfig = {
     {
       title: 'Conta',
       items: [
+        { to: '/support', label: 'Suporte', icon: Headset },
         { to: '/settings/billing', label: 'Plano', icon: CreditCard },
         { to: '/settings/profile', label: 'Configurações', icon: Settings },
         { to: '/notifications', label: 'Notificações', icon: Bell },
@@ -70,8 +72,8 @@ export const buyerNav: RoleNavConfig = {
   ],
   bottomNav: {
     left: [
-      { to: '/buyer/feed', icon: LayoutGrid, label: 'Feed de ofertas' },
-      { to: '/buyer/dashboard', icon: LayoutList, label: 'Leilão' },
+      { to: '/buyer/feed', icon: LayoutGrid, label: 'Feed' },
+      { to: '/buyer/dashboard', icon: LayoutList, label: 'Ofertas' },
     ],
     right: [
       { to: '/buyer/orders', icon: Package, label: 'Pedidos' },
@@ -95,6 +97,7 @@ export const supplierNav: RoleNavConfig = {
     {
       title: 'Conta',
       items: [
+        { to: '/support', label: 'Suporte', icon: Headset },
         { to: '/settings/billing', label: 'Plano', icon: CreditCard },
         { to: '/settings/profile', label: 'Configurações', icon: Settings },
         { to: '/notifications', label: 'Notificações', icon: Bell },

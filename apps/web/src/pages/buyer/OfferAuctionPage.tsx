@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
-  ArrowLeft,
   Check,
   Clock,
   Eye,
@@ -24,7 +23,7 @@ import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import { ChatThread } from '@/pages/components/chat/ChatThread'
 import { usePageTitle } from '@/hooks/use-page-title'
 import { useDemand } from '@/hooks/use-demands'
-import { useOffersForDemand, useRevealContact, useAcceptOffer } from '@/hooks/use-offers'
+import { useOffersForDemand, useRevealContact, useAcceptOffer, useRejectOffer } from '@/hooks/use-offers'
 import { useAuth } from '@/contexts/auth-context'
 import { translateSupabaseError } from '@/lib/errors'
 import type { PublicOffer } from '@/services/offers'
@@ -106,13 +105,6 @@ function OfferCard({
         {rank}
       </div>
 
-      {/* Best price badge */}
-      {isLowest && !isRejected && !isAccepted && (
-        <div className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
-          <TrendingDown className="h-3 w-3" />
-          Menor preço
-        </div>
-      )}
 
       <CardContent className="p-5 pt-6 space-y-4">
         {/* Supplier info row */}
@@ -122,7 +114,15 @@ function OfferCard({
               <h3 className="text-base font-semibold text-foreground">
                 {offer.supplier_name ?? 'Fornecedor'}
               </h3>
-              <StatusBadge status={offer.status} kind="offer" />
+              {offer.status !== 'enviada' && (
+                <StatusBadge status={offer.status} kind="offer" />
+              )}
+              {isLowest && !isRejected && !isAccepted && (
+                <div className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-600 border border-emerald-500/20 shrink-0">
+                  <TrendingDown className="h-3 w-3" />
+                  Menor preço
+                </div>
+              )}
             </div>
             {offer.supplier_avg_rating != null && (
               <div className="flex items-center gap-1 text-sm text-muted-foreground">
@@ -200,14 +200,15 @@ function OfferCard({
               size="sm"
               disabled={isRevealing}
               onClick={() => onReveal(offer.id)}
-              className="rounded-xl"
+              className="rounded-xl h-9 w-9 p-0 flex items-center justify-center shrink-0"
+              title="Revelar contato"
+              aria-label="Revelar contato"
             >
               {isRevealing ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <Eye className="h-3.5 w-3.5" />
+                <Eye className="h-4 w-4 text-foreground/80" />
               )}
-              Revelar contato
             </Button>
           )}
 
@@ -215,11 +216,12 @@ function OfferCard({
             type="button"
             variant={chatOpen ? 'default' : 'outline'}
             size="sm"
-            className="rounded-xl"
+            className="rounded-xl h-9 w-9 p-0 flex items-center justify-center shrink-0"
             onClick={() => setExpandedChatId(chatOpen ? null : offer.supplier_id)}
+            title={chatOpen ? 'Fechar chat' : 'Abrir chat'}
+            aria-label={chatOpen ? 'Fechar chat' : 'Abrir chat'}
           >
-            <MessageSquare className="h-3.5 w-3.5" />
-            {chatOpen ? 'Fechar chat' : 'Chat'}
+            <MessageSquare className="h-4 w-4 text-foreground/80" />
           </Button>
 
           {canAccept && offer.status === 'enviada' && (
@@ -245,7 +247,7 @@ function OfferCard({
                 size="sm"
                 disabled={isAccepting}
                 onClick={() => onAccept(offer.id)}
-                className="rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
+                className="rounded-xl bg-green-600 text-white hover:bg-green-700 shadow-sm"
               >
                 {isAccepting ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -287,11 +289,12 @@ export function OfferAuctionPage() {
 
   const revealContact = useRevealContact()
   const acceptOffer = useAcceptOffer()
+  const rejectOffer = useRejectOffer()
 
   const [expandedChatId, setExpandedChatId] = useState<string | null>(null)
   const [revealingId, setRevealingId] = useState<string | null>(null)
   const [acceptingId, setAcceptingId] = useState<string | null>(null)
-  const rejectingId: string | null = null
+  const [rejectingId, setRejectingId] = useState<string | null>(null)
 
   async function handleReveal(offerId: string) {
     setRevealingId(offerId)
@@ -320,9 +323,16 @@ export function OfferAuctionPage() {
   }
 
   async function handleReject(offerId: string) {
-    // No-op for now — future: call reject endpoint
-    toast.info('Funcionalidade de recusa em desenvolvimento.')
-    void offerId
+    if (!window.confirm('Confirmar recusa desta proposta?')) return
+    setRejectingId(offerId)
+    try {
+      await rejectOffer.mutateAsync(offerId)
+      toast.success('Proposta recusada com sucesso.')
+    } catch (err) {
+      toast.error(translateSupabaseError(err instanceof Error ? err.message : 'Erro ao recusar proposta'))
+    } finally {
+      setRejectingId(null)
+    }
   }
 
   if (loadingDemand) {
@@ -349,73 +359,55 @@ export function OfferAuctionPage() {
 
   return (
     <div className="space-y-6 pb-10">
-
       {/* ── Header ── */}
-      <div className="flex items-center gap-3">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="shrink-0 rounded-xl"
-          onClick={() => navigate(`/buyer/demands/${demand.id}`)}
-          aria-label="Voltar"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div>
-          <p className="text-xs font-mono text-muted-foreground tracking-widest uppercase">
-            Pedido #{formatShortId(demand.id)}
-          </p>
-          <h2 className="font-display text-2xl font-semibold leading-tight">{demand.titulo}</h2>
-        </div>
-      </div>
-
-      {/* ── Demand summary card ── */}
-      <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
-        {/* Top accent bar */}
-        <div className="h-1 w-full bg-gradient-to-r from-primary via-violet-500 to-indigo-500" />
-
-        <div className="flex flex-wrap items-start justify-between gap-4 p-5">
-          {/* Left: title + status */}
-          <div className="space-y-2 flex-1 min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="flex items-center gap-1.5 rounded-xl bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary font-mono tracking-widest">
-                <Gavel className="h-3.5 w-3.5" />
-                #{formatShortId(demand.id)}
-              </span>
-              <StatusBadge status={demand.status} kind="demand" />
-            </div>
-            <p className="text-sm text-muted-foreground line-clamp-2">{demand.descricao}</p>
+      <div className="relative flex flex-col gap-1.5 md:pr-80">
+        {/* ID + right side (badges on desktop + published date) */}
+        <div className="flex items-start justify-between gap-2">
+          <div className="inline-flex items-center rounded-full border border-border px-2.5 py-0.5 font-mono text-xs font-medium text-muted-foreground tracking-wider bg-muted/10 w-fit">
+            ID#{formatShortId(demand.id)}
           </div>
-
-          {/* Right: key metrics */}
-          <div className="flex flex-wrap gap-4 text-sm shrink-0">
-            <div className="flex items-center gap-1.5 text-foreground/80">
-              <Package className="h-4 w-4 text-muted-foreground" />
-              <span className="font-medium">{demand.quantidade} {demand.unidade}</span>
+          <div className="hidden md:flex absolute top-0 right-0 flex-col items-end gap-1">
+            <div className="flex items-center gap-2">
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
+                <Package className="h-3.5 w-3.5" />
+                <span>{demand.quantidade} {demand.unidade}</span>
+              </div>
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
+                <MapPin className="h-3.5 w-3.5" />
+                <span>{demand.cidade}/{demand.uf}</span>
+              </div>
             </div>
-            <div className="flex items-center gap-1.5 text-foreground/80">
-              <MapPin className="h-4 w-4 text-muted-foreground" />
-              <span className="font-medium">{demand.cidade}/{demand.uf}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Offers summary footer */}
-        {offerList.length > 0 && (
-          <div className="border-t border-border/60 px-5 py-3 bg-muted/30 flex flex-wrap items-center gap-6 text-sm">
-            <span>
-              <span className="font-semibold text-foreground">{offerList.length}</span>
-              <span className="text-muted-foreground ml-1">proposta{offerList.length !== 1 ? 's' : ''} recebida{offerList.length !== 1 ? 's' : ''}</span>
+            <span className="text-xs font-normal text-muted-foreground/60">
+              Publicada em: {new Date(demand.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
             </span>
-            {lowestValue !== null && (
-              <span>
-                <span className="text-muted-foreground">Menor valor: </span>
-                <span className="font-semibold text-primary">{formatCurrency(lowestValue)}</span>
-              </span>
-            )}
           </div>
+        </div>
+
+        {/* Title */}
+        <h2 className="font-display text-2xl font-semibold leading-tight">
+          {demand.titulo}
+        </h2>
+
+        {/* Description */}
+        {demand.descricao && (
+          <p className="text-sm text-muted-foreground leading-relaxed max-w-3xl">
+            {demand.descricao}
+          </p>
         )}
+
+        {/* Quick Info Tags — mobile only */}
+        <div className="flex md:hidden flex-wrap items-center gap-2 pt-1">
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/70 px-3 py-1 text-xs font-medium text-muted-foreground">
+            <Package className="h-3.5 w-3.5" />
+            <span>{demand.quantidade} {demand.unidade}</span>
+          </div>
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/70 px-3 py-1 text-xs font-medium text-muted-foreground">
+            <MapPin className="h-3.5 w-3.5" />
+            <span>{demand.cidade}/{demand.uf}</span>
+          </div>
+        </div>
       </div>
+
 
       {/* ── Offers section ── */}
       <div>

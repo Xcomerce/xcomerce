@@ -100,3 +100,15 @@ export async function acceptOffer(offerId: string, buyerId: string): Promise<Ord
   if (error) throw error
   return data as Order
 }
+
+export async function rejectOffer(offerId: string): Promise<Offer> {
+  const { data, error } = await supabase
+    .from('offers')
+    .update({ status: 'rejeitada' })
+    .eq('id', offerId)
+    .select()
+    .single()
+
+  if (error) throw error
+  return data as Offer
+}

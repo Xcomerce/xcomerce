@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { Package } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/common/EmptyState'
 import { GridSkeleton } from '@/components/common/LoadingSkeleton'
@@ -37,9 +37,9 @@ export function SupplierOrdersPage() {
         {orders.map((order) => (
           <Card key={order.id}>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-base font-medium">
-                Pedido #{order.id.slice(0, 8)}
-              </CardTitle>
+              <div className="inline-flex items-center rounded-full border border-border px-2.5 py-0.5 font-mono text-xs font-medium text-foreground tracking-wider bg-transparent">
+                ID#{order.id.slice(0, 8).toUpperCase()}
+              </div>
               <StatusBadge status={order.status} kind="order" />
             </CardHeader>
             <CardContent className="flex items-center justify-between">

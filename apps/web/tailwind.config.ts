@@ -56,6 +56,10 @@ export default {
           'primary-dark': 'hsl(var(--brand-primary-dark))',
           accent: 'hsl(var(--brand-accent))',
           muted: 'hsl(var(--brand-muted))',
+          'gradient-start': 'hsl(var(--brand-gradient-start))',
+          'gradient-end': 'hsl(var(--brand-gradient-end))',
+          'purple-start': 'hsl(var(--brand-purple-start))',
+          'purple-end': 'hsl(var(--brand-purple-end))',
         },
         sidebar: {
           DEFAULT: 'hsl(var(--sidebar-background))',

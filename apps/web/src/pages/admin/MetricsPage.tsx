@@ -36,7 +36,7 @@ export function MetricsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="font-display text-2xl font-bold">Métricas</h1>
-        <p className="text-sm text-muted-foreground">KPIs da plataforma Keven B2b</p>
+        <p className="text-sm text-muted-foreground">KPIs da plataforma X COMERCE</p>
       </div>
 
       {isLoading && <GridSkeleton count={6} />}

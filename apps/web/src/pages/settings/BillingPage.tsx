@@ -79,10 +79,6 @@ export function BillingPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="font-display text-2xl font-semibold">Plano e billing</h2>
-        <p className="text-sm text-muted-foreground">Gerencie sua assinatura, limites e upgrade de plano.</p>
-      </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card>

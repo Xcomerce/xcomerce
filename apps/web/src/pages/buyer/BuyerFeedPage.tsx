@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Package, Search, Sparkles, ChevronLeft, ChevronRight, Zap, ShieldCheck, Star } from 'lucide-react'
 import { useFeedProducts } from '@/hooks/use-products'
 import { useCategories } from '@/hooks/use-categories'
@@ -18,7 +19,7 @@ function formatCurrency(value: number | null): string {
 const SLIDES = [
   {
     id: 1,
-    gradient: 'from-brand-primary-dark via-brand-primary to-[#0f2142]',
+    gradient: 'from-brand-dark via-brand-primary to-[#1a3a8f]',
     badgeText: 'Homologação Garantida',
     iconType: 'sparkles',
     title: 'Fornecedores Homologados e Verificados',
@@ -26,7 +27,7 @@ const SLIDES = [
   },
   {
     id: 2,
-    gradient: 'from-[#e11d48] via-[#be123c] to-[#4c0519]',
+    gradient: 'from-[#492289] via-[#7F3CEF] to-[#8E45EF]',
     badgeText: 'Economia & Agilidade',
     iconType: 'zap',
     title: 'Cotações Rápidas de Alta Confiança',
@@ -34,7 +35,7 @@ const SLIDES = [
   },
   {
     id: 3,
-    gradient: 'from-[#b45309] via-[#d97706] to-[#78350f]',
+    gradient: 'from-[#222889] via-[#3263F7] to-[#03A0FB]',
     badgeText: 'Fornecedores Ouro',
     iconType: 'shieldCheck',
     title: 'Fornecedores com Selo Ouro de Atendimento',
@@ -73,6 +74,7 @@ function getProductImage(nome: string, dbUrl: string | null): string | null {
 }
 
 export function BuyerFeedPage() {
+  const navigate = useNavigate()
   const [selectedCategory, setSelectedCategory] = useState<string>('')
   const [searchQuery, setSearchQuery] = useState<string>('')
   const [selectedUf, setSelectedUf] = useState<string>('')
@@ -310,7 +312,18 @@ export function BuyerFeedPage() {
             {products.map((product) => (
               <Card
                 key={product.id}
-                className="group overflow-hidden border border-border bg-card shadow-sm transition-all duration-300 hover:scale-[1.02] hover:border-primary/50 hover:shadow-md"
+                onClick={() =>
+                  navigate('/buyer/demands/new', {
+                    state: {
+                      categoryId: product.category_id,
+                      title: product.nome,
+                      description: product.descricao || '',
+                      city: product.cidade || '',
+                      uf: product.uf || '',
+                    },
+                  })
+                }
+                className="group overflow-hidden border border-border bg-card shadow-sm transition-all duration-300 hover:scale-[1.02] hover:border-primary/50 hover:shadow-md cursor-pointer"
               >
                 {/* Imagem do Produto */}
                 <div className="relative aspect-[4/3] w-full bg-secondary overflow-hidden">

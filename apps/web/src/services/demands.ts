@@ -45,8 +45,8 @@ export async function createDemand(buyerId: string, input: DemandInput): Promise
       cidade: input.cidade,
       uf: input.uf.toUpperCase(),
       raio_km: input.raio_km,
-      prazo_desejado: input.prazo_desejado ?? null,
-      observacoes: input.observacoes ?? null,
+      prazo_desejado: input.prazo_desejado || null,
+      observacoes: input.observacoes || null,
       status: 'RASCUNHO',
     })
     .select()
@@ -66,8 +66,8 @@ export async function updateDemand(id: string, input: Partial<DemandInput>): Pro
   if (input.cidade !== undefined) payload.cidade = input.cidade
   if (input.uf !== undefined) payload.uf = input.uf.toUpperCase()
   if (input.raio_km !== undefined) payload.raio_km = input.raio_km
-  if (input.prazo_desejado !== undefined) payload.prazo_desejado = input.prazo_desejado
-  if (input.observacoes !== undefined) payload.observacoes = input.observacoes
+  if (input.prazo_desejado !== undefined) payload.prazo_desejado = input.prazo_desejado || null
+  if (input.observacoes !== undefined) payload.observacoes = input.observacoes || null
 
   const { data, error } = await supabase.from('demands').update(payload).eq('id', id).select().single()
   if (error) throw error

@@ -161,7 +161,7 @@ export function EligibleSuppliersPanel({
           <Button
             type="button"
             disabled={isSaving || !selectedCategoryId}
-            className="w-full rounded-lg bg-amber-500 py-5 text-sm font-semibold uppercase tracking-wide text-white shadow-sm hover:bg-amber-600"
+            className="w-full rounded-lg bg-primary py-5 text-sm font-semibold uppercase tracking-wide text-primary-foreground shadow-sm hover:bg-brand-primary-dark"
             onClick={onPublish}
           >
             {publishPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}

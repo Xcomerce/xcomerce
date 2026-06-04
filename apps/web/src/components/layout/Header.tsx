@@ -1,6 +1,6 @@
 import { useTheme } from 'next-themes'
-import { Bell, Menu, Moon, Sun } from 'lucide-react'
-import { Link, useNavigate } from 'react-router-dom'
+import { ArrowLeft, Bell, Menu, Moon, Sun } from 'lucide-react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,8 +26,11 @@ export function Header({ onMenuClick, className }: HeaderProps) {
   const pageTitle = usePageTitle()
   const { theme, setTheme } = useTheme()
   const navigate = useNavigate()
+  const { pathname } = useLocation()
   const { profile, roles, signOut, setActiveRole } = useAuth()
   const { data: unreadCount = 0 } = useUnreadNotificationCount()
+
+  const isAuctionPage = pathname.startsWith('/buyer/demands/') && pathname.endsWith('/auction')
 
   return (
     <header
@@ -45,9 +48,23 @@ export function Header({ onMenuClick, className }: HeaderProps) {
         >
           <Menu size={24} />
         </button>
-        <h1 className="max-w-[180px] truncate font-display text-lg font-semibold lg:max-w-none lg:text-xl">
-          {pageTitle}
-        </h1>
+        {isAuctionPage ? (
+          <button
+            type="button"
+            onClick={() => navigate('/buyer/dashboard')}
+            className="flex items-center gap-1.5 rounded-xl px-2 py-1 hover:bg-secondary/50 transition-colors -ml-1"
+            aria-label="Voltar para ofertas"
+          >
+            <ArrowLeft size={15} className="shrink-0 text-muted-foreground" />
+            <h1 className="font-display text-sm font-semibold">
+              Voltar para ofertas
+            </h1>
+          </button>
+        ) : (
+          <h1 className="max-w-[180px] truncate font-display text-lg font-semibold lg:max-w-none lg:text-xl">
+            {pageTitle}
+          </h1>
+        )}
       </div>
 
       <div className="flex items-center gap-2">

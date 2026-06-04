@@ -47,7 +47,13 @@ export function NewDemandPage() {
   const location = useLocation()
   const editId = searchParams.get('id') ?? undefined
   const isEditing = !!editId
-  const stateData = location.state as { categoryId?: string; title?: string } | null
+  const stateData = location.state as {
+    categoryId?: string
+    title?: string
+    description?: string
+    city?: string
+    uf?: string
+  } | null
 
   const { data: existingDemand, isLoading: loadingDemand, error: demandError } = useDemand(editId)
   const { data: categories, isLoading: loadingCategories, error: categoriesError } = useCategories()
@@ -100,6 +106,9 @@ export function NewDemandPage() {
     if (isEditing) return
     if (stateData?.categoryId) form.setValue('category_id', stateData.categoryId)
     if (stateData?.title) form.setValue('titulo', stateData.title)
+    if (stateData?.description) form.setValue('descricao', stateData.description)
+    if (stateData?.city) form.setValue('cidade', stateData.city)
+    if (stateData?.uf) form.setValue('uf', stateData.uf)
   }, [stateData, isEditing, form])
 
   useEffect(() => {
@@ -150,7 +159,7 @@ export function NewDemandPage() {
   async function onSubmit(values: DemandInput) {
     const id = await saveDraft(values)
     if (!id) return
-    navigate(`/buyer/demands/${id}`)
+    navigate('/buyer/dashboard')
   }
 
   async function handleCepLookup(rawCep: string) {
@@ -204,7 +213,7 @@ export function NewDemandPage() {
     try {
       await publishDemand.mutateAsync(id)
       toast.success('Demanda publicada')
-      navigate(`/buyer/demands/${id}`)
+      navigate(`/buyer/demands/${id}/auction`)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Erro ao publicar'
       if (message.includes('quota') || message.includes('QUOTA')) {

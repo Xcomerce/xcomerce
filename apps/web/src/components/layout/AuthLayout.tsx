@@ -4,9 +4,8 @@ export function AuthLayout() {
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
       <div className="hidden flex-col justify-between bg-brand-dark p-10 text-white lg:flex">
-        <Link to="/" className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-lg font-bold">K</div>
-          <span className="font-display text-xl font-semibold">Keven B2b</span>
+        <Link to="/" className="flex items-center">
+          <img src="/logo-clara.svg" className="h-10 object-contain" alt="X COMERCE" />
         </Link>
         <div>
           <h2 className="font-display text-3xl font-bold leading-tight">
@@ -16,15 +15,13 @@ export function AuthLayout() {
             Publique demandas, receba propostas qualificadas e negocie com fornecedores verificados na sua região.
           </p>
         </div>
-        <p className="text-sm text-white/60">© {new Date().getFullYear()} Keven B2b</p>
+        <p className="text-sm text-white/60">© {new Date().getFullYear()} X COMERCE</p>
       </div>
       <div className="flex flex-col justify-center px-4 py-10 sm:px-8">
         <div className="mb-8 lg:hidden">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-dark text-sm font-bold text-white">
-              K
-            </div>
-            <span className="font-display text-lg font-semibold">Keven B2b</span>
+          <Link to="/" className="flex items-center">
+            <img src="/logo-dark.svg" className="h-10 object-contain dark:hidden" alt="X COMERCE" />
+            <img src="/logo-clara.svg" className="h-10 object-contain hidden dark:block" alt="X COMERCE" />
           </Link>
         </div>
         <div className="mx-auto w-full max-w-md">

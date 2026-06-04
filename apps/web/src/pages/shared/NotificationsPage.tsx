@@ -3,25 +3,30 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { EmptyState } from '@/components/common/EmptyState'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
-import { useNotifications, useMarkNotificationRead } from '@/hooks/use-notifications'
+import { useNotifications, useMarkNotificationRead, useMarkAllNotificationsRead } from '@/hooks/use-notifications'
 import { cn } from '@/lib/utils'
 
 export function NotificationsPage() {
   const { data: notifications = [], isLoading } = useNotifications()
   const markRead = useMarkNotificationRead()
+  const markAllRead = useMarkAllNotificationsRead()
 
   const unreadCount = notifications.filter((n) => !n.read_at).length
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-display text-2xl font-bold">Notificações</h1>
-          <p className="text-sm text-muted-foreground">
-            {unreadCount > 0 ? `${unreadCount} não lida(s)` : 'Tudo em dia'}
-          </p>
+    <div className="w-full space-y-6">
+      {unreadCount > 0 && (
+        <div className="flex justify-end">
+          <Button
+            onClick={() => markAllRead.mutate()}
+            disabled={markAllRead.isPending}
+            variant="outline"
+            className="rounded-xl font-semibold"
+          >
+            {markAllRead.isPending ? 'Marcando...' : 'Marcar tudo como lido'}
+          </Button>
         </div>
-      </div>
+      )}
 
       {isLoading && (
         <div className="space-y-2">

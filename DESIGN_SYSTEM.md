@@ -68,7 +68,7 @@ Características:
 
 - **Azul navy** (`brand-dark`) em hero, navbar e áreas premium — transmite robustez
 - **Azul primário** (`brand-primary`) em ações principais — confiança
-- **Laranja** (`brand-accent`) em CTAs de conversão — destaque comercial
+- **Púrpura Vibrante** (`brand-accent`) em CTAs de conversão — destaque comercial (do roxo do logo)
 - **Branco e cinzas claros** para legibilidade em listagens densas (catálogo, propostas)
 - Todas as cores em **HSL** para opacidade dinâmica e temas claro/escuro
 
@@ -78,37 +78,43 @@ Características:
 :root {
   /* ===== CORE COLORS ===== */
   --background: 220 20% 97%;           /* Fundo claro #F5F6F8 */
-  --foreground: 221 65% 12%;           /* Texto principal — azul quase preto */
+  --foreground: 237 60% 12%;           /* Texto principal — azul escuro indigo */
 
-  /* ===== BRAND COLORS — Keve B2B ===== */
-  --brand: 221 78% 54%;                /* Azul primário #2F66F3 */
-  --brand-dark: 221 67% 17%;           /* Navy premium #0D1F4D */
-  --brand-primary: 221 78% 54%;        /* Botões e links principais */
-  --brand-primary-dark: 221 80% 44%;   /* Hover botão primário */
-  --brand-accent: 38 100% 50%;         /* CTA conversão #F5A000 */
-  --brand-muted: 220 15% 95%;        /* Superfícies neutras de marca */
+  /* ===== BRAND COLORS — Keve B2B (derived from SVG logos) ===== */
+  --brand: 221 94% 59%;                /* Azul primário #3472F9 */
+  --brand-dark: 237 60% 34%;           /* Navy premium #222889 */
+  --brand-primary: 221 94% 59%;        /* Botões e links principais */
+  --brand-primary-dark: 221 94% 49%;   /* Hover botão primário */
+  --brand-accent: 262 85% 59%;         /* CTA conversão #7F3CEF */
+  --brand-muted: 237 30% 95%;          /* Superfícies neutras de marca */
+
+  /* ===== BRAND GRADIENT & ACCENTS FROM LOGOS ===== */
+  --brand-gradient-start: 266 84% 60%; /* Purple #8E45EF */
+  --brand-gradient-end: 202 98% 50%;   /* Cyan/Blue #03A0FB */
+  --brand-purple-start: 262 85% 59%;   /* Vibrant Purple #7F3CEF */
+  --brand-purple-end: 263 60% 34%;     /* Deep Purple #492289 */
 
   /* ===== SEMANTIC SURFACES ===== */
   --card: 0 0% 100%;
-  --card-foreground: 221 65% 12%;
+  --card-foreground: 237 60% 12%;
 
   --popover: 0 0% 100%;
-  --popover-foreground: 221 65% 12%;
+  --popover-foreground: 237 60% 12%;
 
   /* ===== PRIMARY (Ações principais — azul) ===== */
-  --primary: 221 78% 54%;
+  --primary: 221 94% 59%;
   --primary-foreground: 0 0% 100%;
 
   /* ===== SECONDARY (Superfícies neutras) ===== */
   --secondary: 220 18% 94%;
-  --secondary-foreground: 221 60% 18%;
+  --secondary-foreground: 237 50% 18%;
 
   /* ===== MUTED (Elementos sutis) ===== */
   --muted: 220 15% 95%;
   --muted-foreground: 220 12% 45%;
 
-  /* ===== ACCENT (CTAs de conversão — laranja) ===== */
-  --accent: 38 100% 50%;
+  /* ===== ACCENT (CTAs de conversão — púrpura) ===== */
+  --accent: 262 85% 59%;
   --accent-foreground: 0 0% 100%;
 
   /* ===== DESTRUCTIVE (Erros/Exclusões) ===== */
@@ -118,20 +124,20 @@ Características:
   /* ===== INPUTS & BORDERS ===== */
   --border: 220 14% 88%;               /* #D9DEE8 */
   --input: 220 14% 96%;
-  --ring: 221 78% 54%;                 /* Focus ring — azul primário */
+  --ring: 221 94% 59%;                 /* Focus ring — azul primário */
 
   /* ===== BORDER RADIUS ===== */
   --radius: 1rem;                      /* 16px — bordas suaves marketplace */
 
   /* ===== SIDEBAR ===== */
   --sidebar-background: 220 15% 96%;
-  --sidebar-foreground: 221 65% 12%;
-  --sidebar-primary: 221 78% 54%;
+  --sidebar-foreground: 237 60% 12%;
+  --sidebar-primary: 221 94% 59%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 221 78% 54% / 0.1;
-  --sidebar-accent-foreground: 221 80% 44%;
+  --sidebar-accent: 221 94% 59% / 0.1;
+  --sidebar-accent-foreground: 221 94% 49%;
   --sidebar-border: 220 14% 88%;
-  --sidebar-ring: 221 78% 54%;
+  --sidebar-ring: 221 94% 59%;
 
   /* ===== CHANNEL COLORS (Integrações) ===== */
   --whatsapp: 142 70% 45%;
@@ -140,7 +146,7 @@ Características:
   --telegram: 200 75% 50%;
   --twitter: 203 89% 53%;
   --email: 220 15% 40%;
-  --livechat: 221 78% 54%;
+  --livechat: 221 94% 59%;
 
   /* ===== STATUS COLORS ===== */
   --success: 142 76% 36%;
@@ -167,38 +173,44 @@ Características:
 ```css
 .dark {
   /* ===== CORE COLORS ===== */
-  --background: 221 67% 11%;           /* Navy profundo */
-  --foreground: 0 0% 98%;
+  --background: 237 50% 8%;            /* Deep brand dark background */
+  --foreground: 209 100% 96%;          /* Ice Blue #EAF5FF (from logo-clara text) */
 
   /* ===== BRAND COLORS ===== */
-  --brand: 221 78% 56%;
-  --brand-dark: 221 67% 17%;
-  --brand-primary: 221 78% 56%;
-  --brand-primary-dark: 221 80% 48%;
-  --brand-accent: 38 100% 50%;
-  --brand-muted: 221 24% 20%;
+  --brand: 221 94% 64%;                /* Sightly brighter for dark mode */
+  --brand-dark: 237 60% 34%;
+  --brand-primary: 221 94% 64%;
+  --brand-primary-dark: 221 94% 54%;
+  --brand-accent: 262 85% 59%;
+  --brand-muted: 237 30% 16%;
+
+  /* ===== BRAND GRADIENT & ACCENTS FROM LOGOS ===== */
+  --brand-gradient-start: 266 84% 60%;
+  --brand-gradient-end: 202 98% 50%;
+  --brand-purple-start: 262 85% 59%;
+  --brand-purple-end: 263 60% 34%;
 
   /* ===== SEMANTIC SURFACES ===== */
-  --card: 221 58% 14%;
-  --card-foreground: 0 0% 98%;
+  --card: 237 40% 12%;
+  --card-foreground: 209 100% 96%;
 
-  --popover: 221 58% 14%;
-  --popover-foreground: 0 0% 98%;
+  --popover: 237 40% 12%;
+  --popover-foreground: 209 100% 96%;
 
   /* ===== PRIMARY ===== */
-  --primary: 221 78% 56%;
+  --primary: 221 94% 64%;
   --primary-foreground: 0 0% 100%;
 
   /* ===== SECONDARY ===== */
-  --secondary: 221 35% 18%;
+  --secondary: 237 35% 15%;
   --secondary-foreground: 0 0% 95%;
 
   /* ===== MUTED ===== */
-  --muted: 221 24% 20%;
+  --muted: 237 30% 16%;
   --muted-foreground: 220 10% 72%;
 
-  /* ===== ACCENT (laranja — mantém conversão) ===== */
-  --accent: 38 100% 50%;
+  /* ===== ACCENT (púrpura — mantém conversão) ===== */
+  --accent: 262 85% 59%;
   --accent-foreground: 0 0% 100%;
 
   /* ===== DESTRUCTIVE ===== */
@@ -206,19 +218,19 @@ Características:
   --destructive-foreground: 0 0% 100%;
 
   /* ===== INPUTS & BORDERS ===== */
-  --border: 221 20% 24%;
-  --input: 221 20% 18%;
-  --ring: 221 78% 56%;
+  --border: 237 25% 20%;
+  --input: 237 25% 15%;
+  --ring: 221 94% 64%;
 
   /* ===== SIDEBAR DARK ===== */
-  --sidebar-background: 221 67% 9%;
-  --sidebar-foreground: 0 0% 98%;
-  --sidebar-primary: 221 78% 56%;
+  --sidebar-background: 237 50% 6%;
+  --sidebar-foreground: 209 100% 96%;
+  --sidebar-primary: 221 94% 64%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 221 78% 56% / 0.15;
-  --sidebar-accent-foreground: 221 78% 65%;
-  --sidebar-border: 221 20% 24%;
-  --sidebar-ring: 221 78% 56%;
+  --sidebar-accent: 221 94% 64% / 0.15;
+  --sidebar-accent-foreground: 221 94% 70%;
+  --sidebar-border: 237 25% 20%;
+  --sidebar-ring: 221 94% 64%;
 
   /* ===== STATUS COLORS (mais brilhantes) ===== */
   --success: 142 76% 45%;
@@ -248,7 +260,7 @@ Características:
 // ❌ ERRADO - Cores hardcoded
 <div className="bg-white text-black">
 <button className="bg-blue-600 text-white">
-<button className="bg-orange-500 text-white">
+<button className="bg-purple-600 text-white">
 <p className="text-gray-500">
 ```
 
@@ -256,13 +268,17 @@ Características:
 
 | Token | Hex | HSL | Uso |
 |-------|-----|-----|-----|
-| `brand-dark` | `#0D1F4D` | `221 67% 17%` | Hero, navbar, áreas premium |
-| `brand-primary` | `#2F66F3` | `221 78% 54%` | Botões primários, links, focus ring |
-| `brand-primary-dark` | — | `221 80% 44%` | Hover de botão primário |
-| `brand-accent` | `#F5A000` | `38 100% 50%` | CTAs de conversão (cadastro, publicar demanda, upgrade) |
+| `brand-dark` | `#222889` | `237 60% 34%` | Hero, navbar, áreas premium (do texto do logo escuro) |
+| `brand-primary` | `#3472F9` | `221 94% 59%` | Botões primários, links, focus ring (do azul elétrico do logo) |
+| `brand-primary-dark` | `#0b57f8` | `221 94% 49%` | Hover de botão primário |
+| `brand-accent` | `#7F3CEF` | `262 85% 59%` | CTAs de conversão (cadastro, publicar demanda, upgrade) |
+| `brand-gradient-start` | `#8E45EF` | `266 84% 60%` | Início do gradiente principal (Roxo do logo) |
+| `brand-gradient-end` | `#03A0FB` | `202 98% 50%` | Fim do gradiente principal (Azul Claro do logo) |
+| `brand-purple-start` | `#7F3CEF` | `262 85% 59%` | Início do gradiente de blocos (Púrpura do logo) |
+| `brand-purple-end` | `#492289` | `263 60% 34%` | Fim do gradiente de blocos (Púrpura Escuro do logo) |
 | `neutral-light` | `#F5F6F8` | `220 20% 97%` | Fundos e inputs |
 | `neutral-border` | `#D9DEE8` | `220 14% 88%` | Bordas de cards e divisores |
-| `text-on-dark` | `#FFFFFF` | `0 0% 100%` | Textos sobre fundo navy |
+| `text-on-dark` | `#EAF5FF` | `209 100% 96%` | Textos sobre fundo escuro (Ice Blue do logo claro) |
 
 ### 2.6 Regras Visuais de Cor
 
@@ -274,7 +290,7 @@ Características:
 </Button>
 ```
 
-**CTA de conversão (laranja — cadastro, publicar, upgrade)**
+**CTA de conversão (púrpura — cadastro, publicar, upgrade)**
 
 ```tsx
 <Button className="bg-accent hover:bg-accent/90 text-accent-foreground rounded-xl">

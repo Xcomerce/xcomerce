@@ -7,31 +7,38 @@
 @layer base {
   :root {
     --background: 220 20% 97%;
-    --foreground: 221 65% 12%;
+    --foreground: 237 60% 12%;
 
-    --brand: 221 78% 54%;
-    --brand-dark: 221 67% 17%;
-    --brand-primary: 221 78% 54%;
-    --brand-primary-dark: 221 80% 44%;
-    --brand-accent: 38 100% 50%;
-    --brand-muted: 220 15% 95%;
+    /* ===== BRAND COLORS (derived from SVG logos) ===== */
+    --brand: 221 94% 59%;                /* Electric Blue #3472F9 */
+    --brand-dark: 237 60% 34%;           /* Dark Indigo Navy #222889 (from logo text) */
+    --brand-primary: 221 94% 59%;        /* Primary Action Blue */
+    --brand-primary-dark: 221 94% 49%;   /* Primary Hover Blue */
+    --brand-accent: 221 94% 59%;         /* Electric Blue #3472F9 — mesmo tom dos botões primários */
+    --brand-muted: 237 30% 95%;          /* Tinted muted brand surface */
+
+    /* ===== BRAND GRADIENT & ACCENTS FROM LOGOS ===== */
+    --brand-gradient-start: 266 84% 60%; /* Purple #8E45EF */
+    --brand-gradient-end: 202 98% 50%;   /* Cyan/Blue #03A0FB */
+    --brand-purple-start: 262 85% 59%;   /* Vibrant Purple #7F3CEF */
+    --brand-purple-end: 263 60% 34%;     /* Deep Purple #492289 */
 
     --card: 0 0% 100%;
-    --card-foreground: 221 65% 12%;
+    --card-foreground: 237 60% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 221 65% 12%;
+    --popover-foreground: 237 60% 12%;
 
-    --primary: 221 78% 54%;
+    --primary: 221 94% 59%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 220 18% 94%;
-    --secondary-foreground: 221 60% 18%;
+    --secondary-foreground: 237 50% 18%;
 
     --muted: 220 15% 95%;
     --muted-foreground: 220 12% 45%;
 
-    --accent: 38 100% 50%;
+    --accent: 221 94% 59%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 72% 51%;
@@ -39,18 +46,18 @@
 
     --border: 220 14% 88%;
     --input: 220 14% 96%;
-    --ring: 221 78% 54%;
+    --ring: 221 94% 59%;
 
     --radius: 1rem;
 
     --sidebar-background: 220 15% 96%;
-    --sidebar-foreground: 221 65% 12%;
-    --sidebar-primary: 221 78% 54%;
+    --sidebar-foreground: 237 60% 12%;
+    --sidebar-primary: 221 94% 59%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 221 78% 54% / 0.1;
-    --sidebar-accent-foreground: 221 80% 44%;
+    --sidebar-accent: 221 94% 59% / 0.1;
+    --sidebar-accent-foreground: 221 94% 49%;
     --sidebar-border: 220 14% 88%;
-    --sidebar-ring: 221 78% 54%;
+    --sidebar-ring: 221 94% 59%;
 
     --success: 142 76% 36%;
     --warning: 38 92% 50%;
@@ -59,49 +66,56 @@
   }
 
   .dark {
-    --background: 221 67% 11%;
-    --foreground: 0 0% 98%;
+    --background: 237 50% 8%;            /* Deep brand dark background */
+    --foreground: 209 100% 96%;          /* Ice Blue #EAF5FF (from logo-clara text) */
 
-    --brand: 221 78% 56%;
-    --brand-dark: 221 67% 17%;
-    --brand-primary: 221 78% 56%;
-    --brand-primary-dark: 221 80% 48%;
-    --brand-accent: 38 100% 50%;
-    --brand-muted: 221 24% 20%;
+    /* ===== BRAND COLORS ===== */
+    --brand: 221 94% 64%;                /* Sightly brighter for dark mode */
+    --brand-dark: 237 60% 34%;
+    --brand-primary: 221 94% 64%;
+    --brand-primary-dark: 221 94% 54%;
+    --brand-accent: 221 94% 64%;
+    --brand-muted: 237 30% 16%;
 
-    --card: 221 58% 14%;
-    --card-foreground: 0 0% 98%;
+    /* ===== BRAND GRADIENT & ACCENTS FROM LOGOS ===== */
+    --brand-gradient-start: 266 84% 60%;
+    --brand-gradient-end: 202 98% 50%;
+    --brand-purple-start: 262 85% 59%;
+    --brand-purple-end: 263 60% 34%;
 
-    --popover: 221 58% 14%;
-    --popover-foreground: 0 0% 98%;
+    --card: 237 40% 12%;
+    --card-foreground: 209 100% 96%;
 
-    --primary: 221 78% 56%;
+    --popover: 237 40% 12%;
+    --popover-foreground: 209 100% 96%;
+
+    --primary: 221 94% 64%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 221 35% 18%;
+    --secondary: 237 35% 15%;
     --secondary-foreground: 0 0% 95%;
 
-    --muted: 221 24% 20%;
+    --muted: 237 30% 16%;
     --muted-foreground: 220 10% 72%;
 
-    --accent: 38 100% 50%;
+    --accent: 221 94% 64%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 72% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 221 20% 24%;
-    --input: 221 20% 18%;
-    --ring: 221 78% 56%;
+    --border: 237 25% 20%;
+    --input: 237 25% 15%;
+    --ring: 221 94% 64%;
 
-    --sidebar-background: 221 67% 9%;
-    --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 221 78% 56%;
+    --sidebar-background: 237 50% 6%;
+    --sidebar-foreground: 209 100% 96%;
+    --sidebar-primary: 221 94% 64%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 221 78% 56% / 0.15;
-    --sidebar-accent-foreground: 221 78% 65%;
-    --sidebar-border: 221 20% 24%;
-    --sidebar-ring: 221 78% 56%;
+    --sidebar-accent: 221 94% 64% / 0.15;
+    --sidebar-accent-foreground: 221 94% 70%;
+    --sidebar-border: 237 25% 20%;
+    --sidebar-ring: 221 94% 64%;
 
     --success: 142 76% 45%;
     --warning: 38 92% 55%;
@@ -137,7 +151,25 @@
 
   .scrollbar-custom {
     scrollbar-width: thin;
-    scrollbar-color: hsl(var(--border)) transparent;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
+  }
+
+  .scrollbar-custom::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .scrollbar-custom::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-custom::-webkit-scrollbar-thumb {
+    border-radius: 9999px;
+    background: hsl(var(--muted-foreground) / 0.3);
+  }
+
+  .scrollbar-custom::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.5);
   }
 
   .scrollbar-kanban-board {

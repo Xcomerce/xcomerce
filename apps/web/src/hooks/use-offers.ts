@@ -57,3 +57,19 @@ export function useAcceptOffer() {
     },
   })
 }
+
+export function useRejectOffer() {
+  const queryClient = useQueryClient()
+  const { user } = useAuth()
+
+  return useMutation({
+    mutationFn: (offerId: string) => offers.rejectOffer(offerId),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: offerKeys.byDemand(data.demand_id) })
+      queryClient.invalidateQueries({ queryKey: demandKeys.detail(data.demand_id) })
+      if (user?.id) {
+        queryClient.invalidateQueries({ queryKey: demandKeys.list(user.id) })
+      }
+    },
+  })
+}

@@ -7,7 +7,8 @@ const PLACEHOLDER_KEY = 'your-anon-key-from-supabase-status'
 const PLACEHOLDER_URL = 'http://127.0.0.1:54321'
 
 export const isSupabaseConfigured =
-  Boolean(supabaseUrl && supabaseAnonKey) &&
+  supabaseUrl !== undefined &&
+  supabaseAnonKey !== undefined &&
   supabaseAnonKey !== PLACEHOLDER_KEY &&
   !supabaseUrl.includes('placeholder')
 
@@ -21,7 +22,7 @@ export function getSupabaseProjectLabel(): string {
 
 if (!isSupabaseConfigured && import.meta.env.DEV) {
   console.warn(
-    '[Keven B2b] Supabase: crie apps/web/.env.local com VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY (Dashboard → Settings → API).',
+    '[X COMERCE] Supabase: crie apps/web/.env.local com VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY (Dashboard → Settings → API).',
   )
 }
 

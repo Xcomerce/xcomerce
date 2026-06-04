@@ -21,7 +21,7 @@ import { EmptyState } from '@/components/common/EmptyState'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import { ChatThread } from '@/pages/components/chat/ChatThread'
 import { usePageTitle } from '@/hooks/use-page-title'
-import { useDemand } from '@/hooks/use-demands'
+import { useDemand, usePublishDemand } from '@/hooks/use-demands'
 import { useOffersForDemand, useRevealContact, useAcceptOffer } from '@/hooks/use-offers'
 import { useAuth } from '@/contexts/auth-context'
 import { translateSupabaseError } from '@/lib/errors'
@@ -39,9 +39,24 @@ export function DemandDetailPage() {
   const { data: offers, isLoading: loadingOffers, error: offersError } = useOffersForDemand(id)
   const revealContact = useRevealContact()
   const acceptOffer = useAcceptOffer()
+  const publishDemand = usePublishDemand()
   const [expandedChatSupplierId, setExpandedChatSupplierId] = useState<string | null>(null)
   const [revealingId, setRevealingId] = useState<string | null>(null)
   const [acceptingId, setAcceptingId] = useState<string | null>(null)
+  const [publishing, setPublishing] = useState(false)
+
+  async function handlePublish() {
+    if (!demand) return
+    setPublishing(true)
+    try {
+      await publishDemand.mutateAsync(demand.id)
+      toast.success('Solicitação publicada com sucesso!')
+    } catch (err) {
+      toast.error(translateSupabaseError(err instanceof Error ? err.message : 'Erro ao publicar solicitação'))
+    } finally {
+      setPublishing(false)
+    }
+  }
 
   async function handleReveal(offerId: string) {
     setRevealingId(offerId)
@@ -110,9 +125,19 @@ export function DemandDetailPage() {
           </div>
         </div>
         {canEdit && (
-          <Button asChild variant="outline">
-            <Link to={`/buyer/demands/new?id=${demand.id}`}>Editar rascunho</Link>
-          </Button>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button asChild variant="outline">
+              <Link to={`/buyer/demands/new?id=${demand.id}`}>Editar rascunho</Link>
+            </Button>
+            <Button
+              onClick={handlePublish}
+              disabled={publishing}
+              className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm font-semibold"
+            >
+              {publishing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Publicar solicitação
+            </Button>
+          </div>
         )}
         {!canEdit && (
           <Button asChild variant="accent" className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm">

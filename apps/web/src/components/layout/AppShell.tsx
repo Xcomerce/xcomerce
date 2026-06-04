@@ -8,8 +8,15 @@ import { BottomNav } from '@/components/layout/BottomNav'
 import { Outlet, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 
-const FULL_HEIGHT_LAYOUT_PATHS = ['/buyer/demands/new', '/buyer/dashboard']
-const FULL_WIDTH_LAYOUT_PATHS = ['/buyer/demands/new', '/buyer/feed', '/buyer/dashboard']
+const FULL_HEIGHT_LAYOUT_PATHS = ['/buyer/demands/new', '/buyer/dashboard', '/settings/profile']
+const FULL_WIDTH_LAYOUT_PATHS = [
+  '/buyer/demands/new',
+  '/buyer/feed',
+  '/buyer/dashboard',
+  '/settings/profile',
+  '/settings/billing',
+  '/notifications',
+]
 
 export function AppShell({ role }: { role: UserRole }) {
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -21,36 +28,26 @@ export function AppShell({ role }: { role: UserRole }) {
   useEffect(() => {
     if (!isFullHeightLayout) return
     const html = document.documentElement
-    const mq = window.matchMedia('(min-width: 1024px)')
+    const body = document.body
 
-    function lockPageScroll() {
-      if (mq.matches) {
-        html.style.overflow = 'hidden'
-        document.body.style.overflow = 'hidden'
-      } else {
-        html.style.overflow = ''
-        document.body.style.overflow = ''
-      }
-    }
+    html.style.overflow = 'hidden'
+    body.style.overflow = 'hidden'
 
-    lockPageScroll()
-    mq.addEventListener('change', lockPageScroll)
     return () => {
-      mq.removeEventListener('change', lockPageScroll)
       html.style.overflow = ''
-      document.body.style.overflow = ''
+      body.style.overflow = ''
     }
   }, [isFullHeightLayout])
 
   return (
-    <div className={cn('bg-background', isFullHeightLayout ? 'lg:overflow-hidden' : 'min-h-screen')}>
+    <div className={cn('bg-background', isFullHeightLayout ? 'h-dvh overflow-hidden' : 'min-h-screen')}>
       <Sidebar config={config} />
       <MobileSidebar open={mobileOpen} onClose={() => setMobileOpen(false)} config={config} />
 
       <div
         className={cn(
           'lg:pl-60',
-          isFullHeightLayout && 'lg:flex lg:h-dvh lg:flex-col lg:overflow-hidden',
+          isFullHeightLayout && 'flex h-full flex-col overflow-hidden',
         )}
       >
         <Header onMenuClick={() => setMobileOpen(true)} className={isFullHeightLayout ? 'shrink-0' : undefined} />

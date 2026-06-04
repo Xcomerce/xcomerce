@@ -44,6 +44,16 @@ export async function markRead(notificationId: string): Promise<Notification> {
   return data as Notification
 }
 
+export async function markAllRead(userId: string): Promise<void> {
+  const { error } = await supabase
+    .from('notifications')
+    .update({ read_at: new Date().toISOString() })
+    .eq('user_id', userId)
+    .is('read_at', null)
+
+  if (error) throw error
+}
+
 export async function fetchUnreadCount(userId: string): Promise<number> {
   const { count, error } = await supabase
     .from('notifications')

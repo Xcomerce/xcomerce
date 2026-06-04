@@ -53,6 +53,21 @@ export function useMarkNotificationRead() {
   })
 }
 
+export function useMarkAllNotificationsRead() {
+  const queryClient = useQueryClient()
+  const { user } = useAuth()
+
+  return useMutation({
+    mutationFn: () => notifications.markAllRead(user!.id),
+    onSuccess: () => {
+      if (user?.id) {
+        queryClient.invalidateQueries({ queryKey: notificationKeys.list(user.id) })
+        queryClient.invalidateQueries({ queryKey: notificationKeys.unread(user.id) })
+      }
+    },
+  })
+}
+
 export function useUpdateNotificationPreferences() {
   const queryClient = useQueryClient()
   const { user } = useAuth()

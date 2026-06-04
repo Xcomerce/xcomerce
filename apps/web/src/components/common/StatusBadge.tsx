@@ -18,7 +18,7 @@ const LABELS: Record<StatusKind, Record<string, string>> = {
 
 const VARIANTS: Record<string, string> = {
   RASCUNHO: 'bg-muted text-muted-foreground',
-  PUBLICADA: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+  PUBLICADA: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
   OFERTAS_RECEBIDAS: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
   EM_NEGOCIACAO: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
   PROPOSTA_ACEITA: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',

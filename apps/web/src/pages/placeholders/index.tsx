@@ -20,6 +20,7 @@ import { CategoriesAdminPage } from '@/pages/admin/CategoriesAdminPage'
 import { AuditPage } from '@/pages/admin/AuditPage'
 import { NotificationsPage } from '@/pages/shared/NotificationsPage'
 import { PublicProfilePage } from '@/pages/shared/PublicProfilePage'
+import { SupportPage } from '@/pages/shared/SupportPage'
 
 export const buyerPages = {
   feed: <BuyerFeedPage />,
@@ -54,4 +55,5 @@ export const sharedPages = {
   billing: <BillingPage />,
   notifications: <NotificationsPage />,
   publicProfile: <PublicProfilePage />,
+  support: <SupportPage />,
 }

@@ -1,157 +1,325 @@
-import { useMemo } from 'react'
-import { Link } from 'react-router-dom'
-import { MapPin } from 'lucide-react'
-import { DEMAND_STATUS_LABELS } from '@keve/shared'
+import { useState, useMemo } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import {
+  Package,
+  Gavel,
+  Plus,
+  Check,
+  X,
+} from 'lucide-react'
 import { Alert } from '@/components/ui/alert'
-import { formatSupabaseError } from '@/lib/errors'
-import { getSupabaseProjectLabel, isSupabaseConfigured } from '@/lib/supabase'
+import { Button } from '@/components/ui/button'
+import { StatusBadge } from '@/components/common/StatusBadge'
+import { EmptyState } from '@/components/common/EmptyState'
+import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import { usePageTitle } from '@/hooks/use-page-title'
 import { useDemands } from '@/hooks/use-demands'
-import type { Demand, DemandStatus } from '@/services/demands'
-import { cn } from '@/lib/utils'
+import { useOffersForDemand, useAcceptOffer, useRejectOffer } from '@/hooks/use-offers'
+import { useCategories } from '@/hooks/use-categories'
+import { toast } from 'sonner'
+import { formatSupabaseError } from '@/lib/errors'
+import { getSupabaseProjectLabel, isSupabaseConfigured } from '@/lib/supabase'
+import type { Demand } from '@/services/demands'
+import { cn, formatRelativeDate } from '@/lib/utils'
 
-type KanbanColumn = {
-  id: string
-  label: string
-  statuses: DemandStatus[]
-  headerClass: string
-  dotClass: string
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
 }
 
-const KANBAN_COLUMNS: KanbanColumn[] = [
-  {
-    id: 'rascunho',
-    label: DEMAND_STATUS_LABELS.RASCUNHO,
-    statuses: ['RASCUNHO'],
-    headerClass: 'bg-muted/60 text-muted-foreground',
-    dotClass: 'bg-muted-foreground',
-  },
-  {
-    id: 'publicada',
-    label: DEMAND_STATUS_LABELS.PUBLICADA,
-    statuses: ['PUBLICADA'],
-    headerClass: 'bg-blue-500/10 text-blue-800 dark:text-blue-300',
-    dotClass: 'bg-blue-500',
-  },
-  {
-    id: 'ofertas',
-    label: DEMAND_STATUS_LABELS.OFERTAS_RECEBIDAS,
-    statuses: ['OFERTAS_RECEBIDAS'],
-    headerClass: 'bg-purple-500/10 text-purple-800 dark:text-purple-300',
-    dotClass: 'bg-purple-500',
-  },
-  {
-    id: 'negociacao',
-    label: DEMAND_STATUS_LABELS.EM_NEGOCIACAO,
-    statuses: ['EM_NEGOCIACAO'],
-    headerClass: 'bg-amber-500/10 text-amber-800 dark:text-amber-300',
-    dotClass: 'bg-amber-500',
-  },
-  {
-    id: 'aceita',
-    label: DEMAND_STATUS_LABELS.PROPOSTA_ACEITA,
-    statuses: ['PROPOSTA_ACEITA'],
-    headerClass: 'bg-green-500/10 text-green-800 dark:text-green-300',
-    dotClass: 'bg-green-500',
-  },
-  {
-    id: 'cancelado',
-    label: DEMAND_STATUS_LABELS.CANCELADO,
-    statuses: ['CANCELADO'],
-    headerClass: 'bg-red-500/10 text-red-800 dark:text-red-300',
-    dotClass: 'bg-red-500',
-  },
-  {
-    id: 'expirado',
-    label: DEMAND_STATUS_LABELS.EXPIRADO,
-    statuses: ['EXPIRADO'],
-    headerClass: 'bg-gray-500/10 text-gray-600 dark:text-gray-400',
-    dotClass: 'bg-gray-400',
-  },
-]
-
-function demandHref(demand: Demand): string {
-  if (demand.status === 'RASCUNHO') {
-    return `/buyer/demands/new?id=${demand.id}`
-  }
-  return `/buyer/demands/${demand.id}`
+function formatShortId(id: string) {
+  return id.slice(0, 8).toUpperCase()
 }
 
-function KanbanCard({ demand }: { demand: Demand }) {
-  const dateLabel = demand.published_at
-    ? `Publicada ${new Date(demand.published_at).toLocaleDateString('pt-BR')}`
-    : `Criada ${new Date(demand.created_at).toLocaleDateString('pt-BR')}`
-
-  return (
-    <Link
-      to={demandHref(demand)}
-      className="block rounded-xl border border-border bg-card p-3 shadow-sm transition-all duration-200 hover:border-primary/40 hover:shadow-md"
-    >
-      <p className="line-clamp-2 text-sm font-semibold leading-snug text-foreground">{demand.titulo}</p>
-      <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">{demand.descricao}</p>
-      <div className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
-        <MapPin className="h-3.5 w-3.5 shrink-0" />
-        <span className="truncate">
-          {demand.cidade}/{demand.uf}
-        </span>
-      </div>
-      <p className="mt-2 text-xs text-muted-foreground">
-        {demand.quantidade} {demand.unidade}
-      </p>
-      <p className="mt-2 text-[10px] text-muted-foreground/80">{dateLabel}</p>
-    </Link>
-  )
+function getProductImage(nome: string): string | null {
+  const nameLower = nome.toLowerCase()
+  if (nameLower.includes('cimento')) return '/products/cimento.png'
+  if (nameLower.includes('tijolo')) return '/products/tijolo.png'
+  if (nameLower.includes('brita')) return '/products/brita.png'
+  if (nameLower.includes('tinta') || nameLower.includes('esmalte')) return '/products/tinta.png'
+  if (nameLower.includes('notebook') || nameLower.includes('computador') || nameLower.includes('switch') || nameLower.includes('impressora')) return '/products/notebook.png'
+  if (nameLower.includes('arroz') || nameLower.includes('feijão') || nameLower.includes('azeite')) return '/products/arroz.png'
+  if (nameLower.includes('água') || nameLower.includes('agua')) return '/products/agua.png'
+  if (nameLower.includes('epi') || nameLower.includes('capacete') || nameLower.includes('uniforme')) return '/products/epi.png'
+  if (nameLower.includes('caixa') || nameLower.includes('embalagem') || nameLower.includes('filme stretch') || nameLower.includes('saco')) return '/products/caixa.png'
+  return null
 }
 
-function KanbanColumnView({
-  column,
-  demands,
-}: {
-  column: KanbanColumn
-  demands: Demand[]
+function OfferCardMini({ 
+  offer, 
+  isLowest, 
+  demandTitle, 
+  canAccept 
+}: { 
+  offer: any
+  isLowest: boolean
+  demandTitle: string
+  canAccept: boolean 
 }) {
+  const imageUrl = getProductImage(demandTitle)
+  const acceptOffer = useAcceptOffer()
+  const rejectOffer = useRejectOffer()
+  const navigate = useNavigate()
+  
+  const isAccepting = acceptOffer.isPending
+  const isRejecting = rejectOffer.isPending
+  
+  const handleAcceptClick = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!window.confirm('Confirmar aceitação desta proposta? As demais serão encerradas automaticamente.')) return
+    try {
+      const order = await acceptOffer.mutateAsync(offer.id)
+      toast.success('Proposta aceita! Pedido criado com sucesso.')
+      navigate(`/buyer/orders/${order.id}`)
+    } catch (err: any) {
+      toast.error(formatSupabaseError(err))
+    }
+  }
+
+  const handleRejectClick = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!window.confirm('Confirmar recusa desta proposta?')) return
+    try {
+      await rejectOffer.mutateAsync(offer.id)
+      toast.success('Proposta recusada com sucesso.')
+    } catch (err: any) {
+      toast.error(formatSupabaseError(err))
+    }
+  }
+  
   return (
-    <div className="flex h-full min-h-0 w-[min(100%,17.5rem)] min-w-[17.5rem] flex-1 flex-col rounded-xl border border-border/70 bg-muted/20">
-      <div
-        className={cn(
-          'mx-2 mt-2 flex shrink-0 items-center justify-between gap-2 rounded-lg px-3 py-2.5',
-          column.headerClass,
+    <div className="group/card bg-card border border-border/50 rounded-xl overflow-hidden shadow-sm hover:shadow-md hover:border-border/80 transition-all duration-300 flex flex-col min-h-[220px] w-[270px] shrink-0 snap-start md:w-full md:shrink">
+      {/* Imagem do Produto correspondente à categoria */}
+      <div className="relative h-24 w-full bg-muted overflow-hidden">
+        {imageUrl ? (
+          <img
+            src={imageUrl}
+            alt={demandTitle}
+            className="h-full w-full object-cover group-hover/card:scale-105 transition-transform duration-500"
+          />
+        ) : (
+          <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-muted to-muted/60">
+            <Package className="h-8 w-8 text-muted-foreground/30" />
+          </div>
         )}
-      >
-        <div className="flex min-w-0 items-center gap-2">
-          <span className={cn('h-2 w-2 shrink-0 rounded-full', column.dotClass)} />
-          <span className="truncate text-xs font-semibold uppercase tracking-wide">{column.label}</span>
+        
+        {/* Badge superior esquerdo */}
+        <div className="absolute top-2 left-2 z-10">
+          {isLowest ? (
+            <span className="inline-flex items-center rounded-md bg-emerald-500 text-[9px] font-bold text-white px-1.5 py-0.5 uppercase tracking-wider shadow-sm">
+              Melhor Preço
+            </span>
+          ) : (
+            <span className="inline-flex items-center rounded-md bg-indigo-600 text-[9px] font-bold text-white px-1.5 py-0.5 uppercase tracking-wider shadow-sm">
+              Proposta
+            </span>
+          )}
         </div>
-        <span className="shrink-0 rounded-md bg-background/60 px-2 py-0.5 text-xs font-bold tabular-nums">
-          {demands.length}
-        </span>
       </div>
 
-      <div className="scrollbar-kanban-column mx-2 mb-2 mt-2 flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1">
-        {demands.length === 0 ? (
-          <div className="flex min-h-0 flex-1 items-center justify-center rounded-lg border border-dashed border-border/60 px-3 py-6">
-            <p className="text-center text-xs text-muted-foreground">Nenhuma demanda</p>
+      {/* Detalhes da Proposta */}
+      <div className="p-3 flex-1 flex flex-col justify-between gap-2.5">
+        <div className="space-y-1">
+          <h4 className="font-semibold text-xs text-foreground truncate" title={offer.supplier_name || 'Fornecedor'}>
+            {offer.supplier_name || 'Fornecedor Parceiro'}
+          </h4>
+          {/* Formato de Avaliação: ★ 0.0 (0 avaliações) */}
+          <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-medium">
+            <span className="text-amber-500">★</span>
+            <span className="text-foreground font-semibold">
+              {(offer.supplier_avg_rating ?? 0).toFixed(1)}
+            </span>
+            <span className="text-muted-foreground/80">
+              ({offer.supplier_total_ratings ?? 0} {offer.supplier_total_ratings === 1 ? 'avaliação' : 'avaliações'})
+            </span>
           </div>
-        ) : (
-          demands.map((demand) => <KanbanCard key={demand.id} demand={demand} />)
-        )}
+          <p className="text-[10px] text-muted-foreground font-medium">
+            Entrega: {offer.prazo_entrega_dias} {offer.prazo_entrega_dias === 1 ? 'dia' : 'dias'}
+          </p>
+        </div>
+        
+        <div className="pt-2 border-t border-border/40 flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-primary">
+              {formatCurrency(offer.valor)}
+            </span>
+            <span className="text-[10px] text-muted-foreground font-medium">
+              Qtd: {offer.quantidade}
+            </span>
+          </div>
+
+          {/* Botões de Ações ou Status */}
+          {offer.status === 'enviada' && canAccept ? (
+            <div className="flex items-center gap-1.5 pt-0.5">
+              <button
+                onClick={handleRejectClick}
+                disabled={isRejecting || isAccepting}
+                className="flex-1 flex items-center justify-center gap-1 rounded-full border border-red-200 bg-red-50/30 hover:bg-red-50 text-[10px] font-bold text-red-600 hover:text-red-700 py-1 transition-colors text-center disabled:opacity-50 h-7"
+              >
+                <X className="h-3 w-3 shrink-0" />
+                <span>{isRejecting ? '...' : 'Recusar'}</span>
+              </button>
+              <button
+                onClick={handleAcceptClick}
+                disabled={isRejecting || isAccepting}
+                className="flex-1 flex items-center justify-center gap-1 rounded-full bg-emerald-600 hover:bg-emerald-700 text-[10px] font-bold text-white py-1 transition-colors text-center disabled:opacity-50 h-7"
+              >
+                <Check className="h-3 w-3 shrink-0" />
+                <span>{isAccepting ? '...' : 'Aceitar'}</span>
+              </button>
+            </div>
+          ) : offer.status === 'aceita' ? (
+            <div className="text-center bg-emerald-500/10 border border-emerald-500/20 rounded-full py-1">
+              <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                Aceita
+              </span>
+            </div>
+          ) : offer.status === 'rejeitada' ? (
+            <div className="text-center bg-destructive/10 border border-destructive/20 rounded-full py-1">
+              <span className="text-[10px] font-bold text-destructive">
+                Recusada
+              </span>
+            </div>
+          ) : null}
+        </div>
       </div>
     </div>
   )
 }
 
-function KanbanSkeleton() {
+function OfferPlaceholderCard({ demandTitle, isDraft }: { demandTitle: string, isDraft: boolean }) {
+  const imageUrl = getProductImage(demandTitle)
+  
   return (
-    <div className="flex h-full min-h-0 gap-3 overflow-hidden">
-      {KANBAN_COLUMNS.map((col) => (
-        <div
-          key={col.id}
-          className="flex h-full min-h-0 w-[min(100%,17.5rem)] min-w-[17.5rem] flex-1 flex-col gap-3 rounded-xl border border-border/70 bg-muted/20 p-3"
-        >
-          <div className="h-9 shrink-0 animate-pulse rounded-lg bg-muted" />
-          <div className="min-h-0 flex-1 animate-pulse rounded-xl bg-muted/80" />
+    <div className="bg-card/40 border border-dashed border-border/80 rounded-xl overflow-hidden flex flex-col opacity-60 min-h-[220px] w-[270px] shrink-0 snap-start md:w-full md:shrink">
+      {/* Imagem do Produto (Opaca/Grayscale) */}
+      <div className="relative h-24 w-full bg-muted/30 overflow-hidden grayscale">
+        {imageUrl ? (
+          <img
+            src={imageUrl}
+            alt={demandTitle}
+            className="h-full w-full object-cover opacity-20"
+          />
+        ) : (
+          <div className="h-full w-full flex items-center justify-center bg-muted/20">
+            <Package className="h-8 w-8 text-muted-foreground/20" />
+          </div>
+        )}
+        
+        {/* Badge superior esquerdo */}
+        <div className="absolute top-2 left-2 z-10">
+          <span className="inline-flex items-center gap-1 rounded-md bg-muted/80 border border-border text-[9px] font-medium text-muted-foreground px-1.5 py-0.5">
+            <span className={cn("h-1.5 w-1.5 rounded-full bg-muted-foreground/40", !isDraft && "bg-amber-400 animate-pulse")} />
+            {isDraft ? 'Rascunho' : 'Aguardando'}
+          </span>
         </div>
-      ))}
+      </div>
+
+      {/* Detalhes vazios */}
+      <div className="p-3 flex-1 flex flex-col justify-between gap-2.5">
+        <div className="space-y-0.5">
+          <h4 className="font-medium text-xs text-muted-foreground italic">
+            {isDraft ? 'Demanda em rascunho' : 'Buscando propostas...'}
+          </h4>
+          <p className="text-[9px] text-muted-foreground/60 leading-tight">
+            {isDraft ? 'Publique para iniciar o leilão' : 'Notificando fornecedores parceiros'}
+          </p>
+        </div>
+        
+        <div className="pt-2 border-t border-border/20 flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-muted-foreground/55">
+              Sob consulta
+            </span>
+            <span className="text-[9px] text-muted-foreground/45">
+              --
+            </span>
+          </div>
+          {/* Espaço em branco para alinhar com cards reais que possuem botões */}
+          <div className="h-7" />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function DemandItem({ demand }: { demand: Demand }) {
+  const { data: offers, isLoading: loadingOffers } = useOffersForDemand(demand.id)
+  const offerList = offers ?? []
+  const lowestValue = offerList.length > 0 ? Math.min(...offerList.map((o) => o.valor)) : null
+
+  const destination = demand.status === 'RASCUNHO'
+    ? `/buyer/demands/new?id=${demand.id}`
+    : `/buyer/demands/${demand.id}/auction`
+
+  const canAccept = !['RASCUNHO', 'CANCELADO', 'EXPIRADO', 'PROPOSTA_ACEITA'].includes(demand.status)
+
+  // Render exactly 4 cards in the grid
+  const renderCards = () => {
+    if (loadingOffers) {
+      return Array.from({ length: 4 }).map((_, idx) => (
+        <LoadingSkeleton key={`skeleton-${idx}`} className="h-[220px] w-[270px] shrink-0 md:w-full md:shrink rounded-xl" />
+      ))
+    }
+
+    const cards: React.ReactNode[] = []
+    
+    // Add active offers (up to 4)
+    offerList.slice(0, 4).forEach((offer) => {
+      const isLowest = offer.valor === lowestValue
+      cards.push(
+        <OfferCardMini
+          key={offer.id}
+          offer={offer}
+          isLowest={isLowest}
+          demandTitle={demand.titulo}
+          canAccept={canAccept}
+        />
+      )
+    })
+
+    // Fill the remaining slots with placeholders up to 4
+    const placeholderCount = 4 - cards.length
+    for (let i = 0; i < placeholderCount; i++) {
+      cards.push(
+        <OfferPlaceholderCard
+          key={`placeholder-${demand.id}-${i}`}
+          demandTitle={demand.titulo}
+          isDraft={demand.status === 'RASCUNHO'}
+        />
+      )
+    }
+
+    return cards
+  }
+
+  return (
+    <Link
+      to={destination}
+      className="group block transition-all duration-300 flex flex-col gap-3.5"
+    >
+      {/* ID PEDIDO > Produto (Header) */}
+      <div className="flex items-center gap-2 flex-wrap text-sm md:text-base font-semibold text-foreground">
+        <span className="text-muted-foreground font-mono">ID#{formatShortId(demand.id)}</span>
+        <span className="text-muted-foreground/40 font-normal">&gt;</span>
+        <span className="group-hover:text-primary transition-colors">{demand.titulo}</span>
+      </div>
+
+      {/* Grid of 4 Cards (Offers) - Horizontal Scroll on Mobile */}
+      <div className="flex overflow-x-auto gap-4 pb-3 snap-x snap-mandatory md:grid md:grid-cols-4 md:gap-4 md:snap-none [&::-webkit-scrollbar]:hidden [scrollbar-width:none]">
+        {renderCards()}
+      </div>
+    </Link>
+  )
+}
+
+function DashboardSkeleton() {
+  return (
+    <div className="space-y-6 px-4 md:px-0">
+      <LoadingSkeleton className="h-40 w-full rounded-2xl" />
+      <LoadingSkeleton className="h-48 w-full rounded-2xl" />
+      <LoadingSkeleton className="h-48 w-full rounded-2xl" />
     </div>
   )
 }
@@ -159,46 +327,136 @@ function KanbanSkeleton() {
 export function BuyerDashboardPage() {
   usePageTitle()
   const { data: demands, isLoading, error } = useDemands()
+  const { data: categories } = useCategories()
+  const navigate = useNavigate()
 
-  const columnsData = useMemo(() => {
-    const list = demands ?? []
-    return KANBAN_COLUMNS.map((column) => ({
-      column,
-      demands: list
-        .filter((d) => column.statuses.includes(d.status))
-        .sort((a, b) => new Date(b.updated_at ?? b.created_at).getTime() - new Date(a.updated_at ?? a.created_at).getTime()),
-    }))
-  }, [demands])
+  const [selectedCategoryId, setSelectedCategoryId] = useState('')
+
+  const userCategories = useMemo(() => {
+    if (!demands || !categories) return []
+    const uniqueCategoryIds = Array.from(
+      new Set(demands.map((d) => d.category_id).filter(Boolean))
+    )
+    return categories.filter((c) => uniqueCategoryIds.includes(c.id))
+  }, [demands, categories])
+
+  const filteredDemands = useMemo(() => {
+    if (!demands) return []
+    let result = [...demands]
+
+    if (selectedCategoryId) {
+      result = result.filter((d) => d.category_id === selectedCategoryId)
+    }
+
+    return result.sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    )
+  }, [demands, selectedCategoryId])
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      {!isSupabaseConfigured && (
-        <Alert className="mx-4 mt-4 shrink-0 border-amber-500/50 text-amber-900 dark:text-amber-200 lg:mx-6">
-          Configure o Supabase em <code className="text-xs">apps/web/.env.local</code> (URL e anon key do
-          dashboard). O MCP do Cursor usa outro projeto — o app só lê o .env.
-        </Alert>
-      )}
+    <div className="flex-1 h-full min-h-0 flex flex-col overflow-hidden px-0 py-6 md:px-6">
+      <div className="w-full flex-1 min-h-0 flex flex-col gap-6 overflow-hidden">
+        {!isSupabaseConfigured && (
+          <div className="px-4 md:px-0">
+            <Alert className="border-amber-500/50 text-amber-900 dark:text-amber-200">
+              Configure o Supabase em <code className="text-xs">apps/web/.env.local</code> (URL e anon key do
+              dashboard). O MCP do Cursor usa outro projeto — o app só lê o .env.
+            </Alert>
+          </div>
+        )}
 
-      {error && (
-        <Alert className="mx-4 mt-4 shrink-0 border-destructive/50 text-destructive lg:mx-6">
-          <p>{formatSupabaseError(error)}</p>
-          <p className="mt-2 text-xs opacity-80">
-            Projeto no .env: <span className="font-mono">{getSupabaseProjectLabel()}</span>
-          </p>
-        </Alert>
-      )}
+        {error && (
+          <div className="px-4 md:px-0">
+            <Alert className="border-destructive/50 text-destructive">
+              <p>{formatSupabaseError(error)}</p>
+              <p className="mt-2 text-xs opacity-80">
+                Projeto no .env: <span className="font-mono">{getSupabaseProjectLabel()}</span>
+              </p>
+            </Alert>
+          </div>
+        )}
 
-      {isLoading ? (
-        <div className="min-h-0 flex-1 px-3 pb-3 pt-3 lg:px-4">
-          <KanbanSkeleton />
-        </div>
-      ) : (
-        <div className="scrollbar-kanban-board flex min-h-0 flex-1 gap-3 overflow-x-auto overflow-y-hidden px-3 pb-3 pt-3 lg:px-4">
-          {columnsData.map(({ column, demands: columnDemands }) => (
-            <KanbanColumnView key={column.id} column={column} demands={columnDemands} />
-          ))}
-        </div>
-      )}
+        {isLoading ? (
+          <DashboardSkeleton />
+        ) : demands && demands.length === 0 ? (
+          <div className="px-4 md:px-0">
+            <EmptyState
+              icon={Gavel}
+              title="Nenhuma solicitação criada"
+              description="Você ainda não solicitou nenhuma proposta. Comece criando uma nova demanda."
+              actionLabel="Solicitar oferta"
+              onAction={() => navigate('/buyer/demands/new')}
+            />
+          </div>
+        ) : (
+          <div className="flex-1 min-h-0 flex flex-col gap-6 overflow-hidden">
+            {/* Filtros e Ação */}
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between w-full shrink-0">
+              {/* Category Chips */}
+              <div className="flex overflow-x-auto gap-2 pb-2 px-4 [&::-webkit-scrollbar]:hidden [scrollbar-width:none] [-ms-overflow-style:none] md:px-0 md:flex-wrap md:overflow-x-visible md:pb-0">
+                <Button
+                  size="sm"
+                  variant={selectedCategoryId === '' ? 'default' : 'outline'}
+                  onClick={() => setSelectedCategoryId('')}
+                  className="rounded-full px-4 text-sm font-semibold shrink-0"
+                >
+                  Todas
+                </Button>
+                {userCategories.map((category) => (
+                  <Button
+                    key={category.id}
+                    size="sm"
+                    variant={selectedCategoryId === category.id ? 'default' : 'outline'}
+                    onClick={() => setSelectedCategoryId(category.id)}
+                    className="rounded-full px-4 text-sm font-semibold shrink-0"
+                  >
+                    {category.name}
+                  </Button>
+                ))}
+              </div>
+
+              {/* Ação */}
+              <div className="hidden md:flex flex-wrap items-center gap-3 shrink-0">
+                <Button
+                  onClick={() => navigate('/buyer/demands/new')}
+                  className="rounded-xl bg-primary text-primary-foreground hover:bg-brand-primary-dark shadow-sm flex items-center justify-center gap-2 h-[38px] px-4 font-semibold text-sm shrink-0"
+                >
+                  <Plus className="h-4 w-4" />
+                  Nova Oferta
+                </Button>
+              </div>
+            </div>
+
+            {/* Lista ou Estado Vazio Filtrado */}
+            {filteredDemands.length === 0 ? (
+              <div className="flex-1 flex flex-col items-center justify-center py-12 text-center bg-transparent">
+                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-secondary text-muted-foreground">
+                  <Package size={24} />
+                </div>
+                <h3 className="font-display text-lg font-semibold">Nenhuma solicitação encontrada</h3>
+                <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+                  Nenhum resultado corresponde aos filtros selecionados. Tente redefinir seus filtros ou limpe-os abaixo.
+                </p>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSelectedCategoryId('')
+                  }}
+                  className="mt-4 rounded-xl text-xs font-semibold"
+                >
+                  Limpar filtros
+                </Button>
+              </div>
+            ) : (
+              <div className="flex-1 min-h-0 overflow-y-auto scrollbar-custom space-y-10 px-4 md:px-0 md:pr-1 pb-24 md:pb-6">
+                {filteredDemands.map((demand) => (
+                  <DemandItem key={demand.id} demand={demand} />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

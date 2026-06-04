@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { ShoppingBag } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Alert } from '@/components/ui/alert'
 import { EmptyState } from '@/components/common/EmptyState'
 import { StatusBadge } from '@/components/common/StatusBadge'
@@ -15,12 +15,6 @@ export function BuyerOrdersPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="font-display text-2xl font-semibold">Meus pedidos</h2>
-        <p className="text-sm text-muted-foreground">
-          Acompanhe o workflow pós-aceite de propostas.
-        </p>
-      </div>
 
       {error && (
         <Alert className="border-destructive/50 text-destructive">
@@ -44,9 +38,9 @@ export function BuyerOrdersPage() {
             <Link key={order.id} to={`/buyer/orders/${order.id}`}>
               <Card className="transition-colors hover:border-primary/40 hover:bg-muted/20">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-base">
-                    Pedido #{order.id.slice(0, 8).toUpperCase()}
-                  </CardTitle>
+                  <div className="inline-flex items-center rounded-full border border-border px-2.5 py-0.5 font-mono text-xs font-medium text-foreground tracking-wider bg-transparent">
+                    ID#{order.id.slice(0, 8).toUpperCase()}
+                  </div>
                   <StatusBadge status={order.status} kind="order" />
                 </CardHeader>
                 <CardContent className="text-sm text-muted-foreground">

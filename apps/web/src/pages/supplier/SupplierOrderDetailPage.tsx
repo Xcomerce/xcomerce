@@ -97,8 +97,12 @@ export function SupplierOrderDetailPage() {
           </Link>
         </Button>
         <div className="flex-1">
-          <h1 className="font-display text-2xl font-bold">Pedido #{order.id.slice(0, 8)}</h1>
-          <StatusBadge status={order.status} kind="order" className="mt-1" />
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="inline-flex items-center rounded-full border border-border px-2.5 py-0.5 font-mono text-xs font-medium text-foreground tracking-wider bg-transparent">
+              ID#{order.id.slice(0, 8).toUpperCase()}
+            </div>
+            <StatusBadge status={order.status} kind="order" />
+          </div>
         </div>
       </div>
 

@@ -1,5 +1,5 @@
 export const PAGE_TITLES: Record<string, string> = {
-  '/': 'Keven B2b',
+  '/': 'X COMERCE',
   '/para-compradores': 'Para compradores',
   '/para-fornecedores': 'Para fornecedores',
   '/pricing': 'Planos e preços',
@@ -9,8 +9,8 @@ export const PAGE_TITLES: Record<string, string> = {
   '/auth/forgot-password': 'Recuperar senha',
   '/auth/reset-password': 'Nova senha',
   '/auth/select-role': 'Escolher perfil',
-  '/buyer/feed': 'Feed de ofertas',
-  '/buyer/dashboard': 'Leilão de ofertas',
+  '/buyer/feed': 'Feed',
+  '/buyer/dashboard': 'Ofertas',
   '/buyer/demands/new': 'Solicitar oferta',
   '/buyer/orders': 'Pedidos',
   '/supplier/board': 'Oportunidades',
@@ -29,12 +29,12 @@ export const PAGE_TITLES: Record<string, string> = {
 
 export function resolvePageTitle(pathname: string): string {
   if (PAGE_TITLES[pathname]) return PAGE_TITLES[pathname]
-  if (pathname.startsWith('/buyer/demands/') && pathname.endsWith('/auction')) return 'Leilão de ofertas'
+  if (pathname.startsWith('/buyer/demands/') && pathname.endsWith('/auction')) return 'Ofertas'
   if (pathname.startsWith('/buyer/demands/')) return 'Detalhe da demanda'
   if (pathname.startsWith('/buyer/orders/')) return 'Detalhe do pedido'
   if (pathname.startsWith('/supplier/offers/')) return 'Proposta'
   if (pathname.startsWith('/supplier/catalog/') && pathname.endsWith('/edit')) return 'Editar produto'
   if (pathname.startsWith('/supplier/orders/')) return 'Detalhe do pedido'
   if (pathname.startsWith('/profile/')) return 'Perfil público'
-  return 'Keven B2b'
+  return 'X COMERCE'
 }
