@@ -333,10 +333,10 @@ export function BuyerFeedPage() {
       {/* Grid de Produtos */}
       <div className="space-y-4">
         {loadingProducts ? (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 md:gap-6 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 3xl:grid-cols-8">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 md:gap-6 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6">
             {Array.from({ length: 8 }).map((_, i) => (
               <div key={i} className="space-y-2.5">
-                <div className="aspect-[4/5] w-full animate-pulse bg-secondary rounded-xl" />
+                <div className="aspect-[4/4.5] w-full animate-pulse bg-secondary rounded-xl" />
                 <div className="space-y-2 px-0.5">
                   <div className="h-4 w-2/3 animate-pulse rounded bg-secondary" />
                   <div className="h-3 w-1/2 animate-pulse rounded bg-secondary" />
@@ -356,10 +356,10 @@ export function BuyerFeedPage() {
             </p>
           </div>
         ) : (
-          <div className="space-y-10">
+          <div className="space-y-16">
             {/* Seção Em Destaque (Primeira Seção) */}
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 md:gap-6 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 3xl:grid-cols-8">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 md:gap-6 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6">
                 {products.slice(0, 12).map((product, index) => (
                   <div
                     key={`destaque-${product.id}`}
@@ -377,7 +377,7 @@ export function BuyerFeedPage() {
                     className="cursor-pointer"
                   >
                     {/* Imagem do Produto */}
-                    <div className="relative aspect-[4/5] w-full bg-secondary overflow-hidden rounded-xl border border-border/40 hover:border-primary/45 transition-all duration-300 hover:scale-[1.03] hover:shadow-sm">
+                    <div className="relative aspect-[4/4.5] w-full bg-secondary overflow-hidden rounded-xl border border-border/40 hover:border-primary/45 transition-all duration-300 hover:scale-[1.03] hover:shadow-sm">
                       <span className={cn(
                         "absolute top-2.5 left-2.5 z-10 items-center rounded-full bg-[#7F3CEF] px-2.5 py-0.5 text-[9px] font-bold text-white shadow-sm uppercase tracking-wider",
                         getBadgeVisibilityClass(index)
@@ -428,7 +428,7 @@ export function BuyerFeedPage() {
                 <h4 className="font-display text-base font-semibold text-foreground/80 pl-0.5 mt-8">
                   Mais procurados em {group.categoryName}
                 </h4>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 md:gap-6 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 3xl:grid-cols-8">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 md:gap-6 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6">
                   {group.products.map((product) => (
                     <div
                       key={product.id}
@@ -446,7 +446,7 @@ export function BuyerFeedPage() {
                       className="cursor-pointer"
                     >
                       {/* Imagem do Produto */}
-                      <div className="relative aspect-[4/5] w-full bg-secondary overflow-hidden rounded-xl border border-border/40 hover:border-primary/45 transition-all duration-300 hover:scale-[1.03] hover:shadow-sm">
+                      <div className="relative aspect-[4/4.5] w-full bg-secondary overflow-hidden rounded-xl border border-border/40 hover:border-primary/45 transition-all duration-300 hover:scale-[1.03] hover:shadow-sm">
                         {getProductImage(product.nome, product.image_url) ? (
                           <img
                             src={getProductImage(product.nome, product.image_url) || ''}
