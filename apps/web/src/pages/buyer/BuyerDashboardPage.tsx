@@ -295,10 +295,16 @@ function DemandItem({ demand }: { demand: Demand }) {
           <p className="text-sm font-semibold text-muted-foreground">
             {demand.status === 'RASCUNHO' ? 'Rascunho criado' : 'Buscando propostas...'}
           </p>
-          <p className="text-xs text-muted-foreground/60 mt-0.5">
-            {demand.status === 'RASCUNHO' 
-              ? 'Publique esta demanda para começar a receber propostas.'
-              : 'Notificando fornecedores parceiros. Novas ofertas aparecerão aqui.'}
+          <p className="text-xs text-muted-foreground/60 mt-0.5 px-4">
+            {demand.status === 'RASCUNHO' ? (
+              <>
+                Publique esta demanda para <br className="sm:hidden" /> começar a receber propostas.
+              </>
+            ) : (
+              <>
+                Notificando fornecedores parceiros. <br className="sm:hidden" /> Novas ofertas aparecerão aqui.
+              </>
+            )}
           </p>
         </div>
       )
