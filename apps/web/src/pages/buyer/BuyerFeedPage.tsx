@@ -118,11 +118,25 @@ export function BuyerFeedPage() {
       groups[catId].products.push(product)
     })
     
-    return Object.entries(groups).map(([id, group]) => ({
-      categoryId: id,
-      categoryName: group.categoryName,
-      products: group.products,
-    }))
+    return Object.entries(groups).map(([id, group]) => {
+      const categoryProducts = group.products
+      const paddedProducts = [...categoryProducts]
+      if (categoryProducts.length > 0) {
+        while (paddedProducts.length < 12) {
+          paddedProducts.push(
+            ...categoryProducts.map((p, idx) => ({
+              ...p,
+              id: `${p.id}-dup-${paddedProducts.length + idx}`
+            }))
+          )
+        }
+      }
+      return {
+        categoryId: id,
+        categoryName: group.categoryName,
+        products: paddedProducts.slice(0, 12),
+      }
+    })
   }, [products])
 
   function handleScroll() {
