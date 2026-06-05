@@ -5,7 +5,7 @@ export function AuthLayout() {
     <div className="grid min-h-screen lg:grid-cols-2">
       <div className="hidden flex-col justify-between bg-brand-dark p-10 text-white lg:flex">
         <Link to="/" className="flex items-center">
-          <img src="/logo-clara.svg" className="h-10 object-contain" alt="X COMERCE" />
+          <img src="/logo-clara.svg" className="h-14 object-contain" alt="X COMERCE" />
         </Link>
         <div>
           <h2 className="font-display text-3xl font-bold leading-tight">
@@ -20,8 +20,8 @@ export function AuthLayout() {
       <div className="flex flex-col justify-center px-4 py-10 sm:px-8">
         <div className="mb-8 lg:hidden">
           <Link to="/" className="flex items-center">
-            <img src="/logo-dark.svg" className="h-10 object-contain dark:hidden" alt="X COMERCE" />
-            <img src="/logo-clara.svg" className="h-10 object-contain hidden dark:block" alt="X COMERCE" />
+            <img src="/logo-dark.svg" className="h-12 object-contain dark:hidden" alt="X COMERCE" />
+            <img src="/logo-clara.svg" className="h-12 object-contain hidden dark:block" alt="X COMERCE" />
           </Link>
         </div>
         <div className="mx-auto w-full max-w-md">

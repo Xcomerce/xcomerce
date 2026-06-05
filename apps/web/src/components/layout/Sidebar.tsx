@@ -13,8 +13,8 @@ export function Sidebar({ config }: { config: RoleNavConfig }) {
   return (
     <aside className="glass-sidebar fixed left-0 top-0 z-40 hidden h-screen w-60 flex-col px-3 py-4 lg:flex">
       <Link to="/" className="mb-6 flex items-center px-2">
-        <img src="/logo-dark.svg" className="h-10 object-contain dark:hidden" alt="X COMERCE" />
-        <img src="/logo-clara.svg" className="h-10 object-contain hidden dark:block" alt="X COMERCE" />
+        <img src="/logo-dark.svg" className="h-12 object-contain dark:hidden" alt="X COMERCE" />
+        <img src="/logo-clara.svg" className="h-12 object-contain hidden dark:block" alt="X COMERCE" />
       </Link>
 
       <nav className="scrollbar-custom flex-1 overflow-y-auto">
