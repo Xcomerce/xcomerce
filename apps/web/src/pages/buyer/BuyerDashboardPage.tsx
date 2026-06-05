@@ -290,45 +290,16 @@ function DemandItem({ demand }: { demand: Demand }) {
 
     if (offerList.length === 0) {
       return (
-        <div className="col-span-4 w-full bg-card/40 border border-dashed border-border rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-6 min-h-[170px] shrink-0 md:shrink">
-          <div className="flex items-center gap-5">
-            {/* Radar Animation */}
-            <div className="relative flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 shrink-0">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/20 opacity-75" />
-              <div className="relative h-9 w-9 rounded-full bg-primary flex items-center justify-center shadow-sm">
-                <Search className="h-4 w-4 text-primary-foreground" />
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <h4 className="font-display font-semibold text-sm text-foreground">
-                {demand.status === 'RASCUNHO' ? 'Rascunho criado' : 'Buscando propostas...'}
-              </h4>
-              <p className="text-xs text-muted-foreground max-w-md">
-                {demand.status === 'RASCUNHO' 
-                  ? 'Publique esta demanda para notificar fornecedores da região e receber orçamentos.'
-                  : `Buscando propostas ativamente em ${demand.cidade}/${demand.uf} (raio de ${demand.raio_km}km).`}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full md:w-auto shrink-0 pt-4 md:pt-0 border-t md:border-t-0 md:pl-6 md:border-l border-border/60">
-            <div className="space-y-0.5 text-left md:text-right min-w-[150px]">
-              <div className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Tempo de resposta</div>
-              <div className="text-sm font-bold text-foreground">Em até 24 horas</div>
-              <div className="text-[10px] text-muted-foreground/60">Notificando fornecedores parceiros</div>
-            </div>
-            
-            {demand.status === 'RASCUNHO' ? (
-              <Button size="sm" onClick={() => navigate(`/buyer/demands/new?id=${demand.id}`)} className="font-semibold px-4 h-9">
-                Editar e Publicar
-              </Button>
-            ) : (
-              <Button size="sm" variant="outline" asChild className="font-semibold px-4 h-9">
-                <Link to={`/buyer/demands/${demand.id}/auction`}>Ver detalhes</Link>
-              </Button>
-            )}
-          </div>
+        <div className="col-span-4 w-full py-8 text-center border border-dashed border-border rounded-2xl bg-background/50">
+          <Search className="mx-auto h-8 w-8 text-muted-foreground/30 mb-2" />
+          <p className="text-sm font-semibold text-muted-foreground">
+            {demand.status === 'RASCUNHO' ? 'Rascunho criado' : 'Buscando propostas...'}
+          </p>
+          <p className="text-xs text-muted-foreground/60 mt-0.5">
+            {demand.status === 'RASCUNHO' 
+              ? 'Publique esta demanda para começar a receber propostas.'
+              : 'Notificando fornecedores parceiros. Novas ofertas aparecerão aqui.'}
+          </p>
         </div>
       )
     }
