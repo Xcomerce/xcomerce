@@ -9,8 +9,10 @@ import { QuotaBadge } from '@/components/common/QuotaBadge'
 import { PaywallModal } from '@/components/common/PaywallModal'
 import { useProducts, useDeleteProduct, useProductCount } from '@/hooks/use-products'
 import { useSubscription } from '@/hooks/use-billing'
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { translateSupabaseError } from '@/lib/errors'
+import { useQuery } from '@tanstack/react-query'
+import { supabase } from '@/lib/supabase'
 
 export function CatalogPage() {
   const navigate = useNavigate()
@@ -19,9 +21,28 @@ export function CatalogPage() {
   const { data: count = 0 } = useProductCount()
   const { data: subscription } = useSubscription()
   const deleteProduct = useDeleteProduct()
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null)
 
   const limit = subscription?.plan?.max_catalog_items ?? null
   const atLimit = limit !== null && count >= limit
+
+  const uniqueCategoryIds = useMemo(() => {
+    return Array.from(new Set(products.map((p) => p.category_id)))
+  }, [products])
+
+  const { data: categories = [] } = useQuery({
+    queryKey: ['categories-by-ids', uniqueCategoryIds],
+    queryFn: async () => {
+      if (uniqueCategoryIds.length === 0) return []
+      const { data, error } = await supabase
+        .from('categories')
+        .select('id, name')
+        .in('id', uniqueCategoryIds)
+      if (error) throw error
+      return data
+    },
+    enabled: uniqueCategoryIds.length > 0,
+  })
 
   function handleNewProduct() {
     if (atLimit) {
@@ -43,12 +64,35 @@ export function CatalogPage() {
 
   const activeProducts = products.filter((p) => p.is_active)
 
+  const filteredProducts = selectedCategoryId
+    ? activeProducts.filter((p) => p.category_id === selectedCategoryId)
+    : activeProducts
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="font-display text-2xl font-bold">Catálogo</h1>
-          <p className="text-sm text-muted-foreground">Produtos exibidos no seu perfil de fornecedor</p>
+        <div className="flex flex-wrap gap-2">
+          {categories.length > 0 && (
+            <>
+              <Button
+                size="sm"
+                variant={selectedCategoryId === null ? 'default' : 'outline'}
+                onClick={() => setSelectedCategoryId(null)}
+              >
+                Todos
+              </Button>
+              {categories.map((cat) => (
+                <Button
+                  key={cat.id}
+                  size="sm"
+                  variant={selectedCategoryId === cat.id ? 'default' : 'outline'}
+                  onClick={() => setSelectedCategoryId(cat.id)}
+                >
+                  {cat.name}
+                </Button>
+              ))}
+            </>
+          )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <QuotaBadge used={count} limit={limit} label="Itens" />
@@ -74,7 +118,7 @@ export function CatalogPage() {
       {activeProducts.length > 0 && (
         <>
           <ProductGrid
-            products={activeProducts}
+            products={filteredProducts}
             editHref={(id) => `/supplier/catalog/${id}/edit`}
           />
           <div className="flex flex-wrap gap-2 border-t pt-4">

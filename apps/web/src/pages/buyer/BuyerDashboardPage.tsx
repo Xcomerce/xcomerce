@@ -101,7 +101,7 @@ function OfferCardMini({
   return (
     <div 
       onClick={handleCardClick}
-      className="group/card cursor-pointer bg-card border border-border/50 rounded-xl overflow-hidden shadow-sm hover:shadow-md hover:border-border/80 transition-all duration-300 flex flex-col min-h-[220px] w-[270px] shrink-0 snap-start md:w-full md:shrink"
+      className="group/card cursor-pointer bg-card border border-border/50 rounded-xl overflow-hidden hover:border-border/80 transition-all duration-300 flex flex-col min-h-[220px] w-[270px] shrink-0 snap-start md:w-full md:shrink"
     >
       {/* Imagem do Produto correspondente à categoria */}
       <div className="relative h-24 w-full bg-muted overflow-hidden">
@@ -215,8 +215,15 @@ function OfferPlaceholderCard({
   
   return (
     <div 
-      onClick={() => navigate(destination)}
-      className="cursor-pointer bg-card/40 border border-dashed border-border/80 rounded-xl overflow-hidden flex flex-col opacity-60 min-h-[220px] w-[270px] shrink-0 snap-start md:w-full md:shrink"
+      onClick={() => {
+        if (isDraft && destination) {
+          navigate(destination)
+        }
+      }}
+      className={cn(
+        "bg-card/40 border border-dashed border-border/80 rounded-xl overflow-hidden flex flex-col opacity-60 min-h-[220px] w-[270px] shrink-0 snap-start md:w-full md:shrink",
+        isDraft && "cursor-pointer"
+      )}
     >
       {/* Imagem do Produto (Opaca/Grayscale) */}
       <div className="relative h-24 w-full bg-muted/30 overflow-hidden grayscale">
@@ -276,7 +283,7 @@ function DemandItem({ demand }: { demand: Demand }) {
 
   const destination = demand.status === 'RASCUNHO'
     ? `/buyer/demands/new?id=${demand.id}`
-    : `/buyer/demands/${demand.id}/auction`
+    : `/buyer/demands/${demand.id}`
 
   const canAccept = !['RASCUNHO', 'CANCELADO', 'EXPIRADO', 'PROPOSTA_ACEITA'].includes(demand.status)
 
@@ -343,17 +350,31 @@ function DemandItem({ demand }: { demand: Demand }) {
     return cards
   }
 
+  const isDraft = demand.status === 'RASCUNHO'
+
+  const headerContent = (
+    <>
+      <span className="text-muted-foreground font-mono">ID#{formatShortId(demand.id)}</span>
+      <span className="text-muted-foreground/40 font-normal">&gt;</span>
+      <span className={cn(isDraft && "group-hover:text-primary transition-colors")}>{demand.titulo}</span>
+    </>
+  )
+
   return (
     <div className="group flex flex-col gap-3.5 w-full min-w-0">
       {/* ID PEDIDO > Produto (Header) */}
-      <Link
-        to={destination}
-        className="flex items-center gap-2 flex-wrap text-sm md:text-base font-semibold text-foreground"
-      >
-        <span className="text-muted-foreground font-mono">ID#{formatShortId(demand.id)}</span>
-        <span className="text-muted-foreground/40 font-normal">&gt;</span>
-        <span className="group-hover:text-primary transition-colors">{demand.titulo}</span>
-      </Link>
+      {isDraft ? (
+        <Link
+          to={destination}
+          className="flex items-center gap-2 flex-wrap text-sm md:text-base font-semibold text-foreground"
+        >
+          {headerContent}
+        </Link>
+      ) : (
+        <div className="flex items-center gap-2 flex-wrap text-sm md:text-base font-semibold text-foreground">
+          {headerContent}
+        </div>
+      )}
 
       {/* Grid of 4 Cards (Offers) - Horizontal Scroll on Mobile */}
       <div className="flex overflow-x-auto gap-4 pb-3 snap-x snap-mandatory md:grid md:grid-cols-4 md:gap-4 md:snap-none [&::-webkit-scrollbar]:hidden [scrollbar-width:none] min-w-0 w-[calc(100%+2rem)] -mx-4 px-4 scroll-px-4 md:w-full md:mx-0 md:px-0 md:scroll-px-0">

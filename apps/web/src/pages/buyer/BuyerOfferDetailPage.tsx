@@ -213,9 +213,13 @@ export function BuyerOfferDetailPage() {
   const isRejected = offer.status === 'rejeitada' || offer.status === 'cancelada'
   const isAccepted = offer.status === 'aceita'
   const canAccept = !['RASCUNHO', 'CANCELADO', 'EXPIRADO', 'PROPOSTA_ACEITA'].includes(demand.status)
+  const showFooter = canAccept && offer.status === 'enviada'
 
   return (
-    <div className="h-full max-h-full min-h-0 flex w-full flex-col overflow-hidden lg:flex-row pb-[9.5rem] lg:pb-20">
+    <div className={cn(
+      "h-full max-h-full min-h-0 flex w-full flex-col overflow-hidden lg:flex-row",
+      showFooter ? "pb-[9.5rem] lg:pb-20" : "pb-0 lg:pb-0"
+    )}>
       {/* Coluna do Conteúdo — único scroll */}
       <section className="scrollbar-custom min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 lg:p-6 space-y-6">
         {/* Imagem do Produto correspondente à categoria (separada na parte de cima) */}
@@ -563,7 +567,7 @@ export function BuyerOfferDetailPage() {
       </section>
 
       {/* Botões de Decisão Fixos no Footer */}
-      {canAccept && offer.status === 'enviada' && (
+      {showFooter && (
         <div className="fixed bottom-[4.5rem] lg:bottom-0 left-0 right-0 z-30 border-t border-border bg-background/80 backdrop-blur-md px-6 py-4 lg:left-60 shadow-[0_-4px_12px_rgba(0,0,0,0.03)]">
           <div className="mx-auto max-w-7xl flex items-center justify-end gap-3">
             <Button

@@ -1,6 +1,6 @@
 import { useTheme } from 'next-themes'
-import { ArrowLeft, Bell, Menu, Moon, Sun } from 'lucide-react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { ArrowLeft, Bell, Menu, Moon, Sun, Search } from 'lucide-react'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,6 +17,11 @@ import { cn, getInitials } from '@/lib/utils'
 import { ROLE_LABELS } from '@/config/navigation'
 import { getDashboardForRole } from '@keve/shared'
 
+const BRAZILIAN_UFS = [
+  'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG',
+  'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO',
+]
+
 type HeaderProps = {
   onMenuClick: () => void
   className?: string
@@ -29,10 +34,35 @@ export function Header({ onMenuClick, className }: HeaderProps) {
   const { pathname } = useLocation()
   const { profile, roles, signOut, setActiveRole } = useAuth()
   const { data: unreadCount = 0 } = useUnreadNotificationCount()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const searchQuery = searchParams.get('search') || ''
+  const selectedUf = searchParams.get('uf') || ''
 
-  const isBackToOffersPage =
-    (pathname.startsWith('/buyer/demands/') && pathname.endsWith('/auction')) ||
-    pathname.startsWith('/buyer/offers/')
+  const isBackToOffersPage = pathname.startsWith('/buyer/offers/')
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    setSearchParams((prev) => {
+      if (value) {
+        prev.set('search', value)
+      } else {
+        prev.delete('search')
+      }
+      return prev
+    }, { replace: true })
+  }
+
+  const handleUfChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value
+    setSearchParams((prev) => {
+      if (value) {
+        prev.set('uf', value)
+      } else {
+        prev.delete('uf')
+      }
+      return prev
+    }, { replace: true })
+  }
 
   return (
     <header
@@ -41,7 +71,7 @@ export function Header({ onMenuClick, className }: HeaderProps) {
         className,
       )}
     >
-      <div className="flex min-w-0 items-center gap-3">
+      <div className="flex min-w-0 items-center gap-3 flex-1 lg:flex-initial">
         <button
           type="button"
           onClick={onMenuClick}
@@ -62,6 +92,37 @@ export function Header({ onMenuClick, className }: HeaderProps) {
               Voltar para ofertas
             </h1>
           </button>
+        ) : pathname === '/buyer/feed' ? (
+          <div className="flex h-9 w-52 sm:w-80 items-center gap-2 rounded-xl border border-border bg-secondary/50 px-3 py-1 focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2">
+            <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+            <input
+              type="text"
+              placeholder="Buscar produto..."
+              value={searchQuery}
+              onChange={handleSearchChange}
+              className="flex-1 bg-transparent py-1 text-sm outline-none placeholder:text-muted-foreground min-w-0 text-foreground h-full"
+            />
+            <div className="h-4 w-px bg-border shrink-0" />
+            <div className="relative shrink-0 flex items-center pr-3">
+              <select
+                value={selectedUf}
+                onChange={handleUfChange}
+                className="appearance-none bg-transparent py-1 pl-1 pr-4 text-sm font-medium text-muted-foreground hover:text-foreground focus:outline-none cursor-pointer"
+              >
+                <option value="">UF</option>
+                {BRAZILIAN_UFS.map((uf) => (
+                  <option key={uf} value={uf}>
+                    {uf}
+                  </option>
+                ))}
+              </select>
+              <div className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 text-muted-foreground">
+                <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
+          </div>
         ) : (
           <h1 className="max-w-[180px] truncate font-display text-lg font-semibold lg:max-w-none lg:text-xl">
             {pageTitle}

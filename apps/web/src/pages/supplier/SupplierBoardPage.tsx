@@ -48,14 +48,7 @@ export function SupplierBoardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="font-display text-2xl font-bold">Oportunidades</h1>
-          <p className="text-sm text-muted-foreground">
-            Demandas compatíveis com seu perfil e área de atuação
-          </p>
-        </div>
-      </div>
+
 
       <div className="flex flex-wrap gap-2">
         {STATUS_FILTERS.map((f) => (

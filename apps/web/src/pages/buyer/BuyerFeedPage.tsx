@@ -1,60 +1,18 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Package, Search, Sparkles, ChevronLeft, ChevronRight, Zap, ShieldCheck, Star } from 'lucide-react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Package, ChevronLeft, ChevronRight, Rocket } from 'lucide-react'
 import { useFeedProducts } from '@/hooks/use-products'
 import { useCategories } from '@/hooks/use-categories'
-import { Card, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 
-const BRAZILIAN_UFS = [
-  'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG',
-  'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO',
-]
+
 
 function formatCurrency(value: number | null): string {
   if (value === null || value === undefined) return 'Sob consulta'
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
 }
 
-const SLIDES = [
-  {
-    id: 1,
-    gradient: 'from-brand-dark via-brand-primary to-[#1a3a8f]',
-    badgeText: 'Homologação Garantida',
-    iconType: 'sparkles',
-    title: 'Fornecedores Homologados e Verificados',
-    description: 'Todos os parceiros da plataforma passam por uma verificação rigorosa de CNPJ e documentos para garantir negociações e compras seguras.',
-  },
-  {
-    id: 2,
-    gradient: 'from-[#492289] via-[#7F3CEF] to-[#8E45EF]',
-    badgeText: 'Economia & Agilidade',
-    iconType: 'zap',
-    title: 'Cotações Rápidas de Alta Confiança',
-    description: 'Publique sua demanda em minutos e receba propostas de fornecedores regionais qualificados em até 24 horas.',
-  },
-  {
-    id: 3,
-    gradient: 'from-[#222889] via-[#3263F7] to-[#03A0FB]',
-    badgeText: 'Fornecedores Ouro',
-    iconType: 'shieldCheck',
-    title: 'Fornecedores com Selo Ouro de Atendimento',
-    description: 'Negocie diretamente com empresas que possuem o selo de entrega exemplar e construa uma parceria duradoura.',
-  },
-]
 
-function renderIcon(type: string) {
-  switch (type) {
-    case 'sparkles':
-      return <Sparkles size={12} className="text-yellow-400 animate-pulse" />
-    case 'zap':
-      return <Zap size={12} className="text-yellow-300 animate-bounce" />
-    case 'shieldCheck':
-      return <ShieldCheck size={12} className="text-emerald-400" />
-    default:
-      return null
-  }
-}
 
 function getProductImage(nome: string, dbUrl: string | null): string | null {
   if (dbUrl) return dbUrl
@@ -85,14 +43,14 @@ function getBadgeVisibilityClass(index: number): string {
 
 export function BuyerFeedPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const searchQuery = searchParams.get('search') || ''
+  const selectedUf = searchParams.get('uf') || ''
   const [selectedCategory, setSelectedCategory] = useState<string>('')
-  const [searchQuery, setSearchQuery] = useState<string>('')
-  const [selectedUf, setSelectedUf] = useState<string>('')
   const categoriesRef = useRef<HTMLDivElement>(null)
   const [showLeftArrow, setShowLeftArrow] = useState(false)
   const [showRightArrow, setShowRightArrow] = useState(true)
-  const [currentSlide, setCurrentSlide] = useState(0)
-  const [isHovered, setIsHovered] = useState(false)
+
 
   const { data: categories = [], isLoading: loadingCategories } = useCategories()
   const { data: products = [], isLoading: loadingProducts } = useFeedProducts({
@@ -154,15 +112,7 @@ export function BuyerFeedPage() {
     return () => clearTimeout(timer)
   }, [categories, products])
 
-  useEffect(() => {
-    if (isHovered) return
 
-    const interval = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % SLIDES.length)
-    }, 6000)
-
-    return () => clearInterval(interval)
-  }, [isHovered])
 
   function scrollCategories(direction: 'left' | 'right') {
     if (categoriesRef.current) {
@@ -177,54 +127,62 @@ export function BuyerFeedPage() {
 
   return (
     <div className="space-y-8 pb-12">
-      {/* Banner Superior Premium - Carrossel de Ofertas */}
-      <div 
-        className="relative overflow-hidden rounded-2xl h-[220px] sm:h-48 shadow-lg select-none"
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-      >
-        {SLIDES.map((slide, idx) => (
-          <div
-            key={slide.id}
-            className={cn(
-              "absolute inset-0 w-full h-full p-6 md:p-8 text-white bg-gradient-to-r transition-all duration-700 ease-in-out flex flex-col justify-center",
-              slide.gradient,
-              currentSlide === idx ? "opacity-100 scale-100 z-10" : "opacity-0 scale-95 z-0 pointer-events-none"
-            )}
-          >
-            <div className="relative z-10 max-w-2xl space-y-3">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-[10px] sm:text-xs font-semibold uppercase tracking-wider backdrop-blur-sm w-fit">
-                {renderIcon(slide.iconType)}
-                {slide.badgeText}
-              </span>
-              <h2 className="font-display text-xl sm:text-2xl md:text-3xl font-bold leading-tight">
-                {slide.title}
-              </h2>
-              <p className="text-xs sm:text-sm text-white/80 md:text-base line-clamp-3 sm:line-clamp-none">
-                {slide.description}
-              </p>
+      {/* Banner Superior Premium */}
+      <div className="relative overflow-hidden rounded-xl h-[240px] sm:h-60 select-none bg-[#222689] flex items-center">
+        {/* Lado Esquerdo (Conteúdo e Textos) */}
+        <div className="relative z-20 pl-6 pr-4 sm:pl-10 max-w-[65%] sm:max-w-[70%] flex flex-col justify-center space-y-4">
+          <h2 className="font-display font-bold text-white text-sm sm:text-lg md:text-xl lg:text-2xl leading-snug tracking-tight">
+            Suas vendas não podem parar.<br />
+            Seus novos fornecedores estão no <span className="text-[#a5f3fc]">XCOMERCE</span>.
+          </h2>
+          
+          <div className="flex items-center gap-4 sm:gap-8 text-white/95">
+            {/* Item 1 */}
+            <div className="flex flex-col items-center text-center space-y-1 sm:space-y-1.5">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.75"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="w-8 h-8 sm:w-10 sm:h-10 text-white"
+              >
+                <path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.75z" />
+                <path d="m9 12 2 2 4-4" />
+                <path d="M8.5 17.5 6 22.5 9.5 21 11.5 17.5" />
+                <path d="M15.5 17.5 18 22.5 14.5 21 12.5 17.5" />
+              </svg>
+              <div className="text-[8px] sm:text-[10px] md:text-xs font-medium leading-tight uppercase tracking-wider font-sans text-white/95">
+                Fornecedores<br />
+                Pré-Qualificados
+              </div>
             </div>
-            
-            {/* Blurs decorativos */}
-            <div className="absolute right-0 top-0 -mr-16 -mt-16 h-64 w-64 rounded-full bg-white/5 blur-3xl pointer-events-none" />
-            <div className="absolute bottom-0 left-1/3 -mb-20 h-80 w-80 rounded-full bg-brand-accent/10 blur-3xl pointer-events-none" />
-          </div>
-        ))}
 
-        {/* Indicadores de Paginação */}
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex gap-1.5">
-          {SLIDES.map((_, idx) => (
-            <button
-              key={idx}
-              type="button"
-              onClick={() => setCurrentSlide(idx)}
-              className={cn(
-                "h-1.5 rounded-full transition-all duration-300",
-                currentSlide === idx ? "w-5 bg-white" : "w-1.5 bg-white/40 hover:bg-white/70"
-              )}
-              aria-label={`Ir para slide ${idx + 1}`}
-            />
-          ))}
+            {/* Separador */}
+            <div className="h-10 sm:h-12 w-px bg-white/20 self-center" />
+
+            {/* Item 2 */}
+            <div className="flex flex-col items-center text-center space-y-1 sm:space-y-1.5">
+              <Rocket className="w-8 h-8 sm:w-10 sm:h-10 text-white" strokeWidth={1.75} />
+              <div className="text-[8px] sm:text-[10px] md:text-xs font-medium leading-tight uppercase tracking-wider font-sans text-white/95">
+                Agilidade e<br />
+                Transparência
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Lado Direito (Foto do Homem com Efeito de Fade) */}
+        <div className="absolute right-0 top-0 h-full w-[42%] sm:w-[35%] md:w-[30%] overflow-hidden z-10">
+          {/* Gradiente de fade para misturar com o fundo azul */}
+          <div className="absolute inset-y-0 left-0 bg-gradient-to-r from-[#222689] via-[#222689]/40 to-transparent w-12 sm:w-20 z-20" />
+          <img
+            src="/feed-banner-man.png"
+            alt="Profissional XCommerce"
+            className="w-full h-full object-cover object-top"
+          />
         </div>
       </div>
 
@@ -293,41 +251,11 @@ export function BuyerFeedPage() {
         </button>
       </div>
 
-      {/* Título da Seção e Filtros de Busca/UF */}
+      {/* Título da Seção */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h3 className="font-display text-lg font-normal text-foreground">
           Em destaque
         </h3>
-        <div className="flex w-full items-center gap-2 rounded-xl border border-border bg-secondary/50 px-3 py-1 focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2 sm:max-w-md">
-          <Search className="h-4 w-4 text-muted-foreground shrink-0" />
-          <input
-            type="text"
-            placeholder="Buscar produto por nome..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="flex-1 bg-transparent py-2 text-sm outline-none placeholder:text-muted-foreground min-w-0"
-          />
-          <div className="h-5 w-px bg-border shrink-0" />
-          <div className="relative shrink-0 flex items-center pr-4">
-            <select
-              value={selectedUf}
-              onChange={(e) => setSelectedUf(e.target.value)}
-              className="appearance-none bg-transparent py-2 pl-2 pr-4 text-sm font-medium text-muted-foreground hover:text-foreground focus:outline-none cursor-pointer"
-            >
-              <option value="">UF</option>
-              {BRAZILIAN_UFS.map((uf) => (
-                <option key={uf} value={uf}>
-                  {uf}
-                </option>
-              ))}
-            </select>
-            <div className="pointer-events-none absolute right-0.5 top-1/2 -translate-y-1/2 text-muted-foreground">
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-              </svg>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Grid de Produtos */}

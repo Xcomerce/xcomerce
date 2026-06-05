@@ -213,7 +213,7 @@ export function NewDemandPage() {
     try {
       await publishDemand.mutateAsync(id)
       toast.success('Demanda publicada')
-      navigate(`/buyer/demands/${id}/auction`)
+      navigate('/buyer/dashboard')
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Erro ao publicar'
       if (message.includes('quota') || message.includes('QUOTA')) {

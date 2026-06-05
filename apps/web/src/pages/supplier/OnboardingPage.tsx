@@ -8,7 +8,7 @@ import { supplierAddressSchema } from '@keve/shared'
 import type { SupplierAddressInput } from '@/services/onboarding'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Alert } from '@/components/ui/alert'
 import { Separator } from '@/components/ui/separator'
@@ -157,7 +157,7 @@ export function OnboardingPage() {
   const docsReady = uploadedDocs.includes('cnpj_card') && uploadedDocs.includes('address_proof')
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="mx-auto max-w-4xl space-y-6">
       <div>
         <h1 className="font-display text-2xl font-bold">Onboarding fornecedor</h1>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -189,11 +189,7 @@ export function OnboardingPage() {
 
       {step === 1 && (
         <Card>
-          <CardHeader>
-            <CardTitle>Consulta CNPJ</CardTitle>
-            <CardDescription>Busque os dados da empresa na Receita Federal</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="pt-6 space-y-4">
             <div className="flex gap-2">
               <Input
                 placeholder="00.000.000/0000-00"
@@ -235,15 +231,12 @@ export function OnboardingPage() {
 
       {step === 2 && (
         <Card>
-          <CardHeader>
-            <CardTitle>Área de atuação</CardTitle>
-            <CardDescription>Cidade base e raio de atendimento em km</CardDescription>
-          </CardHeader>
-          <CardContent>
+          <CardContent className="pt-6">
             <Form {...addressForm}>
               <form onSubmit={addressForm.handleSubmit(handleSaveAddress)} className="space-y-4">
                 <div className="grid gap-4 sm:grid-cols-2">
                   <FormField
+                    relative-id="city"
                     control={addressForm.control}
                     name="service_city"
                     render={({ field }) => (
@@ -257,6 +250,7 @@ export function OnboardingPage() {
                     )}
                   />
                   <FormField
+                    relative-id="uf"
                     control={addressForm.control}
                     name="service_uf"
                     render={({ field }) => (
@@ -271,6 +265,7 @@ export function OnboardingPage() {
                   />
                 </div>
                 <FormField
+                  relative-id="radius"
                   control={addressForm.control}
                   name="service_radius_km"
                   render={({ field }) => (
@@ -299,11 +294,7 @@ export function OnboardingPage() {
 
       {step === 3 && (
         <Card>
-          <CardHeader>
-            <CardTitle>Documentos</CardTitle>
-            <CardDescription>Cartão CNPJ e comprovante de endereço (PDF ou imagem)</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="pt-6 space-y-4">
             <DocumentUploadRow
               label="Cartão CNPJ"
               done={uploadedDocs.includes('cnpj_card')}
@@ -334,11 +325,7 @@ export function OnboardingPage() {
 
       {step === 4 && (
         <Card>
-          <CardHeader>
-            <CardTitle>Categorias</CardTitle>
-            <CardDescription>Selecione as categorias em que sua empresa atua</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="pt-6 space-y-4">
             {categoriesLoading ? (
               <p className="text-sm text-muted-foreground">Carregando categorias...</p>
             ) : (
@@ -382,11 +369,7 @@ export function OnboardingPage() {
 
       {step === 5 && (
         <Card>
-          <CardHeader>
-            <CardTitle>Revisão</CardTitle>
-            <CardDescription>Confira os dados antes de enviar para análise</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="pt-6 space-y-4">
             {companySaved && (
               <section className="space-y-1 text-sm">
                 <h3 className="font-medium">Empresa</h3>

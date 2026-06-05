@@ -32,12 +32,7 @@ export function SupplierOrdersPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-display text-2xl font-bold">Pedidos</h1>
-        <p className="text-sm text-muted-foreground">
-          Acompanhe pedidos após aceite das suas propostas
-        </p>
-      </div>
+
 
       {isLoading && <GridSkeleton count={3} />}
 
