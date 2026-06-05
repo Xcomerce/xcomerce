@@ -330,7 +330,7 @@ begin
        or new.validade_ate is distinct from old.validade_ate
        or new.quantidade is distinct from old.quantidade
        or new.mensagem is distinct from old.mensagem
-       or new.status is distinct from old.status then
+       or (new.status is distinct from old.status and new.status not in ('aceita', 'rejeitada')) then
       raise exception 'BUYER_OFFER_UPDATE_FORBIDDEN: comprador só pode revelar contato'
         using errcode = 'P0001';
     end if;

@@ -48,12 +48,14 @@ function OfferCardMini({
   offer, 
   isLowest, 
   demandTitle, 
-  canAccept 
+  canAccept,
+  destination
 }: { 
   offer: any
   isLowest: boolean
   demandTitle: string
   canAccept: boolean 
+  destination: string
 }) {
   const imageUrl = getProductImage(demandTitle)
   const acceptOffer = useAcceptOffer()
@@ -87,9 +89,19 @@ function OfferCardMini({
       toast.error(formatSupabaseError(err))
     }
   }
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest('button')) {
+      return
+    }
+    navigate(destination)
+  }
   
   return (
-    <div className="group/card bg-card border border-border/50 rounded-xl overflow-hidden shadow-sm hover:shadow-md hover:border-border/80 transition-all duration-300 flex flex-col min-h-[220px] w-[270px] shrink-0 snap-start md:w-full md:shrink">
+    <div 
+      onClick={handleCardClick}
+      className="group/card cursor-pointer bg-card border border-border/50 rounded-xl overflow-hidden shadow-sm hover:shadow-md hover:border-border/80 transition-all duration-300 flex flex-col min-h-[220px] w-[270px] shrink-0 snap-start md:w-full md:shrink"
+    >
       {/* Imagem do Produto correspondente à categoria */}
       <div className="relative h-24 w-full bg-muted overflow-hidden">
         {imageUrl ? (
@@ -188,11 +200,23 @@ function OfferCardMini({
   )
 }
 
-function OfferPlaceholderCard({ demandTitle, isDraft }: { demandTitle: string, isDraft: boolean }) {
+function OfferPlaceholderCard({ 
+  demandTitle, 
+  isDraft,
+  destination
+}: { 
+  demandTitle: string
+  isDraft: boolean
+  destination: string
+}) {
   const imageUrl = getProductImage(demandTitle)
+  const navigate = useNavigate()
   
   return (
-    <div className="bg-card/40 border border-dashed border-border/80 rounded-xl overflow-hidden flex flex-col opacity-60 min-h-[220px] w-[270px] shrink-0 snap-start md:w-full md:shrink">
+    <div 
+      onClick={() => navigate(destination)}
+      className="cursor-pointer bg-card/40 border border-dashed border-border/80 rounded-xl overflow-hidden flex flex-col opacity-60 min-h-[220px] w-[270px] shrink-0 snap-start md:w-full md:shrink"
+    >
       {/* Imagem do Produto (Opaca/Grayscale) */}
       <div className="relative h-24 w-full bg-muted/30 overflow-hidden grayscale">
         {imageUrl ? (
@@ -275,6 +299,7 @@ function DemandItem({ demand }: { demand: Demand }) {
           isLowest={isLowest}
           demandTitle={demand.titulo}
           canAccept={canAccept}
+          destination={`/buyer/offers/${offer.id}`}
         />
       )
     })
@@ -287,6 +312,7 @@ function DemandItem({ demand }: { demand: Demand }) {
           key={`placeholder-${demand.id}-${i}`}
           demandTitle={demand.titulo}
           isDraft={demand.status === 'RASCUNHO'}
+          destination={destination}
         />
       )
     }
@@ -295,22 +321,22 @@ function DemandItem({ demand }: { demand: Demand }) {
   }
 
   return (
-    <Link
-      to={destination}
-      className="group block transition-all duration-300 flex flex-col gap-3.5"
-    >
+    <div className="group flex flex-col gap-3.5 w-full min-w-0">
       {/* ID PEDIDO > Produto (Header) */}
-      <div className="flex items-center gap-2 flex-wrap text-sm md:text-base font-semibold text-foreground">
+      <Link
+        to={destination}
+        className="flex items-center gap-2 flex-wrap text-sm md:text-base font-semibold text-foreground"
+      >
         <span className="text-muted-foreground font-mono">ID#{formatShortId(demand.id)}</span>
         <span className="text-muted-foreground/40 font-normal">&gt;</span>
         <span className="group-hover:text-primary transition-colors">{demand.titulo}</span>
-      </div>
+      </Link>
 
       {/* Grid of 4 Cards (Offers) - Horizontal Scroll on Mobile */}
-      <div className="flex overflow-x-auto gap-4 pb-3 snap-x snap-mandatory md:grid md:grid-cols-4 md:gap-4 md:snap-none [&::-webkit-scrollbar]:hidden [scrollbar-width:none]">
+      <div className="flex overflow-x-auto gap-4 pb-3 snap-x snap-mandatory md:grid md:grid-cols-4 md:gap-4 md:snap-none [&::-webkit-scrollbar]:hidden [scrollbar-width:none] min-w-0 w-[calc(100%+2rem)] -mx-4 px-4 scroll-px-4 md:w-full md:mx-0 md:px-0 md:scroll-px-0">
         {renderCards()}
       </div>
-    </Link>
+    </div>
   )
 }
 

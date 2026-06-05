@@ -73,3 +73,11 @@ export function useRejectOffer() {
     },
   })
 }
+
+export function useOfferDetail(offerId: string | undefined) {
+  return useQuery({
+    queryKey: [...offerKeys.all, 'detail', offerId ?? ''],
+    queryFn: () => offers.fetchOfferById(offerId!),
+    enabled: !!offerId,
+  })
+}

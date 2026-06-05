@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Package, Search, Sparkles, ChevronLeft, ChevronRight, Zap, ShieldCheck, Star } from 'lucide-react'
 import { useFeedProducts } from '@/hooks/use-products'
@@ -73,6 +73,16 @@ function getProductImage(nome: string, dbUrl: string | null): string | null {
   return null
 }
 
+function getBadgeVisibilityClass(index: number): string {
+  if (index === 0 || index === 1) return 'inline-flex'
+  if (index === 2) return 'hidden md:inline-flex'
+  if (index === 3) return 'hidden lg:inline-flex'
+  if (index === 4) return 'hidden xl:inline-flex'
+  if (index === 5) return 'hidden 2xl:inline-flex'
+  if (index === 6 || index === 7) return 'hidden 3xl:inline-flex'
+  return 'hidden'
+}
+
 export function BuyerFeedPage() {
   const navigate = useNavigate()
   const [selectedCategory, setSelectedCategory] = useState<string>('')
@@ -90,6 +100,30 @@ export function BuyerFeedPage() {
     search: searchQuery || undefined,
     uf: selectedUf || undefined,
   })
+
+  // Group products by category
+  const groupedProducts = useMemo(() => {
+    const groups: { [categoryId: string]: { categoryName: string; products: typeof products } } = {}
+    
+    products.forEach((product) => {
+      const catId = product.category_id || 'other'
+      const catName = product.category?.name || 'Outros'
+      
+      if (!groups[catId]) {
+        groups[catId] = {
+          categoryName: catName,
+          products: [],
+        }
+      }
+      groups[catId].products.push(product)
+    })
+    
+    return Object.entries(groups).map(([id, group]) => ({
+      categoryId: id,
+      categoryName: group.categoryName,
+      products: group.products,
+    }))
+  }, [products])
 
   function handleScroll() {
     if (categoriesRef.current) {
@@ -202,7 +236,7 @@ export function BuyerFeedPage() {
           <button
             type="button"
             onClick={() => setSelectedCategory('')}
-            className={`whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-medium border transition-all duration-200 ${
+            className={`whitespace-nowrap rounded-full px-4 h-9 flex items-center justify-center text-sm font-semibold border transition-all duration-200 ${
               selectedCategory === ''
                 ? 'bg-primary border-primary text-primary-foreground shadow-sm'
                 : 'bg-secondary/40 border-border/60 hover:bg-secondary/70 text-foreground'
@@ -212,7 +246,7 @@ export function BuyerFeedPage() {
           </button>
           {loadingCategories ? (
             Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="h-8 w-20 animate-pulse rounded-full bg-secondary" />
+              <div key={i} className="h-9 w-20 animate-pulse rounded-full bg-secondary" />
             ))
           ) : (
             categories.map((cat) => (
@@ -220,7 +254,7 @@ export function BuyerFeedPage() {
                 key={cat.id}
                 type="button"
                 onClick={() => setSelectedCategory(cat.id)}
-                className={`whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-medium border transition-all duration-200 ${
+                className={`whitespace-nowrap rounded-full px-4 h-9 flex items-center justify-center text-sm font-semibold border transition-all duration-200 ${
                   selectedCategory === cat.id
                     ? 'bg-primary border-primary text-primary-foreground shadow-sm'
                     : 'bg-secondary/40 border-border/60 hover:bg-secondary/70 text-foreground'
@@ -248,9 +282,9 @@ export function BuyerFeedPage() {
       {/* Título da Seção e Filtros de Busca/UF */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h3 className="font-display text-lg font-normal text-foreground">
-          Indicações Kevin B
+          Em destaque
         </h3>
-        <div className="flex w-full items-center gap-2 rounded-xl border border-input bg-card px-3 py-1 shadow-sm focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2 sm:max-w-md">
+        <div className="flex w-full items-center gap-2 rounded-xl border border-border bg-secondary/50 px-3 py-1 focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2 sm:max-w-md">
           <Search className="h-4 w-4 text-muted-foreground shrink-0" />
           <input
             type="text"
@@ -287,14 +321,14 @@ export function BuyerFeedPage() {
         {loadingProducts ? (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 md:gap-6 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 3xl:grid-cols-8">
             {Array.from({ length: 8 }).map((_, i) => (
-              <Card key={i} className="overflow-hidden">
-                <div className="aspect-[4/3] w-full animate-pulse bg-secondary" />
-                <CardContent className="p-4 space-y-2">
+              <div key={i} className="space-y-2.5">
+                <div className="aspect-[4/5] w-full animate-pulse bg-secondary rounded-xl" />
+                <div className="space-y-2 px-0.5">
                   <div className="h-4 w-2/3 animate-pulse rounded bg-secondary" />
                   <div className="h-3 w-1/2 animate-pulse rounded bg-secondary" />
-                  <div className="h-5 w-1/3 animate-pulse rounded bg-secondary pt-2" />
-                </CardContent>
-              </Card>
+                  <div className="h-4 w-1/3 animate-pulse rounded bg-secondary mt-1" />
+                </div>
+              </div>
             ))}
           </div>
         ) : products.length === 0 ? (
@@ -308,67 +342,134 @@ export function BuyerFeedPage() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 md:gap-6 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 3xl:grid-cols-8">
-            {products.map((product) => (
-              <Card
-                key={product.id}
-                onClick={() =>
-                  navigate('/buyer/demands/new', {
-                    state: {
-                      categoryId: product.category_id,
-                      title: product.nome,
-                      description: product.descricao || '',
-                      city: product.cidade || '',
-                      uf: product.uf || '',
-                    },
-                  })
-                }
-                className="group overflow-hidden border border-border bg-card shadow-sm transition-all duration-300 hover:scale-[1.02] hover:border-primary/50 hover:shadow-md cursor-pointer"
-              >
-                {/* Imagem do Produto */}
-                <div className="relative aspect-[4/3] w-full bg-secondary overflow-hidden">
-                  {getProductImage(product.nome, product.image_url) ? (
-                    <img
-                      src={getProductImage(product.nome, product.image_url) || ''}
-                      alt={product.nome}
-                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-muted-foreground">
-                      <Package size={32} />
-                    </div>
-                  )}
-                </div>
-
-                {/* Conteúdo do Card */}
-                <CardContent className="p-4 space-y-3">
-                  <div className="space-y-1 min-w-0">
-                    <h4 className="font-display font-semibold text-sm leading-tight text-foreground truncate" title={product.nome}>
-                      {product.nome}
-                    </h4>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {product.supplier?.company
-                        ? `${product.supplier.company.nome_fantasia || product.supplier.company.razao_social} ${product.category?.name ? `· ${product.category.name}` : ''}`
-                        : product.category?.name || ''}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center justify-between gap-1.5 pt-1">
-                    <span className="font-display text-sm font-bold text-foreground">
-                      {formatCurrency(product.preco_referencia)}
-                    </span>
-                    <div className="flex items-center gap-1 text-xs font-semibold text-amber-500">
-                      <Star size={13} className="fill-amber-400 text-amber-400 shrink-0" />
-                      <span>
-                        {product.supplier?.avg_rating 
-                          ? Number(product.supplier.avg_rating).toFixed(1) 
-                          : '4.8'}
+          <div className="space-y-10">
+            {/* Seção Em Destaque (Primeira Seção) */}
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 md:gap-6 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 3xl:grid-cols-8">
+                {products.slice(0, 8).map((product, index) => (
+                  <div
+                    key={`destaque-${product.id}`}
+                    onClick={() =>
+                      navigate('/buyer/demands/new', {
+                        state: {
+                          categoryId: product.category_id,
+                          title: product.nome,
+                          description: product.descricao || '',
+                          city: product.cidade || '',
+                          uf: product.uf || '',
+                        },
+                      })
+                    }
+                    className="cursor-pointer"
+                  >
+                    {/* Imagem do Produto */}
+                    <div className="relative aspect-[4/5] w-full bg-secondary overflow-hidden rounded-xl border border-border/40 hover:border-primary/45 transition-all duration-300 hover:scale-[1.03] hover:shadow-sm">
+                      <span className={cn(
+                        "absolute top-2.5 left-2.5 z-10 items-center rounded-full bg-[#7F3CEF] px-2.5 py-0.5 text-[9px] font-bold text-white shadow-sm uppercase tracking-wider",
+                        getBadgeVisibilityClass(index)
+                      )}>
+                        Destaque
                       </span>
+                      {getProductImage(product.nome, product.image_url) ? (
+                        <img
+                          src={getProductImage(product.nome, product.image_url) || ''}
+                          alt={product.nome}
+                          className="h-full w-full object-cover"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                          <Package size={32} />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Conteúdo (Informações embaixo da foto) */}
+                    <div className="mt-2.5 px-0.5 space-y-1.5">
+                      <div className="space-y-0.5 min-w-0">
+                        <h4 className="font-display font-semibold text-sm leading-tight text-foreground hover:text-primary transition-colors truncate" title={product.nome}>
+                          {product.nome}
+                        </h4>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {product.supplier?.company
+                            ? `${product.supplier.company.nome_fantasia || product.supplier.company.razao_social} ${product.category?.name ? `· ${product.category.name}` : ''}`
+                            : product.category?.name || ''}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-1.5 pt-0.5">
+                        <span className="font-display text-sm font-bold text-foreground">
+                          {formatCurrency(product.preco_referencia)}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+                ))}
+              </div>
+            </div>
+
+            {/* Categorias (Seções Mais Procurados) */}
+            {groupedProducts.map((group) => (
+              <div key={group.categoryId} className="space-y-4">
+                <h4 className="font-display text-base font-semibold text-foreground/80 pl-0.5 mt-8">
+                  Mais procurados em {group.categoryName}
+                </h4>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 md:gap-6 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 3xl:grid-cols-8">
+                  {group.products.map((product) => (
+                    <div
+                      key={product.id}
+                      onClick={() =>
+                        navigate('/buyer/demands/new', {
+                          state: {
+                            categoryId: product.category_id,
+                            title: product.nome,
+                            description: product.descricao || '',
+                            city: product.cidade || '',
+                            uf: product.uf || '',
+                          },
+                        })
+                      }
+                      className="cursor-pointer"
+                    >
+                      {/* Imagem do Produto */}
+                      <div className="relative aspect-[4/5] w-full bg-secondary overflow-hidden rounded-xl border border-border/40 hover:border-primary/45 transition-all duration-300 hover:scale-[1.03] hover:shadow-sm">
+                        {getProductImage(product.nome, product.image_url) ? (
+                          <img
+                            src={getProductImage(product.nome, product.image_url) || ''}
+                            alt={product.nome}
+                            className="h-full w-full object-cover"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                            <Package size={32} />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Conteúdo (Informações embaixo da foto) */}
+                      <div className="mt-2.5 px-0.5 space-y-1.5">
+                        <div className="space-y-0.5 min-w-0">
+                          <h4 className="font-display font-semibold text-sm leading-tight text-foreground hover:text-primary transition-colors truncate" title={product.nome}>
+                            {product.nome}
+                          </h4>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {product.supplier?.company
+                              ? `${product.supplier.company.nome_fantasia || product.supplier.company.razao_social} ${product.category?.name ? `· ${product.category.name}` : ''}`
+                              : product.category?.name || ''}
+                          </p>
+                        </div>
+
+                        <div className="flex items-center justify-between gap-1.5 pt-0.5">
+                          <span className="font-display text-sm font-bold text-foreground">
+                            {formatCurrency(product.preco_referencia)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         )}

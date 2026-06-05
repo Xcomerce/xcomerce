@@ -22,8 +22,12 @@ export function AppShell({ role }: { role: UserRole }) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const config = NAV_BY_ROLE[role]
   const { pathname } = useLocation()
-  const isFullHeightLayout = FULL_HEIGHT_LAYOUT_PATHS.includes(pathname)
-  const isFullWidthLayout = FULL_WIDTH_LAYOUT_PATHS.includes(pathname)
+  const isFullHeightLayout =
+    FULL_HEIGHT_LAYOUT_PATHS.includes(pathname) ||
+    pathname.startsWith('/buyer/offers/')
+  const isFullWidthLayout =
+    FULL_WIDTH_LAYOUT_PATHS.includes(pathname) ||
+    pathname.startsWith('/buyer/offers/')
 
   useEffect(() => {
     if (!isFullHeightLayout) return

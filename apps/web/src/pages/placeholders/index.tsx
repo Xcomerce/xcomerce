@@ -12,6 +12,7 @@ import { BuyerFeedPage } from '@/pages/buyer/BuyerFeedPage'
 import { NewDemandPage } from '@/pages/buyer/NewDemandPage'
 import { DemandDetailPage } from '@/pages/buyer/DemandDetailPage'
 import { OfferAuctionPage } from '@/pages/buyer/OfferAuctionPage'
+import { BuyerOfferDetailPage } from '@/pages/buyer/BuyerOfferDetailPage'
 import { BuyerOrdersPage } from '@/pages/buyer/BuyerOrdersPage'
 import { BuyerOrderDetailPage } from '@/pages/buyer/BuyerOrderDetailPage'
 import { ApprovalsPage } from '@/pages/admin/ApprovalsPage'
@@ -28,6 +29,7 @@ export const buyerPages = {
   newDemand: <NewDemandPage />,
   demandDetail: <DemandDetailPage />,
   offerAuction: <OfferAuctionPage />,
+  offerDetail: <BuyerOfferDetailPage />,
   orders: <BuyerOrdersPage />,
   orderDetail: <BuyerOrderDetailPage />,
 }

@@ -112,3 +112,14 @@ export async function rejectOffer(offerId: string): Promise<Offer> {
   if (error) throw error
   return data as Offer
 }
+
+export async function fetchOfferById(offerId: string): Promise<PublicOffer> {
+  const { data, error } = await supabase
+    .from('v_offers_public')
+    .select('*')
+    .eq('id', offerId)
+    .single()
+
+  if (error) throw error
+  return data as PublicOffer
+}

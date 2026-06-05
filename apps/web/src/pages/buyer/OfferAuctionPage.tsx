@@ -36,6 +36,20 @@ function formatShortId(id: string) {
   return id.slice(0, 8).toUpperCase()
 }
 
+function getProductImage(nome: string): string | null {
+  const nameLower = nome.toLowerCase()
+  if (nameLower.includes('cimento')) return '/products/cimento.png'
+  if (nameLower.includes('tijolo')) return '/products/tijolo.png'
+  if (nameLower.includes('brita')) return '/products/brita.png'
+  if (nameLower.includes('tinta') || nameLower.includes('esmalte')) return '/products/tinta.png'
+  if (nameLower.includes('notebook') || nameLower.includes('computador') || nameLower.includes('switch') || nameLower.includes('impressora')) return '/products/notebook.png'
+  if (nameLower.includes('arroz') || nameLower.includes('feijão') || nameLower.includes('azeite')) return '/products/arroz.png'
+  if (nameLower.includes('água') || nameLower.includes('agua')) return '/products/agua.png'
+  if (nameLower.includes('epi') || nameLower.includes('capacete') || nameLower.includes('uniforme')) return '/products/epi.png'
+  if (nameLower.includes('caixa') || nameLower.includes('embalagem') || nameLower.includes('filme stretch') || nameLower.includes('saco')) return '/products/caixa.png'
+  return null
+}
+
 type OfferCardProps = {
   offer: PublicOffer
   rank: number
@@ -51,6 +65,7 @@ type OfferCardProps = {
   setExpandedChatId: (id: string | null) => void
   demandId: string
   user: { id: string } | null
+  demandTitle: string
 }
 
 function OfferCard({
@@ -68,7 +83,10 @@ function OfferCard({
   setExpandedChatId,
   demandId,
   user,
+  demandTitle,
 }: OfferCardProps) {
+  const imageUrl = getProductImage(demandTitle)
+  const navigate = useNavigate()
   const isRevealing = revealingId === offer.id
   const isAccepting = acceptingId === offer.id
   const isRejecting = rejectingId === offer.id
@@ -76,10 +94,18 @@ function OfferCard({
   const isRejected = offer.status === 'rejeitada' || offer.status === 'cancelada'
   const isAccepted = offer.status === 'aceita'
 
+  const handleCardClick = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('a')) {
+      return
+    }
+    navigate(`/buyer/offers/${offer.id}`)
+  }
+
   return (
     <Card
+      onClick={handleCardClick}
       className={[
-        'relative overflow-hidden border transition-all duration-300',
+        'relative overflow-hidden border transition-all duration-300 flex flex-col min-h-[340px] w-[270px] shrink-0 snap-start md:w-full md:shrink cursor-pointer',
         isAccepted
           ? 'border-green-400/60 bg-green-50/30 shadow-lg shadow-green-500/10 dark:bg-green-950/10'
           : isRejected
@@ -89,180 +115,191 @@ function OfferCard({
           : 'border-border bg-card shadow-sm hover:shadow-md',
       ].join(' ')}
     >
-      {/* Rank badge */}
-      <div
-        className={[
-          'absolute left-0 top-0 flex h-7 w-7 items-center justify-center rounded-br-xl text-xs font-bold',
-          rank === 1
-            ? 'bg-amber-400 text-amber-900'
-            : rank === 2
-            ? 'bg-slate-300 text-slate-800 dark:bg-slate-600 dark:text-slate-100'
-            : rank === 3
-            ? 'bg-orange-300 text-orange-900 dark:bg-orange-700 dark:text-orange-100'
-            : 'bg-muted text-muted-foreground',
-        ].join(' ')}
-      >
-        {rank}
-      </div>
-
-
-      <CardContent className="p-5 pt-6 space-y-4">
-        {/* Supplier info row */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-1 pl-6">
-            <div className="flex flex-wrap items-center gap-2">
-              <h3 className="text-base font-semibold text-foreground">
-                {offer.supplier_name ?? 'Fornecedor'}
-              </h3>
-              {offer.status !== 'enviada' && (
-                <StatusBadge status={offer.status} kind="offer" />
-              )}
-              {isLowest && !isRejected && !isAccepted && (
-                <div className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-600 border border-emerald-500/20 shrink-0">
-                  <TrendingDown className="h-3 w-3" />
-                  Menor preço
-                </div>
-              )}
-            </div>
-            {offer.supplier_avg_rating != null && (
-              <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                <span className="font-medium text-foreground">
-                  {offer.supplier_avg_rating.toFixed(1)}
-                </span>
-                {offer.supplier_total_ratings != null && (
-                  <span>({offer.supplier_total_ratings} avaliações)</span>
-                )}
-              </div>
-            )}
+      {/* Imagem do Produto correspondente à categoria */}
+      <div className="relative h-32 w-full bg-muted overflow-hidden">
+        {imageUrl ? (
+          <img
+            src={imageUrl}
+            alt={demandTitle}
+            className="h-full w-full object-cover transition-transform duration-500"
+          />
+        ) : (
+          <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-muted to-muted/60">
+            <Package className="h-8 w-8 text-muted-foreground/30" />
           </div>
-
-          {/* Price block */}
-          <div className="flex flex-row items-center justify-between gap-4 sm:flex-col sm:items-end sm:justify-start">
-            <p
-              className={[
-                'text-2xl font-bold tabular-nums',
-                isLowest && !isRejected && !isAccepted
-                  ? 'text-primary'
-                  : 'text-foreground',
-              ].join(' ')}
-            >
-              {formatCurrency(offer.valor)}
-            </p>
-            <div className="flex items-center gap-3 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                {offer.prazo_entrega_dias} dias
-              </span>
-              <span className="flex items-center gap-1">
-                <Package className="h-3 w-3" />
-                {offer.quantidade} un.
-              </span>
-            </div>
-          </div>
+        )}
+        
+        {/* Badge superior esquerdo */}
+        <div className="absolute top-2 left-2 z-10">
+          {isLowest && !isRejected ? (
+            <span className="inline-flex items-center rounded-md bg-emerald-500 text-[9px] font-bold text-white px-1.5 py-0.5 uppercase tracking-wider shadow-sm">
+              Melhor Preço
+            </span>
+          ) : (
+            <span className="inline-flex items-center rounded-md bg-indigo-600 text-[9px] font-bold text-white px-1.5 py-0.5 uppercase tracking-wider shadow-sm">
+              Proposta
+            </span>
+          )}
         </div>
 
-        {/* Divider */}
-        <div className="border-t border-border/60" />
+        {/* Rank badge no canto superior direito */}
+        <div
+          className={[
+            'absolute right-2 top-2 z-10 flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold shadow-sm',
+            rank === 1
+              ? 'bg-amber-400 text-amber-900'
+              : rank === 2
+              ? 'bg-slate-300 text-slate-800 dark:bg-slate-600 dark:text-slate-100'
+              : rank === 3
+              ? 'bg-orange-300 text-orange-900 dark:bg-orange-700 dark:text-orange-100'
+              : 'bg-muted text-muted-foreground',
+          ].join(' ')}
+        >
+          {rank}
+        </div>
+      </div>
 
-        {/* Message */}
-        {offer.mensagem && (
-          <p className="rounded-xl bg-muted/40 px-3.5 py-2.5 text-sm text-foreground/80 leading-relaxed">
-            {offer.mensagem}
-          </p>
-        )}
-
-        {/* Contact block */}
-        {offer.contact_revealed ? (
-          <div className="rounded-xl border border-green-200/80 bg-green-50 px-3.5 py-2.5 dark:border-green-900 dark:bg-green-950/30">
-            <p className="mb-1 text-xs font-semibold text-green-700 dark:text-green-400 uppercase tracking-wide">
-              Contato revelado
-            </p>
-            {offer.supplier_phone && (
-              <p className="text-sm text-foreground">{offer.supplier_phone}</p>
-            )}
-            {offer.supplier_email && (
-              <p className="text-sm text-foreground">{offer.supplier_email}</p>
+      <CardContent className="p-4 flex-1 flex flex-col justify-between gap-3">
+        <div className="space-y-1.5">
+          {/* Supplier Name + StatusBadge */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            <h4 className="font-semibold text-sm text-foreground truncate max-w-[150px]" title={offer.supplier_name ?? 'Fornecedor'}>
+              {offer.supplier_name ?? 'Fornecedor Parceiro'}
+            </h4>
+            {offer.status !== 'enviada' && (
+              <StatusBadge status={offer.status} kind="offer" />
             )}
           </div>
-        ) : (
-          <p className="text-xs text-muted-foreground">
-            Contato oculto — revele para negociar diretamente com o fornecedor.
+          
+          {/* Rating: ★ 0.0 (0 avaliações) */}
+          {offer.supplier_avg_rating != null && (
+            <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-medium">
+              <span className="text-amber-500">★</span>
+              <span className="text-foreground font-semibold">
+                {offer.supplier_avg_rating.toFixed(1)}
+              </span>
+              <span className="text-muted-foreground/80">
+                ({offer.supplier_total_ratings ?? 0} {offer.supplier_total_ratings === 1 ? 'avaliação' : 'avaliações'})
+              </span>
+            </div>
+          )}
+          
+          {/* Delivery info */}
+          <p className="text-[10px] text-muted-foreground font-medium">
+            Entrega: {offer.prazo_entrega_dias} {offer.prazo_entrega_dias === 1 ? 'dia' : 'dias'}
           </p>
-        )}
-
-        {/* Action buttons */}
-        <div className="flex flex-wrap gap-2 pt-1">
-          {!offer.contact_revealed && !isRejected && !isAccepted && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={isRevealing}
-              onClick={() => onReveal(offer.id)}
-              className="rounded-xl h-9 w-9 p-0 flex items-center justify-center shrink-0"
-              title="Revelar contato"
-              aria-label="Revelar contato"
-            >
-              {isRevealing ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Eye className="h-4 w-4 text-foreground/80" />
-              )}
-            </Button>
+          
+          {/* Message balloon */}
+          {offer.mensagem && (
+            <p className="rounded-lg bg-muted/50 p-2 text-xs text-muted-foreground leading-relaxed italic">
+              "{offer.mensagem}"
+            </p>
           )}
 
-          <Button
-            type="button"
-            variant={chatOpen ? 'default' : 'outline'}
-            size="sm"
-            className="rounded-xl h-9 w-9 p-0 flex items-center justify-center shrink-0"
-            onClick={() => setExpandedChatId(chatOpen ? null : offer.supplier_id)}
-            title={chatOpen ? 'Fechar chat' : 'Abrir chat'}
-            aria-label={chatOpen ? 'Fechar chat' : 'Abrir chat'}
-          >
-            <MessageSquare className="h-4 w-4 text-foreground/80" />
-          </Button>
+          {/* Contact information */}
+          {offer.contact_revealed ? (
+            <div className="rounded-lg border border-green-200/80 bg-green-50/50 p-2 text-[10px] dark:border-green-900/40 dark:bg-green-950/20">
+              <p className="font-semibold text-green-700 dark:text-green-400 uppercase tracking-wider text-[9px] mb-0.5">
+                Contato revelado
+              </p>
+              {offer.supplier_phone && <p className="text-foreground">{offer.supplier_phone}</p>}
+              {offer.supplier_email && <p className="text-foreground truncate">{offer.supplier_email}</p>}
+            </div>
+          ) : (
+            <p className="text-[9px] text-muted-foreground italic">
+              Contato oculto — revele ou aceite para negociar diretamente.
+            </p>
+          )}
+        </div>
 
-          {canAccept && offer.status === 'enviada' && (
-            <>
+        {/* Price & Quantity & Actions */}
+        <div className="pt-2 border-t border-border/40 flex flex-col gap-2.5">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-bold text-primary">
+              {formatCurrency(offer.valor)}
+            </span>
+            <span className="text-[10px] text-muted-foreground font-medium">
+              Qtd: {offer.quantidade} un.
+            </span>
+          </div>
+
+          {/* Action buttons row */}
+          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+            {/* Reveal contact button if not revealed and can reveal */}
+            {!offer.contact_revealed && !isRejected && !isAccepted && (
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                disabled={isRejecting}
-                onClick={() => onReject(offer.id)}
-                className="rounded-xl border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive ml-auto"
+                disabled={isRevealing}
+                onClick={() => onReveal(offer.id)}
+                className="rounded-full h-8 w-8 p-0 flex items-center justify-center shrink-0 border-border/60 hover:bg-muted"
+                title="Revelar contato"
               >
-                {isRejecting ? (
+                {isRevealing ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 ) : (
-                  <X className="h-3.5 w-3.5" />
+                  <Eye className="h-3.5 w-3.5 text-foreground/70" />
                 )}
-                Recusar
               </Button>
+            )}
 
-              <Button
-                type="button"
-                size="sm"
-                disabled={isAccepting}
-                onClick={() => onAccept(offer.id)}
-                className="rounded-xl bg-green-600 text-white hover:bg-green-700 shadow-sm"
-              >
-                {isAccepting ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Check className="h-3.5 w-3.5" />
-                )}
-                Aceitar
-              </Button>
-            </>
-          )}
+            {/* Chat button */}
+            <Button
+              type="button"
+              variant={chatOpen ? 'default' : 'outline'}
+              size="sm"
+              className="rounded-full h-8 w-8 p-0 flex items-center justify-center shrink-0 border-border/60 hover:bg-muted"
+              onClick={() => setExpandedChatId(chatOpen ? null : offer.supplier_id)}
+              title={chatOpen ? 'Fechar chat' : 'Abrir chat'}
+            >
+              <MessageSquare className="h-3.5 w-3.5 text-foreground/70" />
+            </Button>
+
+            {/* Accept / Reject buttons if actionable */}
+            {canAccept && offer.status === 'enviada' ? (
+              <div className="flex-1 flex items-center gap-1.5">
+                <button
+                  onClick={() => onReject(offer.id)}
+                  disabled={isRejecting || isAccepting}
+                  className="flex-1 flex items-center justify-center gap-1 rounded-full border border-red-200 bg-red-50/30 hover:bg-red-50 text-[10px] font-bold text-red-600 hover:text-red-700 py-1 transition-colors text-center disabled:opacity-50 h-8"
+                >
+                  <X className="h-3 w-3 shrink-0" />
+                  <span>{isRejecting ? '...' : 'Recusar'}</span>
+                </button>
+                <button
+                  onClick={() => onAccept(offer.id)}
+                  disabled={isRejecting || isAccepting}
+                  className="flex-1 flex items-center justify-center gap-1 rounded-full bg-emerald-600 hover:bg-emerald-700 text-[10px] font-bold text-white py-1 transition-colors text-center disabled:opacity-50 h-8"
+                >
+                  <Check className="h-3 w-3 shrink-0" />
+                  <span>{isAccepting ? '...' : 'Aceitar'}</span>
+                </button>
+              </div>
+            ) : (
+              /* Status display when not actionable */
+              <div className="flex-1">
+                {isAccepted || offer.status === 'aceita' ? (
+                  <div className="text-center bg-emerald-500/10 border border-emerald-500/20 rounded-full py-1 h-8 flex items-center justify-center">
+                    <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                      Aceita
+                    </span>
+                  </div>
+                ) : isRejected || offer.status === 'rejeitada' ? (
+                  <div className="text-center bg-destructive/10 border border-destructive/20 rounded-full py-1 h-8 flex items-center justify-center">
+                    <span className="text-[10px] font-bold text-destructive">
+                      Recusada
+                    </span>
+                  </div>
+                ) : null}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Chat thread */}
         {chatOpen && user && (
-          <div className="pt-2">
+          <div className="pt-2 border-t border-border/40 w-full col-span-full">
             <ChatThread
               demandId={demandId}
               supplierId={offer.supplier_id}
@@ -438,7 +475,7 @@ export function OfferAuctionPage() {
             }
           />
         ) : (
-          <div className="space-y-4">
+          <div className="flex overflow-x-auto gap-4 pb-3 snap-x snap-mandatory md:grid md:grid-cols-4 md:gap-4 md:snap-none [&::-webkit-scrollbar]:hidden [scrollbar-width:none] min-w-0 w-[calc(100%+2rem)] -mx-4 px-4 scroll-px-4 md:w-full md:mx-0 md:px-0 md:scroll-px-0">
             {offerList.map((offer, idx) => (
               <OfferCard
                 key={offer.id}
@@ -456,6 +493,7 @@ export function OfferAuctionPage() {
                 setExpandedChatId={setExpandedChatId}
                 demandId={demand.id}
                 user={user}
+                demandTitle={demand.titulo}
               />
             ))}
           </div>

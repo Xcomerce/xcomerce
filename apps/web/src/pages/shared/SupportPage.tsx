@@ -17,11 +17,6 @@ export function SupportPage() {
       <p className="mt-3 max-w-sm text-sm text-muted-foreground leading-relaxed">
         Nossa central de suporte está sendo preparada com todo cuidado para oferecer a melhor experiência de atendimento.
       </p>
-
-      <div className="mt-8 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-5 py-2">
-        <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-        <span className="text-sm font-semibold text-primary">Em breve</span>
-      </div>
     </div>
   )
 }

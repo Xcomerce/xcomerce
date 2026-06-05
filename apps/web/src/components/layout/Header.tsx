@@ -30,7 +30,9 @@ export function Header({ onMenuClick, className }: HeaderProps) {
   const { profile, roles, signOut, setActiveRole } = useAuth()
   const { data: unreadCount = 0 } = useUnreadNotificationCount()
 
-  const isAuctionPage = pathname.startsWith('/buyer/demands/') && pathname.endsWith('/auction')
+  const isBackToOffersPage =
+    (pathname.startsWith('/buyer/demands/') && pathname.endsWith('/auction')) ||
+    pathname.startsWith('/buyer/offers/')
 
   return (
     <header
@@ -48,7 +50,7 @@ export function Header({ onMenuClick, className }: HeaderProps) {
         >
           <Menu size={24} />
         </button>
-        {isAuctionPage ? (
+        {isBackToOffersPage ? (
           <button
             type="button"
             onClick={() => navigate('/buyer/dashboard')}
