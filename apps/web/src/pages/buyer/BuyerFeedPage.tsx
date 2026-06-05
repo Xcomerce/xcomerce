@@ -346,7 +346,7 @@ export function BuyerFeedPage() {
             {/* Seção Em Destaque (Primeira Seção) */}
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 md:gap-6 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 3xl:grid-cols-8">
-                {products.slice(0, 8).map((product, index) => (
+                {products.slice(0, 12).map((product, index) => (
                   <div
                     key={`destaque-${product.id}`}
                     onClick={() =>
