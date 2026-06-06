@@ -1,0 +1,32 @@
+# Dependencies
+node_modules
+npm-debug.log
+pnpm-debug.log
+
+# Build outputs
+dist
+dist-ssr
+*.tsbuildinfo
+
+# IDEs and OS files
+.DS_Store
+Thumbs.db
+.idea
+.vscode
+.cursor
+.git
+.gitignore
+
+# Environments and Secrets
+.env
+.env.local
+.env.*.local
+.supabase
+
+# Vite & tools cache
+.vite
+coverage
+trans.md
+walkthrough.md
+implementation_plan.md
+task.md

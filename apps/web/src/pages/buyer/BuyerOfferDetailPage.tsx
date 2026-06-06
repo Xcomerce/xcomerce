@@ -1,12 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import {
-  Calendar,
   Check,
-  Clock,
   Eye,
   Loader2,
   MessageSquare,
@@ -17,7 +15,6 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import { useDemand } from '@/hooks/use-demands'
 import { useOfferDetail, useRevealContact, useAcceptOffer, useRejectOffer, useOffersForDemand } from '@/hooks/use-offers'

@@ -10,7 +10,6 @@ import {
 } from 'lucide-react'
 import { Alert } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import { StatusBadge } from '@/components/common/StatusBadge'
 import { EmptyState } from '@/components/common/EmptyState'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import { usePageTitle } from '@/hooks/use-page-title'
@@ -21,7 +20,7 @@ import { toast } from 'sonner'
 import { formatSupabaseError } from '@/lib/errors'
 import { getSupabaseProjectLabel, isSupabaseConfigured } from '@/lib/supabase'
 import type { Demand } from '@/services/demands'
-import { cn, formatRelativeDate } from '@/lib/utils'
+import { cn } from '@/lib/utils'
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
