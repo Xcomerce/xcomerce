@@ -425,7 +425,6 @@ export function ProfilePage() {
 
   const myAccountContent = (
     <MyAccountContent
-      profile={profile}
       roleLabel={roleLabel}
       roleColor={roleColor}
       joinDate={joinDate}
@@ -472,7 +471,7 @@ export function ProfilePage() {
       case 'integrations':
         return <IntegrationsSettings />
       case 'privacy':
-        return <PrivacyDataSettings profile={profile} />
+        return <PrivacyDataSettings profile={profile!} />
       case 'terms':
         return termsSettings
       default:
@@ -560,7 +559,7 @@ export function ProfilePage() {
       <div className="hidden md:grid w-full flex-1 min-h-0 md:grid-cols-[280px_minmax(0,1fr)] md:gap-6 px-6 py-6">
         <aside className="flex min-h-0 flex-col gap-4">
           {avatarSection}
-          <nav className="space-y-1">
+          <nav className="scrollbar-custom min-h-0 flex-1 overflow-y-auto pr-1 space-y-1">
             {menuItems.map((item) => {
               const active = desktopSection === item.id
               return (
@@ -762,7 +761,6 @@ function ProfileFieldControl({ children }: { children: ReactNode }) {
 }
 
 function MyAccountContent({
-  profile,
   roleLabel,
   roleColor,
   joinDate,
@@ -771,7 +769,6 @@ function MyAccountContent({
   onSubmit,
   className,
 }: {
-  profile: UserProfile
   roleLabel: string
   roleColor: string
   joinDate: string

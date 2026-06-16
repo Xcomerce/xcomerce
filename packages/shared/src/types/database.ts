@@ -48,6 +48,8 @@ export type Database = {
           trial_ends_at: string | null
           current_period_start: string | null
           current_period_end: string | null
+          created_at: string
+          updated_at: string
         }
       }
       usage_counters: {
