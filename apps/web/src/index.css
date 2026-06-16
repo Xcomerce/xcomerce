@@ -172,6 +172,12 @@
     background: hsl(var(--muted-foreground) / 0.5);
   }
 
+  .scrollbar-custom::-webkit-scrollbar-button {
+    display: none;
+    height: 0;
+    width: 0;
+  }
+
   .scrollbar-kanban-board {
     scrollbar-width: thin;
     scrollbar-color: hsl(var(--primary) / 0.45) hsl(var(--muted) / 0.8);

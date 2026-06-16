@@ -83,15 +83,59 @@ export async function deleteDemand(id: string): Promise<void> {
   if (error) throw error
 }
 
+async function assertDemandPublishQuota(buyerId: string): Promise<void> {
+  const now = new Date()
+  const periodYear = now.getFullYear()
+  const periodMonth = now.getMonth() + 1
+
+  const [subscriptionRes, usageRes] = await Promise.all([
+    supabase
+      .from('subscriptions')
+      .select('plan:plans(max_demands_monthly)')
+      .eq('user_id', buyerId)
+      .in('status', ['active', 'trialing'])
+      .maybeSingle(),
+    supabase
+      .from('usage_counters')
+      .select('count')
+      .eq('user_id', buyerId)
+      .eq('counter_type', 'demands_published')
+      .eq('period_year', periodYear)
+      .eq('period_month', periodMonth)
+      .maybeSingle(),
+  ])
+
+  if (subscriptionRes.error) throw subscriptionRes.error
+  if (usageRes.error) throw usageRes.error
+
+  const plan = subscriptionRes.data?.plan as { max_demands_monthly: number | null } | null | undefined
+  const limit = plan?.max_demands_monthly
+  if (limit == null) return
+
+  const used = usageRes.data?.count ?? 0
+  if (used >= limit) {
+    throw new Error('QUOTA_EXCEEDED: limite mensal atingido para demands_published')
+  }
+}
+
 export async function publishDemand(id: string): Promise<Demand> {
+  const existing = await fetchDemand(id)
+  if (!existing) {
+    throw new Error('Demanda não encontrada')
+  }
+  if (existing.status !== 'RASCUNHO') {
+    throw new Error('Esta demanda não pode ser publicada')
+  }
+
+  await assertDemandPublishQuota(existing.buyer_id)
+
   const { data, error } = await supabase
     .from('demands')
     .update({
       status: 'PUBLICADA',
-      published_at: new Date().toISOString(),
     })
     .eq('id', id)
-    .in('status', ['RASCUNHO'])
+    .eq('status', 'RASCUNHO')
     .select()
     .single()
 

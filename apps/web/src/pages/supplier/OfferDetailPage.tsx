@@ -26,6 +26,7 @@ import { useAuth } from '@/contexts/auth-context'
 import { translateSupabaseError } from '@/lib/errors'
 import { fetchDemandMarketPrice } from '@/services/pricing'
 import { cn, formatExpiresAt } from '@/lib/utils'
+import { ScrollPageShell, SCROLL_PAGE_SECTION_CLASS } from '@/components/layout/ScrollPageShell'
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
@@ -68,7 +69,7 @@ function OfferChatPanel({
       <div
         className={cn(
           'scrollbar-custom min-h-0 flex-1 px-4 py-3 lg:px-6 space-y-2 bg-muted/10',
-          messages.length > 0 ? 'overflow-y-auto' : 'overflow-hidden',
+          messages.length > 0 ? 'overflow-y-auto overscroll-contain' : 'overflow-hidden',
         )}
       >
         {messagesLoading && (
@@ -262,8 +263,8 @@ export function OfferDetailPage() {
 
   return (
     <div className="flex h-full max-h-full min-h-0 flex-col overflow-hidden">
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
-        <section className="scrollbar-custom min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 lg:p-6 space-y-6">
+      <ScrollPageShell className="min-h-0 flex-1">
+        <section className={cn(SCROLL_PAGE_SECTION_CLASS, 'space-y-6')}>
           <div>
             <h1 className="font-display text-xl font-bold">{demand.titulo}</h1>
             <p className="text-sm text-muted-foreground">
@@ -458,7 +459,7 @@ export function OfferDetailPage() {
                           <FormLabel>Mensagem</FormLabel>
                           <FormControl>
                             <textarea
-                              className="flex min-h-[72px] w-full rounded-xl border border-input bg-background px-3 py-2 text-sm"
+                              className="scrollbar-custom flex min-h-[72px] w-full rounded-xl border border-input bg-background px-3 py-2 text-sm"
                               placeholder="Detalhes da proposta..."
                               {...field}
                             />
@@ -518,7 +519,7 @@ export function OfferDetailPage() {
             messagesEndRef={messagesEndRef}
           />
         </aside>
-      </div>
+      </ScrollPageShell>
 
       {mobileChatOpen && (
         <div className="fixed inset-0 z-50 flex flex-col bg-background lg:hidden">

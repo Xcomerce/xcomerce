@@ -18,6 +18,10 @@ import { ApprovalsPage } from '@/pages/admin/ApprovalsPage'
 import { MetricsPage } from '@/pages/admin/MetricsPage'
 import { CategoriesAdminPage } from '@/pages/admin/CategoriesAdminPage'
 import { AuditPage } from '@/pages/admin/AuditPage'
+import { PlansAdminPage } from '@/pages/admin/PlansAdminPage'
+import { FinancialReportsPage } from '@/pages/admin/FinancialReportsPage'
+import { SubscriptionsAdminPage } from '@/pages/admin/SubscriptionsAdminPage'
+import { UsersAdminPage } from '@/pages/admin/UsersAdminPage'
 import { NotificationsPage } from '@/pages/shared/NotificationsPage'
 import { PublicProfilePage } from '@/pages/shared/PublicProfilePage'
 import { SupportPage } from '@/pages/shared/SupportPage'
@@ -46,6 +50,10 @@ export const supplierPages = {
 export const adminPages = {
   approvals: <ApprovalsPage />,
   metrics: <MetricsPage />,
+  financialReports: <FinancialReportsPage />,
+  plans: <PlansAdminPage />,
+  subscriptions: <SubscriptionsAdminPage />,
+  users: <UsersAdminPage />,
   categories: <CategoriesAdminPage />,
   audit: <AuditPage />,
 }

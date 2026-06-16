@@ -12,8 +12,11 @@ import {
   ShieldCheck,
   Tags,
   User,
+  Users,
   Bell,
   Zap,
+  Wallet,
+  Receipt,
   type LucideIcon,
 } from 'lucide-react'
 import type { UserRole } from '@keve/shared'
@@ -124,8 +127,12 @@ export const adminNav: RoleNavConfig = {
     {
       title: 'Operação',
       items: [
-        { to: '/admin/approvals', label: 'Aprovações', icon: ShieldCheck },
         { to: '/admin/metrics', label: 'Métricas', icon: BarChart3 },
+        { to: '/admin/users', label: 'Usuários', icon: Users },
+        { to: '/admin/approvals', label: 'Aprovações', icon: ShieldCheck },
+        { to: '/admin/financial-reports', label: 'Relatórios', icon: Wallet },
+        { to: '/admin/plans', label: 'Planos', icon: CreditCard },
+        { to: '/admin/subscriptions', label: 'Assinaturas', icon: Receipt },
         { to: '/admin/categories', label: 'Categorias', icon: Tags },
         { to: '/admin/audit', label: 'Auditoria', icon: FileText },
       ],
@@ -133,14 +140,15 @@ export const adminNav: RoleNavConfig = {
     {
       title: 'Conta',
       items: [
+        { to: '/support', label: 'Suporte', icon: Headset },
         { to: '/settings/profile', label: 'Configurações', icon: Settings },
       ],
     },
   ],
   bottomNav: {
     left: [
-      { to: '/admin/approvals', icon: ShieldCheck },
       { to: '/admin/metrics', icon: BarChart3 },
+      { to: '/admin/approvals', icon: ShieldCheck },
     ],
     right: [
       { to: '/admin/categories', icon: Tags },

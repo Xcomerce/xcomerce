@@ -22,6 +22,18 @@ export function formatSupabaseError(error: unknown): string {
   return 'Erro ao comunicar com o Supabase.'
 }
 
+export function isQuotaExceededError(error: unknown): boolean {
+  if (error instanceof Error) {
+    if (/QUOTA_EXCEEDED|QUOTA|limite mensal/i.test(error.message)) return true
+  }
+  if (error && typeof error === 'object') {
+    const e = error as { message?: string; details?: string; hint?: string }
+    const raw = [e.message, e.details, e.hint].filter(Boolean).join(' ')
+    if (/QUOTA_EXCEEDED|QUOTA|limite mensal/i.test(raw)) return true
+  }
+  return false
+}
+
 export function translateSupabaseError(message: string): string {
   for (const [key, pt] of Object.entries(MESSAGES)) {
     if (message.includes(key)) return pt

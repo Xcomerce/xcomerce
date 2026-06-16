@@ -14,8 +14,6 @@ import { useAuth } from '@/contexts/auth-context'
 import { usePageTitle } from '@/hooks/use-page-title'
 import { useUnreadNotificationCount } from '@/hooks/use-notifications'
 import { cn, getInitials } from '@/lib/utils'
-import { ROLE_LABELS } from '@/config/navigation'
-import { getDashboardForRole } from '@keve/shared'
 
 const BRAZILIAN_UFS = [
   'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG',
@@ -32,7 +30,7 @@ export function Header({ onMenuClick, className }: HeaderProps) {
   const { theme, setTheme } = useTheme()
   const navigate = useNavigate()
   const { pathname } = useLocation()
-  const { profile, roles, signOut, setActiveRole } = useAuth()
+  const { profile, roles, signOut } = useAuth()
   const { data: unreadCount = 0 } = useUnreadNotificationCount()
   const [searchParams, setSearchParams] = useSearchParams()
   const searchQuery = searchParams.get('search') || ''
@@ -226,18 +224,6 @@ export function Header({ onMenuClick, className }: HeaderProps) {
             {roles.length > 1 && (
               <DropdownMenuItem onClick={() => navigate('/auth/select-role')}>Trocar perfil</DropdownMenuItem>
             )}
-            <DropdownMenuSeparator />
-            {roles.map((role) => (
-              <DropdownMenuItem
-                key={role}
-                onClick={() => {
-                  setActiveRole(role)
-                  navigate(getDashboardForRole(role))
-                }}
-              >
-                Usar como {ROLE_LABELS[role]}
-              </DropdownMenuItem>
-            ))}
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => signOut()}>Sair</DropdownMenuItem>
           </DropdownMenuContent>

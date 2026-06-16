@@ -47,4 +47,5 @@ export const NOTIFICATION_TYPE_LABELS: Record<string, string> = {
   'supplier.rejected': 'Cadastro recusado',
   'subscription.activated': 'Assinatura ativada',
   'subscription.past_due': 'Pagamento em atraso',
+  'admin.supplier_pending': 'Fornecedor aguardando aprovação',
 }

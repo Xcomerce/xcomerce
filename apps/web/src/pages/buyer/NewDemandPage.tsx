@@ -1,4 +1,4 @@
-import { useEffect, useState, type DragEvent, type ReactNode } from 'react'
+import { useEffect, useState, type DragEvent } from 'react'
 import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -19,41 +19,19 @@ import {
   usePublishDemand,
   useUpdateDemand,
 } from '@/hooks/use-demands'
-import { translateSupabaseError } from '@/lib/errors'
+import { translateSupabaseError, formatSupabaseError, isQuotaExceededError } from '@/lib/errors'
 import { fetchAddressByCep, formatCep } from '@/lib/cep'
 import { cn } from '@/lib/utils'
+import { ScrollPageShell, SCROLL_PAGE_SECTION_CLASS } from '@/components/layout/ScrollPageShell'
 import {
   ATTACHMENT_ACCEPT,
   BRAZILIAN_UFS,
-  DEMAND_PAGE_HEIGHT_CLASS,
   MAX_ATTACHMENTS,
   NATIVE_FIELD_CLASS,
 } from '@/pages/buyer/new-demand/constants'
 import { DemandFormActions } from '@/pages/buyer/new-demand/DemandFormActions'
 import { EligibleSuppliersPanel } from '@/pages/buyer/new-demand/EligibleSuppliersPanel'
 import { getEligibleSuppliers } from '@/pages/buyer/new-demand/utils'
-
-function DemandPageShell({
-  children,
-  mobileFooter,
-}: {
-  children: ReactNode
-  mobileFooter?: ReactNode
-}) {
-  return (
-    <div
-      className={cn(
-        DEMAND_PAGE_HEIGHT_CLASS,
-        'flex w-full flex-col overflow-hidden lg:flex-row',
-      )}
-    >
-      <div className="scrollbar-custom flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain lg:contents">
-        {children}
-      </div>
-      {mobileFooter}
-    </div>
-  )
-}
 
 export function NewDemandPage() {
   usePageTitle()
@@ -235,12 +213,11 @@ export function NewDemandPage() {
       toast.success('Demanda publicada')
       navigate('/buyer/dashboard')
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Erro ao publicar'
-      if (message.includes('quota') || message.includes('QUOTA')) {
+      if (isQuotaExceededError(err)) {
         setPaywallOpen(true)
-      } else {
-        toast.error(translateSupabaseError(message))
+        return
       }
+      toast.error(formatSupabaseError(err))
     }
   }
 
@@ -278,7 +255,7 @@ export function NewDemandPage() {
     <>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="contents">
-          <DemandPageShell
+          <ScrollPageShell
             mobileFooter={
               <footer className="shrink-0 border-t border-border bg-background/95 px-4 py-3 pb-safe-bottom backdrop-blur-sm lg:hidden">
                 <DemandFormActions
@@ -292,7 +269,7 @@ export function NewDemandPage() {
             }
           >
             {/* Coluna do formulário */}
-            <section className="min-h-0 flex-1 p-4 max-lg:flex-none lg:overflow-y-auto lg:p-6">
+            <section className={cn(SCROLL_PAGE_SECTION_CLASS)}>
               <div className="space-y-6">
                 {categoriesError && (
                   <Alert className="border-destructive/50 text-destructive">Erro ao carregar categorias.</Alert>
@@ -634,7 +611,7 @@ export function NewDemandPage() {
                 onCancel={() => navigate('/buyer/dashboard')}
               />
             </section>
-          </DemandPageShell>
+          </ScrollPageShell>
         </form>
       </Form>
 

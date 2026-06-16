@@ -1,9 +1,7 @@
 import { useState } from 'react'
-import { Shield } from 'lucide-react'
+import { RefreshCw, Shield } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent } from '@/components/ui/card'
 import { EmptyState } from '@/components/common/EmptyState'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import { useAuditLogs } from '@/hooks/use-admin'
@@ -32,42 +30,37 @@ export function AuditPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-display text-2xl font-bold">Auditoria</h1>
-        <p className="text-sm text-muted-foreground">
-          Logs de ações sensíveis: aprovações, reveal de contato e mais
-        </p>
+      <div className="flex flex-wrap items-center gap-4">
+        <Input
+          id="entity-type"
+          placeholder="Tipo de entidade (ex.: supplier_profiles)"
+          value={entityType}
+          onChange={(e) => setEntityType(e.target.value)}
+          className="min-w-[200px] flex-1"
+          onKeyDown={(e) => e.key === 'Enter' && applyFilters()}
+        />
+        <Input
+          id="action"
+          placeholder="Ação (ex.: supplier.approved)"
+          value={action}
+          onChange={(e) => setAction(e.target.value)}
+          className="min-w-[200px] flex-1"
+          onKeyDown={(e) => e.key === 'Enter' && applyFilters()}
+        />
+        <Button onClick={applyFilters}>Filtrar</Button>
+        <Button variant="outline" onClick={clearFilters}>
+          Limpar
+        </Button>
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-10 w-10"
+          title="Atualizar"
+          onClick={() => refetch()}
+        >
+          <RefreshCw className="h-4 w-4" />
+        </Button>
       </div>
-
-      <Card>
-        <CardContent className="flex flex-wrap items-end gap-4 pt-6">
-          <div className="space-y-2">
-            <Label htmlFor="entity-type">Tipo de entidade</Label>
-            <Input
-              id="entity-type"
-              placeholder="ex.: supplier_profiles"
-              value={entityType}
-              onChange={(e) => setEntityType(e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="action">Ação</Label>
-            <Input
-              id="action"
-              placeholder="ex.: supplier.approved"
-              value={action}
-              onChange={(e) => setAction(e.target.value)}
-            />
-          </div>
-          <Button onClick={applyFilters}>Filtrar</Button>
-          <Button variant="outline" onClick={clearFilters}>
-            Limpar
-          </Button>
-          <Button variant="ghost" onClick={() => refetch()}>
-            Atualizar
-          </Button>
-        </CardContent>
-      </Card>
 
       {isLoading && (
         <div className="space-y-2">

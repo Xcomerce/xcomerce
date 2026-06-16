@@ -1,31 +1,52 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useOutletContext } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { ArrowLeft, Camera, ChevronRight, Loader2, User, Calendar, Shield, Mail, Palette, Sun, Moon, LogOut } from 'lucide-react'
+import { ArrowLeft, Bell, Camera, ChevronRight, Loader2, User, Calendar, Shield, Palette, Sun, Moon, MonitorSmartphone, FileLock, FileText, Plug, Pencil } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTheme } from 'next-themes'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Alert } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
+import { Switch } from '@/components/ui/switch'
 import { CardSkeleton, LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import { useAuth } from '@/contexts/auth-context'
 import { usePageTitle } from '@/hooks/use-page-title'
+import { useNotificationPreferences, useUpdateNotificationPreferences } from '@/hooks/use-notifications'
 import { updateProfile } from '@/services/profile'
 import { avatarPath, getSignedUrl, uploadFile } from '@/lib/storage'
 import { getInitials, translateAuthError } from '@/lib/utils'
 import { translateSupabaseError } from '@/lib/errors'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
+import { ROLE_LABELS } from '@/config/navigation'
+import type { UserRole } from '@keve/shared'
 import type { UserProfile } from '@/services/profile'
 import type { LucideIcon } from 'lucide-react'
+import {
+  ActiveSessionsSettings,
+  IntegrationsSettings,
+  PrivacyDataSettings,
+  TermsOfUseSettings,
+} from '@/pages/settings/SettingsSections'
+import type { AppShellOutletContext } from '@/components/layout/AppShell'
+
+const ROLE_COLORS: Record<UserRole, string> = {
+  buyer:
+    'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800',
+  supplier:
+    'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800',
+  admin: 'bg-primary/10 text-primary border-primary/20',
+  commercial: 'bg-secondary text-secondary-foreground border-border',
+}
 
 const profileSchema = z.object({
   full_name: z.string().min(2, 'Nome deve ter no mínimo 2 caracteres'),
+  email: z.string().email('E-mail inválido'),
   phone: z
     .string()
     .min(10, 'Telefone inválido')
@@ -44,24 +65,26 @@ const passwordSchema = z.object({
 
 type PasswordFormValues = z.infer<typeof passwordSchema>
 
-type MobileSection = 'account' | 'personal' | 'security' | 'appearance'
+type SettingsSection =
+  | 'account'
+  | 'security'
+  | 'sessions'
+  | 'notifications'
+  | 'appearance'
+  | 'integrations'
+  | 'privacy'
+  | 'terms'
 
-const MOBILE_MENU_ITEMS: {
-  id: MobileSection
+const SETTINGS_MENU_ITEMS: {
+  id: SettingsSection
   label: string
   description: string
   icon: LucideIcon
 }[] = [
   {
     id: 'account',
-    label: 'Detalhes da conta',
-    description: 'Perfil, e-mail e data de cadastro.',
-    icon: User,
-  },
-  {
-    id: 'personal',
-    label: 'Dados pessoais',
-    description: 'Atualize seu nome completo e telefone de contato.',
+    label: 'Minha conta',
+    description: 'Perfil, contato, e-mail e data de cadastro.',
     icon: User,
   },
   {
@@ -71,27 +94,150 @@ const MOBILE_MENU_ITEMS: {
     icon: Shield,
   },
   {
+    id: 'sessions',
+    label: 'Sessões ativas',
+    description: 'Dispositivos conectados e encerramento de sessões.',
+    icon: MonitorSmartphone,
+  },
+  {
+    id: 'notifications',
+    label: 'Notificações',
+    description: 'Propostas, pedidos e alertas da sua conta.',
+    icon: Bell,
+  },
+  {
     id: 'appearance',
     label: 'Aparência',
     description: 'Escolha entre modo claro ou escuro.',
     icon: Palette,
   },
+  {
+    id: 'integrations',
+    label: 'Integrações',
+    description: 'Conecte ferramentas externas à plataforma.',
+    icon: Plug,
+  },
+  {
+    id: 'privacy',
+    label: 'Privacidade / dados (LGPD)',
+    description: 'Exportação, exclusão e política de privacidade.',
+    icon: FileLock,
+  },
+  {
+    id: 'terms',
+    label: 'Termos de Uso',
+    description: 'Regras e condições de utilização da plataforma.',
+    icon: FileText,
+  },
 ]
+
+const ADMIN_OPERATIONAL_NOTIFICATIONS = [
+  {
+    type: 'admin.supplier_pending',
+    label: 'Fornecedor aguardando aprovação',
+    description: 'Quando um novo fornecedor entra em revisão.',
+  },
+  {
+    type: 'subscription.past_due',
+    label: 'Assinatura inadimplente',
+    description: 'Quando uma assinatura entra em atraso de pagamento.',
+  },
+  {
+    type: 'subscription.activated',
+    label: 'Nova assinatura ativada',
+    description: 'Quando um usuário ativa ou renova um plano pago.',
+  },
+] as const
+
+const BUYER_NOTIFICATIONS = [
+  {
+    type: 'offer.received',
+    label: 'Nova proposta recebida',
+    description: 'Quando um fornecedor envia proposta em uma demanda sua.',
+  },
+  {
+    type: 'chat.message',
+    label: 'Mensagens de negociação',
+    description: 'Novas mensagens no chat com fornecedores.',
+  },
+  {
+    type: 'order.status_changed',
+    label: 'Atualização de pedido',
+    description: 'Mudanças de status nos seus pedidos.',
+  },
+  {
+    type: 'sla.reminder',
+    label: 'Lembrete de prazo',
+    description: 'Quando uma ação sua está próxima do prazo limite.',
+  },
+  {
+    type: 'sla.expired',
+    label: 'Prazo expirado',
+    description: 'Quando um prazo importante foi ultrapassado.',
+  },
+  {
+    type: 'subscription.past_due',
+    label: 'Pagamento em atraso',
+    description: 'Quando há pendência no pagamento do seu plano.',
+  },
+  {
+    type: 'subscription.activated',
+    label: 'Plano ativado',
+    description: 'Confirmação de ativação ou renovação do seu plano.',
+  },
+] as const
+
+type NotificationPreferenceItem = {
+  type: string
+  label: string
+  description: string
+}
+
+function resolveSettingsRole(
+  activeRole: UserRole | null,
+  shellRole: UserRole | null | undefined,
+): UserRole | null {
+  if (shellRole === 'buyer' || shellRole === 'supplier') return shellRole
+  if (activeRole === 'buyer' || activeRole === 'supplier') return activeRole
+  if (activeRole === 'admin' || activeRole === 'commercial') return activeRole
+  if (shellRole === 'admin') return 'admin'
+  return shellRole ?? activeRole
+}
+
+function isStaffContext(role: UserRole | null) {
+  return role === 'admin' || role === 'commercial'
+}
+
+function getNotificationPreferences(role: UserRole | null): NotificationPreferenceItem[] | null {
+  if (role === 'admin' || role === 'commercial') {
+    return ADMIN_OPERATIONAL_NOTIFICATIONS.map((item) => ({ ...item }))
+  }
+  if (role === 'buyer') {
+    return BUYER_NOTIFICATIONS.map((item) => ({ ...item }))
+  }
+  return null
+}
 
 export function ProfilePage() {
   usePageTitle()
-  const { user, profile, refreshProfile, signOut } = useAuth()
+  const { user, profile, refreshProfile, activeRole, roles } = useAuth()
+  const { shellRole } = useOutletContext<AppShellOutletContext>()
+  const settingsRole = resolveSettingsRole(activeRole, shellRole)
+  const isStaff = isStaffContext(settingsRole)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [updatingPassword, setUpdatingPassword] = useState(false)
-  const [mobileSection, setMobileSection] = useState<MobileSection | null>(null)
+  const [mobileSection, setMobileSection] = useState<SettingsSection | null>(null)
+  const [desktopSection, setDesktopSection] = useState<SettingsSection>('account')
+  const [termsEditing, setTermsEditing] = useState(false)
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
       full_name: '',
+      email: '',
       phone: '',
     },
   })
@@ -108,12 +254,13 @@ export function ProfilePage() {
     if (!profile) return
     form.reset({
       full_name: profile.full_name,
+      email: profile.email ?? user?.email ?? '',
       phone: profile.phone ?? '',
     })
-  }, [profile, form])
+  }, [profile, user?.email, form])
 
   useEffect(() => {
-    if (!profile?.avatar_url) {
+    if (isStaff || !profile?.avatar_url) {
       setAvatarPreview(null)
       return
     }
@@ -130,10 +277,10 @@ export function ProfilePage() {
     return () => {
       cancelled = true
     }
-  }, [profile?.avatar_url])
+  }, [isStaff, profile?.avatar_url])
 
   async function handleAvatarChange(file: File) {
-    if (!user) return
+    if (!user || isStaff) return
     const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
     if (!['jpg', 'jpeg', 'png', 'webp'].includes(ext)) {
       toast.error('Formato inválido. Use JPG, PNG ou WebP.')
@@ -161,15 +308,30 @@ export function ProfilePage() {
   }
 
   async function onSubmit(values: ProfileFormValues) {
-    if (!user) return
+    if (!user || !profile) return
     setSaveError(null)
     try {
       await updateProfile(user.id, {
         full_name: values.full_name,
         phone: values.phone,
       })
+
+      const currentEmail = (profile.email ?? user.email ?? '').trim().toLowerCase()
+      const nextEmail = values.email.trim().toLowerCase()
+      const emailChanged = nextEmail !== currentEmail
+
+      if (emailChanged) {
+        const { error } = await supabase.auth.updateUser({ email: values.email.trim() })
+        if (error) throw error
+      }
+
       await refreshProfile()
-      toast.success('Perfil updated')
+
+      if (emailChanged) {
+        toast.success('Dados salvos. Confira sua caixa de entrada para confirmar o novo e-mail.')
+      } else {
+        toast.success('Perfil atualizado')
+      }
     } catch (err) {
       const message = translateAuthError(err instanceof Error ? err.message : 'Erro ao salvar perfil')
       setSaveError(message)
@@ -193,30 +355,65 @@ export function ProfilePage() {
 
   if (!profile) {
     return (
-      <div className="w-full space-y-6">
-        <div className="grid gap-6 grid-cols-1 md:grid-cols-3">
-          <div className="md:col-span-1 space-y-6">
-            <CardSkeleton />
-            <CardSkeleton />
-          </div>
-          <div className="md:col-span-2 space-y-6">
-            <CardSkeleton />
-          </div>
+      <div className="hidden md:grid w-full flex-1 min-h-0 md:grid-cols-[280px_minmax(0,1fr)] md:gap-6 px-6 py-6">
+        <div className="space-y-4">
+          <CardSkeleton />
+          <LoadingSkeleton className="h-40 w-full rounded-xl" />
         </div>
+        <CardSkeleton />
       </div>
     )
   }
 
-  const roleLabel = profile.primary_role === 'buyer' ? 'Comprador' : 'Fornecedor'
+  const displayRole = settingsRole ?? profile.primary_role ?? roles[0]
+  const roleLabel =
+    displayRole && displayRole in ROLE_LABELS
+      ? ROLE_LABELS[displayRole as UserRole]
+      : 'Usuário'
   const roleColor =
-    profile.primary_role === 'buyer'
-      ? 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800'
-      : 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800'
+    displayRole && displayRole in ROLE_COLORS
+      ? ROLE_COLORS[displayRole as UserRole]
+      : 'bg-muted text-muted-foreground border-border'
+  const notificationPreferences = getNotificationPreferences(settingsRole)
+  const showNotifications = notificationPreferences != null
+  const menuItems = SETTINGS_MENU_ITEMS.filter((item) => {
+    if (item.id === 'notifications') return showNotifications
+    if (item.id === 'privacy') return !isStaff
+    return true
+  }).map((item) => {
+    if (item.id === 'notifications') {
+      return {
+        ...item,
+        description: isStaff
+          ? 'Alertas operacionais do painel administrativo.'
+          : 'Propostas, pedidos, mensagens e plano da sua conta.',
+      }
+    }
+    return item
+  })
+
+  useEffect(() => {
+    if (desktopSection === 'notifications' && !showNotifications) {
+      setDesktopSection('account')
+    }
+    if (desktopSection === 'privacy' && isStaff) {
+      setDesktopSection('account')
+    }
+    if (desktopSection !== 'terms') {
+      setTermsEditing(false)
+    }
+  }, [desktopSection, showNotifications, isStaff])
+
+  useEffect(() => {
+    if (mobileSection !== 'terms') {
+      setTermsEditing(false)
+    }
+  }, [mobileSection])
   const joinDate = user?.created_at
     ? new Date(user.created_at).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
     : '—'
 
-  const avatarUploader = (
+  const avatarSection = !isStaff ? (
     <AvatarUploader
       profile={profile}
       avatarPreview={avatarPreview}
@@ -224,22 +421,18 @@ export function ProfilePage() {
       fileInputRef={fileInputRef}
       onAvatarChange={handleAvatarChange}
     />
-  )
+  ) : null
 
-  const accountDetails = (
-    <AccountDetailsContent
+  const myAccountContent = (
+    <MyAccountContent
       profile={profile}
       roleLabel={roleLabel}
       roleColor={roleColor}
       joinDate={joinDate}
-    />
-  )
-
-  const personalDataForm = (
-    <PersonalDataForm
       form={form}
       saveError={saveError}
       onSubmit={onSubmit}
+      className="flex-1"
     />
   )
 
@@ -251,31 +444,96 @@ export function ProfilePage() {
     />
   )
 
+  const notificationsSettings = notificationPreferences ? (
+    <NotificationPreferencesSettings items={notificationPreferences} />
+  ) : null
+
+  const termsSettings = (
+    <TermsOfUseSettings
+      canEdit={isStaff}
+      isEditing={termsEditing}
+      onEditingChange={setTermsEditing}
+      className="flex-1"
+    />
+  )
+
+  function renderSectionContent(section: SettingsSection) {
+    switch (section) {
+      case 'account':
+        return myAccountContent
+      case 'security':
+        return securityForm
+      case 'sessions':
+        return <ActiveSessionsSettings />
+      case 'notifications':
+        return notificationsSettings
+      case 'appearance':
+        return <AppearanceSettings />
+      case 'integrations':
+        return <IntegrationsSettings />
+      case 'privacy':
+        return <PrivacyDataSettings profile={profile} />
+      case 'terms':
+        return termsSettings
+      default:
+        return null
+    }
+  }
+
   const mobileSectionTitle =
-    MOBILE_MENU_ITEMS.find((item) => item.id === mobileSection)?.label ?? 'Configurações'
+    SETTINGS_MENU_ITEMS.find((item) => item.id === mobileSection)?.label ?? 'Configurações'
+
+  const desktopSectionMeta = SETTINGS_MENU_ITEMS.find((item) => item.id === desktopSection)
 
   return (
-    <div className="flex-1 h-full min-h-0 flex flex-col overflow-y-auto md:overflow-hidden">
+    <div className="flex-1 h-full min-h-0 flex flex-col overflow-hidden">
       {/* Mobile: menu ou sub-tela */}
-      <div className="md:hidden flex flex-col min-h-0 flex-1 pb-24">
+      <div
+        className={cn(
+          'md:hidden flex min-h-0 flex-1 flex-col pb-24',
+          mobileSection ? 'overflow-hidden' : 'overflow-y-auto',
+        )}
+      >
         {mobileSection ? (
           <>
             <MobileSectionHeader
               title={mobileSectionTitle}
               onBack={() => setMobileSection(null)}
+              hideTitle={mobileSection === 'terms'}
             />
-            <div className="flex-1 overflow-y-auto px-4 py-4">
-              {mobileSection === 'account' && accountDetails}
-              {mobileSection === 'personal' && personalDataForm}
-              {mobileSection === 'security' && securityForm}
-              {mobileSection === 'appearance' && <AppearanceSettings />}
-            </div>
+            {mobileSection === 'account' ? (
+              <div className="flex min-h-0 min-w-0 flex-1 flex-col px-4 pb-4">
+                {myAccountContent}
+              </div>
+            ) : mobileSection === 'terms' ? (
+              <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden px-4 pb-4">
+                <SettingsSectionTitle
+                  icon={FileText}
+                  label="Termos de Uso"
+                  trailing={
+                    isStaff ? (
+                      <TermsEditButton
+                        isEditing={termsEditing}
+                        onToggle={() => setTermsEditing((value) => !value)}
+                      />
+                    ) : undefined
+                  }
+                />
+                {termsSettings}
+              </div>
+            ) : (
+              <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain scrollbar-custom">
+                <div className="box-border w-full max-w-full px-4 py-4">
+                  {renderSectionContent(mobileSection)}
+                </div>
+              </div>
+            )}
           </>
         ) : (
           <div className="space-y-6 px-4 py-6">
-            {avatarUploader}
+            {avatarSection}
             <nav className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-              {MOBILE_MENU_ITEMS.map((item, index) => (
+              {menuItems.map((item, index) => (
                 <button
                   key={item.id}
                   type="button"
@@ -287,78 +545,152 @@ export function ProfilePage() {
                 >
                   <item.icon className="h-5 w-5 shrink-0 self-center text-primary" />
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium">{item.label}</p>
+                    <p className="text-sm font-medium leading-snug">{item.label}</p>
                     <p className="mt-0.5 text-xs text-muted-foreground">{item.description}</p>
                   </div>
                   <ChevronRight className="h-5 w-5 shrink-0 self-center text-muted-foreground" />
                 </button>
               ))}
             </nav>
-            <AccountSessionActions onSignOut={signOut} />
           </div>
         )}
       </div>
 
-      {/* Desktop: layout em grid */}
-      <div className="hidden md:grid w-full flex-1 min-h-0 md:grid-cols-3 md:gap-6 overflow-hidden px-6 py-6">
-        <div className="space-y-6 shrink-0 md:col-span-1 md:h-full md:overflow-y-auto scrollbar-none [&::-webkit-scrollbar]:hidden">
-          {avatarUploader}
-          <Card className="border border-border bg-card shadow-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-semibold">Detalhes da conta</CardTitle>
-            </CardHeader>
-            <CardContent>{accountDetails}</CardContent>
-          </Card>
-          <AccountSessionActions onSignOut={signOut} className="hidden md:flex" />
-        </div>
+      {/* Desktop: submenu lateral + conteúdo */}
+      <div className="hidden md:grid w-full flex-1 min-h-0 md:grid-cols-[280px_minmax(0,1fr)] md:gap-6 px-6 py-6">
+        <aside className="flex min-h-0 flex-col gap-4">
+          {avatarSection}
+          <nav className="space-y-1">
+            {menuItems.map((item) => {
+              const active = desktopSection === item.id
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setDesktopSection(item.id)}
+                  className={cn(
+                    'flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left transition-colors',
+                    active
+                      ? 'bg-primary/10 text-primary'
+                      : 'text-foreground hover:bg-secondary/40',
+                  )}
+                >
+                  <item.icon
+                    className={cn(
+                      'mt-0.5 h-4 w-4 shrink-0',
+                      active ? 'text-primary' : 'text-muted-foreground',
+                    )}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium leading-snug">{item.label}</p>
+                    <p
+                      className={cn(
+                        'mt-0.5 text-xs leading-snug',
+                        active ? 'text-primary/70' : 'text-muted-foreground',
+                      )}
+                    >
+                      {item.description}
+                    </p>
+                  </div>
+                </button>
+              )
+            })}
+          </nav>
+        </aside>
 
-        <div className="flex-1 min-h-0 overflow-y-auto scrollbar-custom space-y-6 pb-6 md:col-span-2 md:h-full pr-1">
-          <Card className="border border-border bg-card shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <User className="h-5 w-5 text-primary" />
-                Dados pessoais
-              </CardTitle>
-              <CardDescription>Atualize seu nome completo e telefone de contato.</CardDescription>
-            </CardHeader>
-            <CardContent>{personalDataForm}</CardContent>
-          </Card>
-
-          <Card className="border border-border bg-card shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <Shield className="h-5 w-5 text-primary" />
-                Segurança do acesso
-              </CardTitle>
-              <CardDescription>Altere sua senha de login da plataforma.</CardDescription>
-            </CardHeader>
-            <CardContent>{securityForm}</CardContent>
-          </Card>
-
-          <Card className="border border-border bg-card shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <Palette className="h-5 w-5 text-primary" />
-                Aparência
-              </CardTitle>
-              <CardDescription>Escolha entre modo claro ou escuro.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <AppearanceSettings />
-            </CardContent>
-          </Card>
+        <div className="flex min-h-0 min-w-0 flex-col">
+          {desktopSectionMeta &&
+            (desktopSection === 'account' ? (
+              <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+                <SettingsSectionTitle
+                  icon={desktopSectionMeta.icon}
+                  label={desktopSectionMeta.label}
+                />
+                {myAccountContent}
+              </div>
+            ) : desktopSection === 'terms' ? (
+              <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+                <SettingsSectionTitle
+                  icon={desktopSectionMeta.icon}
+                  label={desktopSectionMeta.label}
+                  trailing={
+                    isStaff ? (
+                      <TermsEditButton
+                        isEditing={termsEditing}
+                        onToggle={() => setTermsEditing((value) => !value)}
+                      />
+                    ) : undefined
+                  }
+                />
+                {termsSettings}
+              </div>
+            ) : (
+              <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain scrollbar-custom">
+                <div className="box-border w-full max-w-full space-y-6 px-4 pb-4 pt-1">
+                  <SettingsSectionTitle
+                    icon={desktopSectionMeta.icon}
+                    label={desktopSectionMeta.label}
+                  />
+                  {renderSectionContent(desktopSection)}
+                </div>
+              </div>
+            ))}
         </div>
       </div>
     </div>
   )
 }
 
+function SettingsSectionTitle({
+  icon: Icon,
+  label,
+  trailing,
+}: {
+  icon: LucideIcon
+  label: string
+  trailing?: ReactNode
+}) {
+  return (
+    <h2 className="mb-4 flex shrink-0 items-center gap-2 font-display text-base font-semibold">
+      <Icon className="h-5 w-5 text-primary" />
+      {label}
+      {trailing}
+    </h2>
+  )
+}
+
+function TermsEditButton({
+  isEditing,
+  onToggle,
+}: {
+  isEditing: boolean
+  onToggle: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className={cn(
+        'inline-flex h-7 w-7 items-center justify-center rounded-lg transition-colors',
+        isEditing
+          ? 'bg-primary/10 text-primary'
+          : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground',
+      )}
+      aria-label={isEditing ? 'Fechar edição dos termos' : 'Editar termos de uso'}
+    >
+      <Pencil className="h-4 w-4" />
+    </button>
+  )
+}
+
 function MobileSectionHeader({
   title,
   onBack,
+  hideTitle = false,
 }: {
   title: string
   onBack: () => void
+  hideTitle?: boolean
 }) {
   return (
     <div className="sticky top-0 z-10 flex shrink-0 items-center gap-1 border-b border-border bg-background/95 px-2 py-2 backdrop-blur-sm">
@@ -370,7 +702,7 @@ function MobileSectionHeader({
       >
         <ArrowLeft className="h-5 w-5" />
       </button>
-      <h2 className="font-display text-base font-semibold">{title}</h2>
+      {!hideTitle && <h2 className="font-display text-base font-semibold">{title}</h2>}
     </div>
   )
 }
@@ -422,13 +754,66 @@ function AvatarUploader({
   )
 }
 
-function AccountDetailsContent({
+const PROFILE_FIELD_INPUT_CLASS =
+  'box-border min-w-0 w-full max-w-full rounded-xl border-border/60 shadow-none ring-0 ring-offset-0 focus-visible:border-primary focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0'
+
+function ProfileFieldControl({ children }: { children: ReactNode }) {
+  return <div className="box-border w-full max-w-full px-0.5">{children}</div>
+}
+
+function MyAccountContent({
   profile,
   roleLabel,
   roleColor,
   joinDate,
+  form,
+  saveError,
+  onSubmit,
+  className,
 }: {
   profile: UserProfile
+  roleLabel: string
+  roleColor: string
+  joinDate: string
+  form: ReturnType<typeof useForm<ProfileFormValues>>
+  saveError: string | null
+  onSubmit: (values: ProfileFormValues) => Promise<void>
+  className?: string
+}) {
+  const formId = 'my-account-form'
+
+  return (
+    <div className={cn('flex min-h-0 w-full min-w-0 flex-col', className)}>
+      <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain scrollbar-custom">
+        <div className="box-border w-full max-w-full px-4 pb-4 pt-1">
+          <div className="min-w-0 space-y-8">
+            <AccountDetailsContent
+              roleLabel={roleLabel}
+              roleColor={roleColor}
+              joinDate={joinDate}
+            />
+            <div className="min-w-0 border-t border-border/50 pt-6">
+              <PersonalDataForm
+                form={form}
+                saveError={saveError}
+                onSubmit={onSubmit}
+                formId={formId}
+                hideSubmit
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+      <PersonalDataFormFooter form={form} formId={formId} />
+    </div>
+  )
+}
+
+function AccountDetailsContent({
+  roleLabel,
+  roleColor,
+  joinDate,
+}: {
   roleLabel: string
   roleColor: string
   joinDate: string
@@ -443,15 +828,6 @@ function AccountDetailsContent({
         <Badge className={`${roleColor} border font-semibold rounded-full px-2.5 py-0.5 text-xs`}>
           {roleLabel}
         </Badge>
-      </div>
-      <div className="flex items-center justify-between border-b border-border/50 pb-3">
-        <span className="text-muted-foreground flex items-center gap-1.5">
-          <Mail className="h-4 w-4" />
-          E-mail
-        </span>
-        <span className="font-medium text-foreground truncate max-w-[180px]" title={profile.email ?? ''}>
-          {profile.email}
-        </span>
       </div>
       <div className="flex items-center justify-between pb-1">
         <span className="text-muted-foreground flex items-center gap-1.5">
@@ -468,10 +844,14 @@ function PersonalDataForm({
   form,
   saveError,
   onSubmit,
+  formId = 'profile-form',
+  hideSubmit = false,
 }: {
   form: ReturnType<typeof useForm<ProfileFormValues>>
   saveError: string | null
   onSubmit: (values: ProfileFormValues) => Promise<void>
+  formId?: string
+  hideSubmit?: boolean
 }) {
   return (
     <>
@@ -479,15 +859,46 @@ function PersonalDataForm({
         <Alert className="mb-4 border-destructive/50 text-destructive">{saveError}</Alert>
       )}
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <form
+          id={formId}
+          onSubmit={form.handleSubmit(onSubmit)}
+          className="min-w-0 space-y-4"
+        >
           <FormField
             control={form.control}
             name="full_name"
             render={({ field }) => (
-              <FormItem>
+              <FormItem className="min-w-0">
                 <FormLabel>Nome completo</FormLabel>
-                <FormControl>
-                  <Input placeholder="Seu nome" {...field} className="rounded-xl border-border/60" />
+                <FormControl className="min-w-0 max-w-full">
+                  <ProfileFieldControl>
+                    <Input
+                      placeholder="Seu nome"
+                      {...field}
+                      className={PROFILE_FIELD_INPUT_CLASS}
+                    />
+                  </ProfileFieldControl>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem className="min-w-0">
+                <FormLabel>E-mail</FormLabel>
+                <FormControl className="min-w-0 max-w-full">
+                  <ProfileFieldControl>
+                    <Input
+                      type="email"
+                      placeholder="seu@email.com"
+                      autoComplete="email"
+                      {...field}
+                      className={PROFILE_FIELD_INPUT_CLASS}
+                    />
+                  </ProfileFieldControl>
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -497,28 +908,64 @@ function PersonalDataForm({
             control={form.control}
             name="phone"
             render={({ field }) => (
-              <FormItem>
+              <FormItem className="min-w-0">
                 <FormLabel>Telefone</FormLabel>
-                <FormControl>
-                  <Input placeholder="(11) 99999-9999" {...field} className="rounded-xl border-border/60" />
+                <FormControl className="min-w-0 max-w-full">
+                  <ProfileFieldControl>
+                    <Input
+                      placeholder="(11) 99999-9999"
+                      {...field}
+                      className={PROFILE_FIELD_INPUT_CLASS}
+                    />
+                  </ProfileFieldControl>
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
-          <Button type="submit" disabled={form.formState.isSubmitting} className="rounded-xl font-semibold shadow-sm px-6">
-            {form.formState.isSubmitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Salvando...
-              </>
-            ) : (
-              'Salvar alterações'
-            )}
-          </Button>
+          {!hideSubmit && (
+            <Button type="submit" disabled={form.formState.isSubmitting} className="rounded-xl font-semibold shadow-sm px-6">
+              {form.formState.isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Salvando...
+                </>
+              ) : (
+                'Salvar alterações'
+              )}
+            </Button>
+          )}
         </form>
       </Form>
     </>
+  )
+}
+
+function PersonalDataFormFooter({
+  form,
+  formId,
+}: {
+  form: ReturnType<typeof useForm<ProfileFormValues>>
+  formId: string
+}) {
+  return (
+    <div className="flex shrink-0 justify-end border-t border-border/50 bg-background px-4 pt-4">
+      <Button
+        type="submit"
+        form={formId}
+        disabled={form.formState.isSubmitting}
+        className="rounded-xl px-6 font-semibold shadow-sm"
+      >
+        {form.formState.isSubmitting ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Salvando...
+          </>
+        ) : (
+          'Salvar alterações'
+        )}
+      </Button>
+    </div>
   )
 }
 
@@ -533,20 +980,25 @@ function SecurityForm({
 }) {
   return (
     <Form {...passwordForm}>
-      <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-4">
+      <form
+        onSubmit={passwordForm.handleSubmit(onPasswordSubmit)}
+        className="min-w-0 max-w-full space-y-4"
+      >
         <FormField
           control={passwordForm.control}
           name="new_password"
           render={({ field }) => (
-            <FormItem>
+            <FormItem className="min-w-0">
               <FormLabel>Nova senha</FormLabel>
-              <FormControl>
-                <Input
-                  type="password"
-                  placeholder="Nova senha (min. 6 dígitos)"
-                  {...field}
-                  className="rounded-xl border-border/60"
-                />
+              <FormControl className="min-w-0 max-w-full">
+                <ProfileFieldControl>
+                  <Input
+                    type="password"
+                    placeholder="Nova senha (min. 6 dígitos)"
+                    {...field}
+                    className={PROFILE_FIELD_INPUT_CLASS}
+                  />
+                </ProfileFieldControl>
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -556,67 +1008,40 @@ function SecurityForm({
           control={passwordForm.control}
           name="confirm_password"
           render={({ field }) => (
-            <FormItem>
+            <FormItem className="min-w-0">
               <FormLabel>Confirmar nova senha</FormLabel>
-              <FormControl>
-                <Input
-                  type="password"
-                  placeholder="Confirme a nova senha"
-                  {...field}
-                  className="rounded-xl border-border/60"
-                />
+              <FormControl className="min-w-0 max-w-full">
+                <ProfileFieldControl>
+                  <Input
+                    type="password"
+                    placeholder="Confirme a nova senha"
+                    {...field}
+                    className={PROFILE_FIELD_INPUT_CLASS}
+                  />
+                </ProfileFieldControl>
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-        <Button
-          type="submit"
-          disabled={updatingPassword}
-          className="rounded-xl font-semibold shadow-sm px-6 bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border"
-        >
-          {updatingPassword ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Atualizando...
-            </>
-          ) : (
-            'Alterar senha'
-          )}
-        </Button>
+        <div className="flex justify-end pt-2">
+          <Button
+            type="submit"
+            disabled={updatingPassword}
+            className="rounded-xl border border-border bg-secondary px-6 font-semibold text-secondary-foreground shadow-sm hover:bg-secondary/80"
+          >
+            {updatingPassword ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Atualizando...
+              </>
+            ) : (
+              'Alterar senha'
+            )}
+          </Button>
+        </div>
       </form>
     </Form>
-  )
-}
-
-function AccountSessionActions({
-  onSignOut,
-  className,
-}: {
-  onSignOut: () => Promise<void>
-  className?: string
-}) {
-  async function handleSignOut() {
-    if (!window.confirm('Deseja sair da sua conta neste dispositivo?')) return
-    try {
-      await onSignOut()
-    } catch (err) {
-      toast.error(translateSupabaseError(err instanceof Error ? err.message : 'Erro ao sair'))
-    }
-  }
-
-  return (
-    <div className={cn(className)}>
-      <Button
-        type="button"
-        variant="ghost"
-        className="h-11 w-full justify-center gap-2 rounded-xl border border-destructive/20 bg-destructive/10 font-semibold text-destructive hover:bg-destructive/15 hover:text-destructive"
-        onClick={() => void handleSignOut()}
-      >
-        <LogOut className="h-4 w-4" />
-        Sair da conta
-      </Button>
-    </div>
   )
 }
 
@@ -634,6 +1059,90 @@ const THEME_OPTIONS = [
     icon: Moon,
   },
 ]
+
+function NotificationPreferencesSettings({
+  items,
+}: {
+  items: NotificationPreferenceItem[]
+}) {
+  const { data: preferences = [], isLoading } = useNotificationPreferences()
+  const updatePreferences = useUpdateNotificationPreferences()
+
+  function getPreference(type: string) {
+    return preferences.find((pref) => pref.notification_type === type)
+  }
+
+  function isChannelEnabled(type: string, channel: 'in_app_enabled' | 'email_enabled') {
+    const pref = getPreference(type)
+    return pref ? pref[channel] : true
+  }
+
+  async function handleToggle(
+    type: string,
+    channel: 'in_app_enabled' | 'email_enabled',
+    enabled: boolean,
+  ) {
+    const pref = getPreference(type)
+
+    try {
+      await updatePreferences.mutateAsync([
+        {
+          notification_type: type,
+          in_app_enabled: channel === 'in_app_enabled' ? enabled : (pref?.in_app_enabled ?? true),
+          email_enabled: channel === 'email_enabled' ? enabled : (pref?.email_enabled ?? true),
+        },
+      ])
+    } catch (err) {
+      toast.error(translateSupabaseError(err instanceof Error ? err.message : 'Erro ao salvar preferência'))
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="space-y-3">
+        {items.map((item) => (
+          <LoadingSkeleton key={item.type} className="h-24 w-full rounded-xl" />
+        ))}
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-3">
+      {items.map((item) => (
+        <div
+          key={item.type}
+          className="flex items-center justify-between gap-4 rounded-xl border border-border p-4"
+        >
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium">{item.label}</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">{item.description}</p>
+          </div>
+          <div className="flex shrink-0 items-center gap-4">
+            <label className="flex items-center gap-2 text-sm whitespace-nowrap">
+              <Switch
+                id={`${item.type}-in-app`}
+                checked={isChannelEnabled(item.type, 'in_app_enabled')}
+                disabled={updatePreferences.isPending}
+                onCheckedChange={(checked) => void handleToggle(item.type, 'in_app_enabled', checked)}
+              />
+              No app
+            </label>
+            <label className="flex items-center gap-2 text-sm whitespace-nowrap">
+              <Switch
+                id={`${item.type}-email`}
+                checked={isChannelEnabled(item.type, 'email_enabled')}
+                disabled={updatePreferences.isPending}
+                onCheckedChange={(checked) => void handleToggle(item.type, 'email_enabled', checked)}
+              />
+              E-mail
+            </label>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
 
 function AppearanceSettings() {
   const { theme, setTheme, resolvedTheme } = useTheme()

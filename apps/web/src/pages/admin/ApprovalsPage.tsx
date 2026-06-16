@@ -46,13 +46,6 @@ export function ApprovalsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-display text-2xl font-bold">Aprovações</h1>
-        <p className="text-sm text-muted-foreground">
-          Fila de fornecedores aguardando revisão do cadastro
-        </p>
-      </div>
-
       {isLoading && <GridSkeleton count={3} />}
 
       {!isLoading && suppliers.length === 0 && (

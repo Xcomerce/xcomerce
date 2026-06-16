@@ -8,12 +8,19 @@ import { BottomNav } from '@/components/layout/BottomNav'
 import { Outlet, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 
+export type AppShellOutletContext = {
+  shellRole: UserRole
+}
+
 const FULL_HEIGHT_LAYOUT_PATHS = [
   '/buyer/demands/new',
   '/buyer/dashboard',
   '/settings/profile',
   '/supplier/auto-offers',
   '/supplier/onboarding',
+  '/admin/subscriptions',
+  '/admin/users',
+  '/admin/categories',
 ]
 const FULL_WIDTH_LAYOUT_PATHS = [
   '/buyer/demands/new',
@@ -96,7 +103,7 @@ export function AppShell({ role }: { role: UserRole }) {
                   : 'mx-auto max-w-7xl p-4 lg:p-6',
             )}
           >
-            <Outlet />
+            <Outlet context={{ shellRole: role } satisfies AppShellOutletContext} />
           </div>
         </main>
       </div>

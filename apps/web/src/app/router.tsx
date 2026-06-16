@@ -125,6 +125,10 @@ export const router = createBrowserRouter([
             children: [
               { path: 'admin/approvals', element: adminPages.approvals },
               { path: 'admin/metrics', element: adminPages.metrics },
+              { path: 'admin/financial-reports', element: adminPages.financialReports },
+              { path: 'admin/plans', element: adminPages.plans },
+              { path: 'admin/subscriptions', element: adminPages.subscriptions },
+              { path: 'admin/users', element: adminPages.users },
               { path: 'admin/categories', element: adminPages.categories },
               { path: 'admin/audit', element: adminPages.audit },
             ],

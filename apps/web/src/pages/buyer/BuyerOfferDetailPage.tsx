@@ -24,6 +24,7 @@ import { useChatMessages, useSendMessage, useChatSubscription } from '@/hooks/us
 import { useAuth } from '@/contexts/auth-context'
 import { formatSupabaseError } from '@/lib/errors'
 import { cn } from '@/lib/utils'
+import { ScrollPageShell, SCROLL_PAGE_SECTION_CLASS } from '@/components/layout/ScrollPageShell'
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
@@ -97,7 +98,7 @@ function BuyerOfferChatPanel({
       <div
         className={cn(
           'scrollbar-custom min-h-0 flex-1 space-y-2 bg-muted/10 px-4 py-3 lg:px-6',
-          messages.length > 0 ? 'overflow-y-auto' : 'overflow-hidden',
+          messages.length > 0 ? 'overflow-y-auto overscroll-contain' : 'overflow-hidden',
         )}
       >
         {messagesLoading && (
@@ -318,14 +319,11 @@ export function BuyerOfferDetailPage() {
   const showFooter = canAccept && offer.status === 'enviada'
 
   return (
-    <div className="h-full max-h-full min-h-0 flex w-full flex-col overflow-hidden lg:flex-row">
-      {/* Coluna do Conteúdo — único scroll */}
-      <section
-        className={cn(
-          'scrollbar-custom min-h-0 flex-1 overflow-y-auto overscroll-contain space-y-6 p-4 lg:p-6',
-          showFooter && 'lg:pb-20',
-        )}
-      >
+    <>
+      <ScrollPageShell>
+        <section
+          className={cn(SCROLL_PAGE_SECTION_CLASS, 'space-y-6', showFooter && 'lg:pb-20')}
+        >
         {/* Imagem do Produto correspondente à categoria (separada na parte de cima) */}
         <div className="relative h-64 w-full bg-muted overflow-hidden rounded-2xl border border-border/50 shadow-sm shrink-0">
           {imageUrl ? (
@@ -626,6 +624,7 @@ export function BuyerOfferDetailPage() {
           messagesEndRef={messagesEndRef}
         />
       </aside>
+      </ScrollPageShell>
 
       {mobileChatOpen && (
         <div className="fixed inset-0 z-50 flex flex-col bg-background lg:hidden">
@@ -780,6 +779,6 @@ export function BuyerOfferDetailPage() {
           </div>
         </div>
       )}
-    </div>
+    </>
   )
 }

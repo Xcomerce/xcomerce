@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { getDashboardForRole, type UserRole } from '@keve/shared'
 import { Navigate } from 'react-router-dom'
 import { AppShell } from '@/components/layout/AppShell'
@@ -7,15 +8,32 @@ function RoleShell({ role }: { role: UserRole }) {
   return <AppShell role={role} />
 }
 
+function useSyncActiveRole(role: UserRole) {
+  const { roles, setActiveRole } = useAuth()
+
+  useEffect(() => {
+    if (roles.includes(role)) setActiveRole(role)
+  }, [role, roles, setActiveRole])
+}
+
 export function BuyerAppLayout() {
+  useSyncActiveRole('buyer')
   return <RoleShell role="buyer" />
 }
 
 export function SupplierAppLayout() {
+  useSyncActiveRole('supplier')
   return <RoleShell role="supplier" />
 }
 
 export function AdminAppLayout() {
+  const { roles, setActiveRole } = useAuth()
+
+  useEffect(() => {
+    const staffRole = roles.find((role) => role === 'admin' || role === 'commercial')
+    if (staffRole) setActiveRole(staffRole)
+  }, [roles, setActiveRole])
+
   return <RoleShell role="admin" />
 }
 

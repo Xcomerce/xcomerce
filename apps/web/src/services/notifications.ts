@@ -19,13 +19,22 @@ export type NotificationPreferenceUpdate = {
   in_app_enabled?: boolean
 }
 
-export async function fetchNotifications(userId: string, limit = 50): Promise<Notification[]> {
-  const { data, error } = await supabase
+export async function fetchNotifications(
+  userId: string,
+  { limit = 50, unreadOnly = false }: { limit?: number; unreadOnly?: boolean } = {},
+): Promise<Notification[]> {
+  let query = supabase
     .from('notifications')
     .select('*')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(limit)
+
+  if (unreadOnly) {
+    query = query.is('read_at', null)
+  }
+
+  const { data, error } = await query
 
   if (error) throw error
   return (data ?? []) as Notification[]
