@@ -37,9 +37,12 @@ export function MobileSidebar({ open, onClose, config }: MobileSidebarProps) {
       <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm lg:hidden" onClick={onClose} />
       <aside className="animate-slide-in-left fixed bottom-0 left-0 top-0 z-50 flex w-72 flex-col overflow-y-auto border-r border-sidebar-border bg-sidebar lg:hidden">
         <div className="flex items-center justify-between border-b border-sidebar-border/50 p-4">
-          <Link to="/" onClick={onClose} className="flex items-center">
-            <img src="/logo-dark.svg" className="h-11 object-contain dark:hidden" alt="X COMERCE" />
-            <img src="/logo-clara.svg" className="h-11 object-contain hidden dark:block" alt="X COMERCE" />
+          <Link to="/" onClick={onClose} className="flex items-center gap-2">
+            <img src="/logo-icon-dark.svg" className="h-6 w-auto object-contain dark:hidden" alt="" />
+            <img src="/logo-icon-light.svg" className="h-6 w-auto object-contain hidden dark:block" alt="" />
+            <span className="font-display text-lg font-medium tracking-wider text-brand-dark dark:text-foreground">
+              XCOMERCE
+            </span>
           </Link>
           <button type="button" onClick={onClose} className="flex h-10 w-10 items-center justify-center rounded-xl hover:bg-secondary/50">
             <X size={20} />

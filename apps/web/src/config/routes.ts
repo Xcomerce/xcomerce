@@ -1,5 +1,5 @@
 export const PAGE_TITLES: Record<string, string> = {
-  '/': 'X COMERCE',
+  '/': 'XCOMERCE',
   '/para-compradores': 'Para compradores',
   '/para-fornecedores': 'Para fornecedores',
   '/pricing': 'Planos e preços',
@@ -41,5 +41,5 @@ export function resolvePageTitle(pathname: string): string {
   if (pathname.startsWith('/supplier/catalog/') && pathname.endsWith('/edit')) return 'Editar produto'
   if (pathname.startsWith('/supplier/orders/')) return 'Detalhe do pedido'
   if (pathname.startsWith('/profile/')) return 'Perfil público'
-  return 'X COMERCE'
+  return 'XCOMERCE'
 }

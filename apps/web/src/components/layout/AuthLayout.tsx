@@ -1,6 +1,8 @@
 import { Link, Outlet } from 'react-router-dom'
+import { usePageTitle } from '@/hooks/use-page-title'
 
 export function AuthLayout() {
+  usePageTitle()
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
       <div className="hidden flex-col justify-between bg-brand-dark p-10 text-white lg:flex">

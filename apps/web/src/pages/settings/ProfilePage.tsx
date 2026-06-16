@@ -1109,14 +1109,14 @@ function NotificationPreferencesSettings({
       {items.map((item) => (
         <div
           key={item.type}
-          className="flex items-center justify-between gap-4 rounded-xl border border-border p-4"
+          className="flex flex-col md:flex-row md:items-center justify-between gap-4 rounded-xl border border-border p-4"
         >
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium">{item.label}</p>
             <p className="mt-0.5 text-xs text-muted-foreground">{item.description}</p>
           </div>
-          <div className="flex shrink-0 items-center gap-4">
-            <label className="flex items-center gap-2 text-sm whitespace-nowrap">
+          <div className="flex items-center gap-6 md:shrink-0 mt-2 md:mt-0">
+            <label className="flex items-center gap-2 text-sm whitespace-nowrap cursor-pointer">
               <Switch
                 id={`${item.type}-in-app`}
                 checked={isChannelEnabled(item.type, 'in_app_enabled')}
@@ -1125,7 +1125,7 @@ function NotificationPreferencesSettings({
               />
               No app
             </label>
-            <label className="flex items-center gap-2 text-sm whitespace-nowrap">
+            <label className="flex items-center gap-2 text-sm whitespace-nowrap cursor-pointer">
               <Switch
                 id={`${item.type}-email`}
                 checked={isChannelEnabled(item.type, 'email_enabled')}

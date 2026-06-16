@@ -7,6 +7,7 @@ import { Header } from '@/components/layout/Header'
 import { BottomNav } from '@/components/layout/BottomNav'
 import { Outlet, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
+import { usePageTitle } from '@/hooks/use-page-title'
 
 export type AppShellOutletContext = {
   shellRole: UserRole
@@ -36,6 +37,7 @@ const FULL_WIDTH_LAYOUT_PATHS = [
 ]
 
 export function AppShell({ role }: { role: UserRole }) {
+  usePageTitle()
   const [mobileOpen, setMobileOpen] = useState(false)
   const config = NAV_BY_ROLE[role]
   const { pathname } = useLocation()
