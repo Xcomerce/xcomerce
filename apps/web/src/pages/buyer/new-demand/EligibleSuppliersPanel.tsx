@@ -1,7 +1,7 @@
-import { Loader2, Check, MapPin } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Check, MapPin } from 'lucide-react'
 import { SearchingGlobe } from '@/components/common/SearchingGlobe'
 import { cn } from '@/lib/utils'
+import { DemandFormActions } from '@/pages/buyer/new-demand/DemandFormActions'
 import type { getEligibleSuppliers } from './utils'
 
 type EligibleSuppliersPanelProps = {
@@ -58,7 +58,7 @@ export function EligibleSuppliersPanel({
   const showCenteredGlobe = showIdle || showSearching || showAwaitingAddress
 
   return (
-    <aside className="glass-sidebar flex h-full min-h-0 w-full flex-col overflow-hidden border-sidebar-border lg:border-l">
+    <aside className="glass-sidebar flex h-full min-h-0 w-full flex-col overflow-hidden border-sidebar-border max-lg:min-h-[min(20rem,40dvh)] lg:border-l">
       <div className="shrink-0 px-3 pt-4">
         <p className="px-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">
           Fornecedores elegíveis
@@ -74,7 +74,7 @@ export function EligibleSuppliersPanel({
         className={cn(
           'scrollbar-custom min-h-0 flex-1 px-3',
           showCenteredGlobe
-            ? 'flex items-center justify-center overflow-hidden py-6'
+            ? 'flex min-h-[12rem] items-center justify-center overflow-hidden py-6 max-lg:min-h-[14rem]'
             : 'overflow-y-auto py-4',
         )}
       >
@@ -156,37 +156,15 @@ export function EligibleSuppliersPanel({
         )}
       </div>
 
-      <div className="shrink-0 border-t border-sidebar-border px-3 py-3">
-        <div className="space-y-2 rounded-xl border border-sidebar-border bg-card p-3">
-          <Button
-            type="button"
-            disabled={isSaving || !selectedCategoryId}
-            className="w-full rounded-lg bg-primary py-5 text-sm font-semibold uppercase tracking-wide text-primary-foreground shadow-sm hover:bg-brand-primary-dark"
-            onClick={onPublish}
-          >
-            {publishPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-            Publicar
-          </Button>
-          <div className="flex gap-2">
-            <Button
-              type="submit"
-              disabled={isSaving}
-              variant="outline"
-              className="flex-1 rounded-lg border-sidebar-border py-4 text-xs font-semibold uppercase tracking-wide"
-            >
-              {isSaving && !publishPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Salvar
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="flex-1 rounded-lg border-sidebar-border py-4 text-xs font-semibold uppercase tracking-wide"
-              onClick={onCancel}
-            >
-              Cancelar
-            </Button>
-          </div>
-        </div>
+      <div className="hidden shrink-0 border-t border-sidebar-border px-3 py-3 lg:block">
+        <DemandFormActions
+          isSaving={isSaving}
+          selectedCategoryId={selectedCategoryId}
+          publishPending={publishPending}
+          onPublish={onPublish}
+          onCancel={onCancel}
+          className="rounded-xl border border-sidebar-border bg-card p-3"
+        />
       </div>
     </aside>
   )

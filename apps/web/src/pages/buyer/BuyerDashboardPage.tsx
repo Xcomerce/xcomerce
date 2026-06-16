@@ -167,7 +167,7 @@ function OfferCardMini({
               <button
                 onClick={handleRejectClick}
                 disabled={isRejecting || isAccepting}
-                className="flex-1 flex items-center justify-center gap-1 rounded-full border border-red-200 bg-red-50/30 hover:bg-red-50 text-[10px] font-bold text-red-600 hover:text-red-700 py-1 transition-colors text-center disabled:opacity-50 h-7"
+                className="flex h-7 flex-1 items-center justify-center gap-1 rounded-full border border-destructive/20 bg-destructive/10 py-1 text-center text-[10px] font-bold text-destructive transition-colors hover:bg-destructive/15 hover:text-destructive disabled:opacity-50 dark:border-destructive/30 dark:bg-destructive/15 dark:hover:bg-destructive/20"
               >
                 <X className="h-3 w-3 shrink-0" />
                 <span>{isRejecting ? '...' : 'Recusar'}</span>
@@ -251,7 +251,7 @@ function OfferPlaceholderCard({
       <div className="p-3 flex-1 flex flex-col justify-between gap-2.5">
         <div className="space-y-0.5">
           <h4 className="font-medium text-xs text-muted-foreground italic">
-            {isDraft ? 'Demanda em rascunho' : 'Buscando propostas...'}
+            {isDraft ? 'Demanda em rascunho' : 'Esperando propostas'}
           </h4>
           <p className="text-[9px] text-muted-foreground/60 leading-tight">
             {isDraft ? 'Publique para iniciar o leilão' : 'Notificando fornecedores parceiros'}
@@ -299,7 +299,7 @@ function DemandItem({ demand }: { demand: Demand }) {
         <div className="col-span-4 w-full py-8 text-center border border-dashed border-border rounded-2xl bg-background/50">
           <Search className="mx-auto h-8 w-8 text-muted-foreground/30 mb-2" />
           <p className="text-sm font-semibold text-muted-foreground">
-            {demand.status === 'RASCUNHO' ? 'Rascunho criado' : 'Buscando propostas...'}
+            {demand.status === 'RASCUNHO' ? 'Rascunho criado' : 'Esperando propostas'}
           </p>
           <p className="text-xs text-muted-foreground/60 mt-0.5 px-4">
             {demand.status === 'RASCUNHO' ? (

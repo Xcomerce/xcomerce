@@ -8,7 +8,13 @@ import { BottomNav } from '@/components/layout/BottomNav'
 import { Outlet, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 
-const FULL_HEIGHT_LAYOUT_PATHS = ['/buyer/demands/new', '/buyer/dashboard', '/settings/profile']
+const FULL_HEIGHT_LAYOUT_PATHS = [
+  '/buyer/demands/new',
+  '/buyer/dashboard',
+  '/settings/profile',
+  '/supplier/auto-offers',
+  '/supplier/onboarding',
+]
 const FULL_WIDTH_LAYOUT_PATHS = [
   '/buyer/demands/new',
   '/buyer/feed',
@@ -16,18 +22,37 @@ const FULL_WIDTH_LAYOUT_PATHS = [
   '/settings/profile',
   '/settings/billing',
   '/notifications',
+  '/support',
+  '/supplier/auto-offers',
+  '/supplier/onboarding',
+  '/supplier/board',
 ]
 
 export function AppShell({ role }: { role: UserRole }) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const config = NAV_BY_ROLE[role]
   const { pathname } = useLocation()
+  const isSupplierCatalogForm =
+    pathname === '/supplier/catalog/new' ||
+    (pathname.startsWith('/supplier/catalog/') && pathname.endsWith('/edit'))
+  const isSupplierOnboarding = pathname === '/supplier/onboarding'
+  const isSupplierOfferPage = pathname.startsWith('/supplier/offers/')
+  const isSupplierOrderDetailPage =
+    pathname.startsWith('/supplier/orders/') && pathname !== '/supplier/orders'
+  const isBuyerNewDemandPage = pathname === '/buyer/demands/new'
+  const isBuyerOfferDetailPage = pathname.startsWith('/buyer/offers/')
   const isFullHeightLayout =
     FULL_HEIGHT_LAYOUT_PATHS.includes(pathname) ||
-    pathname.startsWith('/buyer/offers/')
+    pathname.startsWith('/buyer/offers/') ||
+    isSupplierCatalogForm ||
+    isSupplierOfferPage ||
+    isSupplierOrderDetailPage
   const isFullWidthLayout =
     FULL_WIDTH_LAYOUT_PATHS.includes(pathname) ||
-    pathname.startsWith('/buyer/offers/')
+    pathname.startsWith('/buyer/offers/') ||
+    isSupplierCatalogForm ||
+    isSupplierOfferPage ||
+    isSupplierOrderDetailPage
 
   useEffect(() => {
     if (!isFullHeightLayout) return
@@ -76,7 +101,17 @@ export function AppShell({ role }: { role: UserRole }) {
         </main>
       </div>
 
-      <BottomNav config={config} />
+      <BottomNav
+        config={config}
+        hiddenOnMobile={
+          isBuyerNewDemandPage ||
+          isBuyerOfferDetailPage ||
+          isSupplierCatalogForm ||
+          isSupplierOnboarding ||
+          isSupplierOfferPage ||
+          isSupplierOrderDetailPage
+        }
+      />
     </div>
   )
 }

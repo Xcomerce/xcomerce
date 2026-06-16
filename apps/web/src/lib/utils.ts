@@ -64,3 +64,112 @@ export function formatRelativeDate(dateInput: string | Date): string {
   const years = Math.floor(diffDays / 365)
   return `há ${years} ${years === 1 ? 'ano' : 'anos'}`
 }
+
+export function formatReceivedAt(dateInput: string | Date): string {
+  const date = typeof dateInput === 'string' ? new Date(dateInput) : dateInput
+  const now = new Date()
+  const diffMs = Math.max(0, now.getTime() - date.getTime())
+  const diffMins = Math.floor(diffMs / (1000 * 60))
+
+  if (diffMins < 1) {
+    return 'agora'
+  }
+  if (diffMins < 60) {
+    return `há ${diffMins} min`
+  }
+
+  const timeStr = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+  const isToday =
+    date.getDate() === now.getDate() &&
+    date.getMonth() === now.getMonth() &&
+    date.getFullYear() === now.getFullYear()
+
+  if (isToday) {
+    return `hoje às ${timeStr}`
+  }
+
+  const yesterday = new Date(now)
+  yesterday.setDate(now.getDate() - 1)
+  const isYesterday =
+    date.getDate() === yesterday.getDate() &&
+    date.getMonth() === yesterday.getMonth() &&
+    date.getFullYear() === yesterday.getFullYear()
+
+  if (isYesterday) {
+    return `ontem às ${timeStr}`
+  }
+
+  return formatRelativeDate(date)
+}
+
+export type ExpiresAtLabel = {
+  label: string
+  isExpired: boolean
+  isUrgent: boolean
+}
+
+export function formatExpiresAt(dateInput: string | Date | null | undefined): ExpiresAtLabel | null {
+  if (!dateInput) return null
+
+  const date = typeof dateInput === 'string' ? new Date(dateInput) : dateInput
+  const now = new Date()
+  const diffMs = date.getTime() - now.getTime()
+
+  if (diffMs <= 0) {
+    return { label: 'Expirada', isExpired: true, isUrgent: false }
+  }
+
+  const diffHours = Math.ceil(diffMs / (1000 * 60 * 60))
+  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24))
+
+  const isSameDay =
+    date.getDate() === now.getDate() &&
+    date.getMonth() === now.getMonth() &&
+    date.getFullYear() === now.getFullYear()
+
+  const tomorrow = new Date(now)
+  tomorrow.setDate(now.getDate() + 1)
+  const isTomorrow =
+    date.getDate() === tomorrow.getDate() &&
+    date.getMonth() === tomorrow.getMonth() &&
+    date.getFullYear() === tomorrow.getFullYear()
+
+  if (isSameDay) {
+    if (diffHours <= 1) {
+      return { label: 'Expira em breve', isExpired: false, isUrgent: true }
+    }
+    return { label: 'Expira hoje', isExpired: false, isUrgent: true }
+  }
+  if (isTomorrow) {
+    return { label: 'Expira amanhã', isExpired: false, isUrgent: true }
+  }
+  if (diffDays < 7) {
+    return {
+      label: `Expira em ${diffDays} ${diffDays === 1 ? 'dia' : 'dias'}`,
+      isExpired: false,
+      isUrgent: diffDays <= 3,
+    }
+  }
+  if (diffDays < 30) {
+    const weeks = Math.ceil(diffDays / 7)
+    return {
+      label: `Expira em ${weeks} ${weeks === 1 ? 'semana' : 'semanas'}`,
+      isExpired: false,
+      isUrgent: false,
+    }
+  }
+  if (diffDays < 365) {
+    const months = Math.ceil(diffDays / 30)
+    return {
+      label: `Expira em ${months} ${months === 1 ? 'mês' : 'meses'}`,
+      isExpired: false,
+      isUrgent: false,
+    }
+  }
+  const years = Math.ceil(diffDays / 365)
+  return {
+    label: `Expira em ${years} ${years === 1 ? 'ano' : 'anos'}`,
+    isExpired: false,
+    isUrgent: false,
+  }
+}

@@ -169,6 +169,7 @@ export type Database = {
           status: 'RASCUNHO' | 'PUBLICADA' | 'OFERTAS_RECEBIDAS' | 'EM_NEGOCIACAO' | 'PROPOSTA_ACEITA' | 'CANCELADO' | 'EXPIRADO'
           prazo_desejado: string | null
           observacoes: string | null
+          preco_referencia_mercado: number | null
           published_at: string | null
           expires_at: string | null
           created_at: string
@@ -203,6 +204,7 @@ export type Database = {
           quantidade: number
           mensagem: string | null
           status: 'enviada' | 'aceita' | 'rejeitada' | 'expirada' | 'cancelada'
+          source: 'manual' | 'auto'
           contact_revealed: boolean
           contact_revealed_at: string | null
         }
@@ -211,6 +213,46 @@ export type Database = {
           validade_ate?: string
         }
         Update: Partial<Database['public']['Tables']['offers']['Row']>
+      }
+      supplier_auto_offer_settings: {
+        Row: {
+          supplier_id: string
+          enabled: boolean
+          discount_percent: number
+          min_demand_quantity: number
+          max_demand_quantity: number | null
+          delivery_days: number
+          validity_days: number
+          default_message: string | null
+          category_ids: string[] | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<
+          Database['public']['Tables']['supplier_auto_offer_settings']['Row'],
+          'created_at' | 'updated_at'
+        > & {
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['supplier_auto_offer_settings']['Row']>
+      }
+      supplier_auto_offer_logs: {
+        Row: {
+          id: string
+          supplier_id: string
+          demand_id: string
+          status: 'sent' | 'skipped' | 'failed'
+          reason: string
+          offer_id: string | null
+          metadata: Record<string, unknown>
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['supplier_auto_offer_logs']['Row'], 'id' | 'created_at'> & {
+          id?: string
+          created_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['supplier_auto_offer_logs']['Row']>
       }
       offer_messages: {
         Row: {

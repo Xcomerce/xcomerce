@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import {
-  ArrowLeft,
   Clock,
   FileUp,
   Loader2,
@@ -14,7 +13,6 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert } from '@/components/ui/alert'
 import { Separator } from '@/components/ui/separator'
-import { StatusBadge } from '@/components/common/StatusBadge'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import { usePageTitle } from '@/hooks/use-page-title'
 import { useAuth } from '@/contexts/auth-context'
@@ -207,25 +205,6 @@ export function BuyerOrderDetailPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start gap-3">
-        <Button asChild variant="ghost" size="icon">
-          <Link to="/buyer/orders" aria-label="Voltar">
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-        </Button>
-        <div className="flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="inline-flex items-center rounded-full border border-border px-2.5 py-0.5 font-mono text-xs font-medium text-foreground tracking-wider bg-transparent">
-              ID#{order.id.slice(0, 8).toUpperCase()}
-            </div>
-            <StatusBadge status={order.status} kind="order" />
-          </div>
-          <p className="text-sm text-muted-foreground">
-            {ORDER_STATUS_LABELS[order.status] ?? order.status}
-          </p>
-        </div>
-      </div>
-
       {pendingBuyerSla && (
         <Alert className="border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">

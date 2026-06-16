@@ -1,16 +1,14 @@
 import { useNavigate } from 'react-router-dom'
 import { Boxes, Plus } from 'lucide-react'
-import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { ProductGrid } from '@/components/catalog/ProductGrid'
 import { EmptyState } from '@/components/common/EmptyState'
 import { GridSkeleton } from '@/components/common/LoadingSkeleton'
 import { QuotaBadge } from '@/components/common/QuotaBadge'
 import { PaywallModal } from '@/components/common/PaywallModal'
-import { useProducts, useDeleteProduct, useProductCount } from '@/hooks/use-products'
+import { useProducts, useProductCount } from '@/hooks/use-products'
 import { useSubscription } from '@/hooks/use-billing'
 import { useState, useMemo } from 'react'
-import { translateSupabaseError } from '@/lib/errors'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 
@@ -20,7 +18,6 @@ export function CatalogPage() {
   const { data: products = [], isLoading } = useProducts()
   const { data: count = 0 } = useProductCount()
   const { data: subscription } = useSubscription()
-  const deleteProduct = useDeleteProduct()
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null)
 
   const limit = subscription?.plan?.max_catalog_items ?? null
@@ -44,22 +41,17 @@ export function CatalogPage() {
     enabled: uniqueCategoryIds.length > 0,
   })
 
+  const categoryNamesById = useMemo(
+    () => Object.fromEntries(categories.map((cat) => [cat.id, cat.name])),
+    [categories],
+  )
+
   function handleNewProduct() {
     if (atLimit) {
       setPaywallOpen(true)
       return
     }
     navigate('/supplier/catalog/new')
-  }
-
-  async function handleDelete(id: string, nome: string) {
-    if (!window.confirm(`Remover "${nome}" do catálogo?`)) return
-    try {
-      await deleteProduct.mutateAsync(id)
-      toast.success('Produto removido')
-    } catch (err) {
-      toast.error(translateSupabaseError(err instanceof Error ? err.message : 'Erro ao remover'))
-    }
   }
 
   const activeProducts = products.filter((p) => p.is_active)
@@ -94,11 +86,11 @@ export function CatalogPage() {
             </>
           )}
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-end">
           <QuotaBadge used={count} limit={limit} label="Itens" />
           <Button onClick={handleNewProduct}>
-            <Plus className="mr-2 h-4 w-4" />
-            Novo produto
+            <Plus className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Novo produto</span>
           </Button>
         </div>
       </div>
@@ -116,25 +108,11 @@ export function CatalogPage() {
       )}
 
       {activeProducts.length > 0 && (
-        <>
-          <ProductGrid
-            products={filteredProducts}
-            editHref={(id) => `/supplier/catalog/${id}/edit`}
-          />
-          <div className="flex flex-wrap gap-2 border-t pt-4">
-            {activeProducts.map((p) => (
-              <Button
-                key={p.id}
-                variant="ghost"
-                size="sm"
-                className="text-destructive"
-                onClick={() => handleDelete(p.id, p.nome)}
-              >
-                Excluir {p.nome}
-              </Button>
-            ))}
-          </div>
-        </>
+        <ProductGrid
+          products={filteredProducts}
+          editHref={(id) => `/supplier/catalog/${id}/edit`}
+          categoryNamesById={categoryNamesById}
+        />
       )}
 
       <PaywallModal

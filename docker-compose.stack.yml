@@ -1,3 +1,22 @@
+# Stack Swarm + Traefik — deploy xcommerce
+#
+# Imagem: sagittadigital/xcommerce:latest
+# Host:   xcommerce.sagittadigital.com.br
+# Build/push: .\scripts\docker-build-push.ps1
+#
+# IMPORTANTE: o Docker build usa o código LOCAL (COPY . .), não clona do GitHub.
+#
+# Pré-requisitos no servidor:
+#   - Rede externa `sagitta` criada
+#   - Traefik com entrypoint websecure + certresolver letsencryptresolver
+#   - `docker login` como sagittadigital
+#
+# Deploy / atualização:
+#   docker stack deploy -c docker-compose.stack.yml xcommerce
+#
+# Forçar pull da nova imagem nos nós:
+#   docker service update --force xcommerce_xcommerce
+
 version: "3.8"
 
 services:

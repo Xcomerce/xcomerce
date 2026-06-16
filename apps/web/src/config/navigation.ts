@@ -13,6 +13,7 @@ import {
   Tags,
   User,
   Bell,
+  Zap,
   type LucideIcon,
 } from 'lucide-react'
 import type { UserRole } from '@keve/shared'
@@ -97,6 +98,7 @@ export const supplierNav: RoleNavConfig = {
     {
       title: 'Conta',
       items: [
+        { to: '/supplier/auto-offers', label: 'Auto-proposta', icon: Zap },
         { to: '/support', label: 'Suporte', icon: Headset },
         { to: '/settings/billing', label: 'Plano', icon: CreditCard },
         { to: '/settings/profile', label: 'Configurações', icon: Settings },

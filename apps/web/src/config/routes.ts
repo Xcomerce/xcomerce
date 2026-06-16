@@ -18,6 +18,7 @@ export const PAGE_TITLES: Record<string, string> = {
   '/supplier/catalog': 'Catálogo',
   '/supplier/catalog/new': 'Novo produto',
   '/supplier/orders': 'Pedidos',
+  '/supplier/auto-offers': 'Auto-proposta',
   '/admin/approvals': 'Aprovações',
   '/admin/metrics': 'Métricas',
   '/admin/categories': 'Categorias',
@@ -25,6 +26,7 @@ export const PAGE_TITLES: Record<string, string> = {
   '/settings/profile': 'Configurações',
   '/settings/billing': 'Plano e billing',
   '/notifications': 'Notificações',
+  '/support': 'Suporte',
 }
 
 export function resolvePageTitle(pathname: string): string {

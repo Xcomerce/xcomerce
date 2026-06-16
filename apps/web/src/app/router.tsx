@@ -95,6 +95,7 @@ export const router = createBrowserRouter([
             element: <SupplierAppLayout />,
             children: [
               { path: 'supplier/onboarding', element: supplierPages.onboarding },
+              { path: 'supplier/auto-offers', element: supplierPages.autoOffers },
               { path: 'supplier/catalog', element: supplierPages.catalog },
               { path: 'supplier/catalog/new', element: supplierPages.catalogNew },
               { path: 'supplier/catalog/:id/edit', element: supplierPages.catalogEdit },

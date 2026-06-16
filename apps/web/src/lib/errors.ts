@@ -32,6 +32,24 @@ export function translateSupabaseError(message: string): string {
   if (message.includes('CONTACT_INFO_BLOCKED')) {
     return 'Não é permitido compartilhar dados de contato antes da revelação.'
   }
+  if (message.includes('OFFER_PRICE_BELOW_MARKET_MARGIN')) {
+    return 'Proposta abaixo do limite viável (máx. 20% abaixo do preço de mercado).'
+  }
+  if (message.includes('supplier_auto_offer_discount_range')) {
+    return 'Desconto da auto-proposta deve estar entre 0% e 20%.'
+  }
+  if (message.includes('supplier_auto_offer_max_gte_min')) {
+    return 'Quantidade máxima da demanda deve ser maior ou igual à mínima.'
+  }
+  if (message.includes('PGRST116') || message.includes('0 rows')) {
+    return 'Nenhum registro encontrado para esta ação. Atualize a página e tente novamente.'
+  }
+  if (message.includes('Complete o onboarding')) {
+    return message
+  }
+  if (message.includes('já foi aprovado') || message.includes('já está em revisão')) {
+    return message
+  }
   if (
     message.includes('does not exist') ||
     (message.includes('relation') && message.includes('demands'))

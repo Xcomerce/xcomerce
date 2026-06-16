@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Package } from 'lucide-react'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { ChevronRight, Package } from 'lucide-react'
+import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/common/EmptyState'
 import { GridSkeleton } from '@/components/common/LoadingSkeleton'
@@ -48,11 +48,12 @@ export function SupplierOrdersPage() {
         />
       ) : !isLoading && !isError && (
         <div className="space-y-5">
-          <div className="flex gap-2 pb-1 overflow-x-auto scrollbar-none py-1">
+          <div className="sticky top-14 z-20 -mx-4 bg-background/95 pt-3 backdrop-blur-sm md:static md:mx-0 md:bg-transparent md:pt-0 md:backdrop-blur-none">
+            <div className="flex min-w-0 w-full gap-2 overflow-x-auto scroll-smooth border-b border-border/60 px-4 pt-1.5 pb-3 scroll-px-4 no-scrollbar md:flex-wrap md:overflow-visible md:border-b-0 md:px-0 md:pt-0 md:pb-0 md:scroll-px-0">
             <button
               onClick={() => setActiveTab('all')}
               className={cn(
-                "px-4 h-9 flex items-center justify-center text-sm font-semibold rounded-full transition-all whitespace-nowrap border",
+                "shrink-0 px-4 h-9 flex items-center justify-center text-sm font-semibold rounded-full transition-all whitespace-nowrap border",
                 activeTab === 'all'
                   ? "bg-primary text-primary-foreground border-transparent shadow-sm"
                   : "bg-background text-foreground border-border hover:bg-muted/40"
@@ -71,7 +72,7 @@ export function SupplierOrdersPage() {
             <button
               onClick={() => setActiveTab('accepted')}
               className={cn(
-                "px-4 h-9 flex items-center justify-center text-sm font-semibold rounded-full transition-all whitespace-nowrap border",
+                "shrink-0 px-4 h-9 flex items-center justify-center text-sm font-semibold rounded-full transition-all whitespace-nowrap border",
                 activeTab === 'accepted'
                   ? "bg-primary text-primary-foreground border-transparent shadow-sm"
                   : "bg-background text-foreground border-border hover:bg-muted/40"
@@ -90,7 +91,7 @@ export function SupplierOrdersPage() {
             <button
               onClick={() => setActiveTab('production')}
               className={cn(
-                "px-4 h-9 flex items-center justify-center text-sm font-semibold rounded-full transition-all whitespace-nowrap border",
+                "shrink-0 px-4 h-9 flex items-center justify-center text-sm font-semibold rounded-full transition-all whitespace-nowrap border",
                 activeTab === 'production'
                   ? "bg-primary text-primary-foreground border-transparent shadow-sm"
                   : "bg-background text-foreground border-border hover:bg-muted/40"
@@ -109,7 +110,7 @@ export function SupplierOrdersPage() {
             <button
               onClick={() => setActiveTab('completed')}
               className={cn(
-                "px-4 h-9 flex items-center justify-center text-sm font-semibold rounded-full transition-all whitespace-nowrap border",
+                "shrink-0 px-4 h-9 flex items-center justify-center text-sm font-semibold rounded-full transition-all whitespace-nowrap border",
                 activeTab === 'completed'
                   ? "bg-primary text-primary-foreground border-transparent shadow-sm"
                   : "bg-background text-foreground border-border hover:bg-muted/40"
@@ -125,6 +126,7 @@ export function SupplierOrdersPage() {
                 {orders.filter(o => completedStatuses.includes(o.status)).length}
               </span>
             </button>
+            </div>
           </div>
 
           {filteredOrders.length === 0 ? (
@@ -136,23 +138,52 @@ export function SupplierOrdersPage() {
               </p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {filteredOrders.map((order) => (
-                <Card key={order.id}>
-                  <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <div className="inline-flex items-center rounded-full border border-border px-2.5 py-0.5 font-mono text-xs font-medium text-foreground tracking-wider bg-transparent">
-                      ID#{order.id.slice(0, 8).toUpperCase()}
+                <Card key={order.id} className="px-4 py-4 lg:px-5">
+                  <div className="flex items-center justify-between gap-3 lg:hidden">
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <div className="flex flex-nowrap items-center gap-2">
+                        <div className="inline-flex h-6 shrink-0 items-center rounded-full border border-border bg-transparent px-2 font-mono text-[10px] font-semibold leading-none tracking-wider text-foreground sm:px-2.5 sm:text-xs">
+                          ID#{order.id.slice(0, 8).toUpperCase()}
+                        </div>
+                        <StatusBadge
+                          status={order.status}
+                          kind="order"
+                          className="h-6 shrink-0 whitespace-nowrap py-0 text-[10px] leading-none sm:text-xs"
+                        />
+                      </div>
+                      <p className="truncate text-sm text-muted-foreground">
+                        Demanda {order.demand_id.slice(0, 8)}…
+                      </p>
                     </div>
-                    <StatusBadge status={order.status} kind="order" />
-                  </CardHeader>
-                  <CardContent className="flex items-center justify-between">
-                    <p className="text-sm text-muted-foreground">
-                      Demanda {order.demand_id.slice(0, 8)}…
-                    </p>
-                    <Button size="sm" variant="secondary" asChild>
+                    <Button size="icon" variant="secondary" className="h-9 w-9 shrink-0" asChild>
+                      <Link to={`/supplier/orders/${order.id}`} aria-label="Ver detalhes">
+                        <ChevronRight className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                  </div>
+
+                  <div className="hidden items-center justify-between gap-4 lg:flex">
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <div className="inline-flex h-6 shrink-0 items-center rounded-full border border-border bg-transparent px-2.5 font-mono text-xs font-semibold leading-none tracking-wider text-foreground">
+                          ID#{order.id.slice(0, 8).toUpperCase()}
+                        </div>
+                        <StatusBadge
+                          status={order.status}
+                          kind="order"
+                          className="h-6 shrink-0 items-center py-0 leading-none"
+                        />
+                      </div>
+                      <p className="truncate text-sm text-muted-foreground">
+                        Demanda {order.demand_id.slice(0, 8)}…
+                      </p>
+                    </div>
+                    <Button size="sm" variant="secondary" className="shrink-0" asChild>
                       <Link to={`/supplier/orders/${order.id}`}>Ver detalhes</Link>
                     </Button>
-                  </CardContent>
+                  </div>
                 </Card>
               ))}
             </div>

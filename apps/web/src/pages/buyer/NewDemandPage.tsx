@@ -29,13 +29,28 @@ import {
   MAX_ATTACHMENTS,
   NATIVE_FIELD_CLASS,
 } from '@/pages/buyer/new-demand/constants'
+import { DemandFormActions } from '@/pages/buyer/new-demand/DemandFormActions'
 import { EligibleSuppliersPanel } from '@/pages/buyer/new-demand/EligibleSuppliersPanel'
 import { getEligibleSuppliers } from '@/pages/buyer/new-demand/utils'
 
-function DemandPageShell({ children }: { children: ReactNode }) {
+function DemandPageShell({
+  children,
+  mobileFooter,
+}: {
+  children: ReactNode
+  mobileFooter?: ReactNode
+}) {
   return (
-    <div className={cn(DEMAND_PAGE_HEIGHT_CLASS, 'flex w-full flex-col overflow-hidden lg:flex-row')}>
-      {children}
+    <div
+      className={cn(
+        DEMAND_PAGE_HEIGHT_CLASS,
+        'flex w-full flex-col overflow-hidden lg:flex-row',
+      )}
+    >
+      <div className="scrollbar-custom flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain lg:contents">
+        {children}
+      </div>
+      {mobileFooter}
     </div>
   )
 }
@@ -53,6 +68,7 @@ export function NewDemandPage() {
     description?: string
     city?: string
     uf?: string
+    precoReferencia?: number | null
   } | null
 
   const { data: existingDemand, isLoading: loadingDemand, error: demandError } = useDemand(editId)
@@ -109,6 +125,9 @@ export function NewDemandPage() {
     if (stateData?.description) form.setValue('descricao', stateData.description)
     if (stateData?.city) form.setValue('cidade', stateData.city)
     if (stateData?.uf) form.setValue('uf', stateData.uf)
+    if (stateData?.precoReferencia != null && stateData.precoReferencia > 0) {
+      form.setValue('preco_referencia_mercado', stateData.precoReferencia)
+    }
   }, [stateData, isEditing, form])
 
   useEffect(() => {
@@ -124,6 +143,7 @@ export function NewDemandPage() {
       raio_km: existingDemand.raio_km,
       prazo_desejado: existingDemand.prazo_desejado ?? '',
       observacoes: existingDemand.observacoes ?? '',
+      preco_referencia_mercado: existingDemand.preco_referencia_mercado ?? undefined,
     })
   }, [existingDemand, form])
 
@@ -258,9 +278,21 @@ export function NewDemandPage() {
     <>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="contents">
-          <DemandPageShell>
-            {/* Coluna do formulário — único scroll */}
-            <section className="scrollbar-custom min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 lg:p-6">
+          <DemandPageShell
+            mobileFooter={
+              <footer className="shrink-0 border-t border-border bg-background/95 px-4 py-3 pb-safe-bottom backdrop-blur-sm lg:hidden">
+                <DemandFormActions
+                  isSaving={isSaving}
+                  selectedCategoryId={selectedCategoryId}
+                  publishPending={publishDemand.isPending}
+                  onPublish={() => void handlePublish()}
+                  onCancel={() => navigate('/buyer/dashboard')}
+                />
+              </footer>
+            }
+          >
+            {/* Coluna do formulário */}
+            <section className="min-h-0 flex-1 p-4 max-lg:flex-none lg:overflow-y-auto lg:p-6">
               <div className="space-y-6">
                 {categoriesError && (
                   <Alert className="border-destructive/50 text-destructive">Erro ao carregar categorias.</Alert>
@@ -587,7 +619,7 @@ export function NewDemandPage() {
             </section>
 
             {/* Painel lateral — altura fixa da viewport, sem empurrar a página */}
-            <section className="flex min-h-0 w-full shrink-0 flex-col overflow-hidden border-t border-sidebar-border max-lg:h-72 lg:w-72 lg:border-l lg:border-t-0 xl:w-80">
+            <section className="flex min-h-0 w-full shrink-0 flex-col overflow-hidden border-t border-sidebar-border max-lg:flex-none lg:w-72 lg:border-l lg:border-t-0 xl:w-80">
               <EligibleSuppliersPanel
                 eligible={eligible}
                 selectedCategory={selectedCategory}

@@ -1,10 +1,20 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/contexts/auth-context'
 import * as onboarding from '@/services/onboarding'
 import type {
   CompanyInput,
   SupplierAddressInput,
 } from '@/services/onboarding'
+
+export function useOnboardingState() {
+  const { user } = useAuth()
+
+  return useQuery({
+    queryKey: ['onboarding-state', user?.id],
+    queryFn: () => onboarding.getOnboardingState(user!.id),
+    enabled: Boolean(user?.id),
+  })
+}
 
 export function useLookupCnpj() {
   return useMutation({
@@ -60,6 +70,7 @@ export function useSubmitForReview() {
     mutationFn: () => onboarding.submitForReview(user!.id),
     onSuccess: () => {
       refreshProfile()
+      queryClient.invalidateQueries({ queryKey: ['onboarding-state', user?.id] })
       queryClient.invalidateQueries({ queryKey: ['admin'] })
     },
   })

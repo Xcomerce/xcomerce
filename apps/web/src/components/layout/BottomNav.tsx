@@ -2,9 +2,17 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import type { RoleNavConfig } from '@/config/navigation'
 import { cn } from '@/lib/utils'
 
-export function BottomNav({ config }: { config: RoleNavConfig }) {
+export function BottomNav({
+  config,
+  hiddenOnMobile = false,
+}: {
+  config: RoleNavConfig
+  hiddenOnMobile?: boolean
+}) {
   const navigate = useNavigate()
   const { left, right, fab } = config.bottomNav
+
+  if (hiddenOnMobile) return null
 
   return (
     <nav className="glass-bottomnav fixed bottom-0 left-0 right-0 z-40 lg:hidden">

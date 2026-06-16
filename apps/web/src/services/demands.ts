@@ -47,6 +47,7 @@ export async function createDemand(buyerId: string, input: DemandInput): Promise
       raio_km: input.raio_km,
       prazo_desejado: input.prazo_desejado || null,
       observacoes: input.observacoes || null,
+      preco_referencia_mercado: input.preco_referencia_mercado ?? null,
       status: 'RASCUNHO',
     })
     .select()
@@ -68,6 +69,9 @@ export async function updateDemand(id: string, input: Partial<DemandInput>): Pro
   if (input.raio_km !== undefined) payload.raio_km = input.raio_km
   if (input.prazo_desejado !== undefined) payload.prazo_desejado = input.prazo_desejado || null
   if (input.observacoes !== undefined) payload.observacoes = input.observacoes || null
+  if (input.preco_referencia_mercado !== undefined) {
+    payload.preco_referencia_mercado = input.preco_referencia_mercado ?? null
+  }
 
   const { data, error } = await supabase.from('demands').update(payload).eq('id', id).select().single()
   if (error) throw error

@@ -8,6 +8,7 @@ dist-ssr/
 
 # Environment
 .env
+.env.build
 .env.local
 .env.*.local
 

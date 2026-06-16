@@ -1,6 +1,6 @@
 import { useTheme } from 'next-themes'
 import { ArrowLeft, Bell, Menu, Moon, Sun, Search } from 'lucide-react'
-import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useMatch, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,6 +39,20 @@ export function Header({ onMenuClick, className }: HeaderProps) {
   const selectedUf = searchParams.get('uf') || ''
 
   const isBackToOffersPage = pathname.startsWith('/buyer/offers/')
+  const isCatalogFormPage =
+    pathname === '/supplier/catalog/new' ||
+    (pathname.startsWith('/supplier/catalog/') && pathname.endsWith('/edit'))
+  const isSupplierOfferPage = pathname.startsWith('/supplier/offers/')
+  const supplierOrderDetailMatch = useMatch('/supplier/orders/:id')
+  const supplierOrderId = supplierOrderDetailMatch?.params.id
+  const buyerOrderDetailMatch = useMatch('/buyer/orders/:id')
+  const buyerOrderId = buyerOrderDetailMatch?.params.id
+  const orderDetailBackPath = supplierOrderDetailMatch
+    ? '/supplier/orders'
+    : buyerOrderDetailMatch
+      ? '/buyer/orders'
+      : null
+  const orderDetailId = supplierOrderId ?? buyerOrderId
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
@@ -92,6 +106,46 @@ export function Header({ onMenuClick, className }: HeaderProps) {
               Voltar para ofertas
             </h1>
           </button>
+        ) : isCatalogFormPage ? (
+          <button
+            type="button"
+            onClick={() => navigate('/supplier/catalog')}
+            className="flex min-w-0 items-center gap-1.5 rounded-xl px-2 py-1 hover:bg-secondary/50 transition-colors -ml-1"
+            aria-label="Voltar ao catálogo"
+          >
+            <ArrowLeft size={15} className="shrink-0 text-muted-foreground" />
+            <h1 className="truncate font-display text-sm font-semibold sm:text-base lg:text-lg">
+              {pageTitle}
+            </h1>
+          </button>
+        ) : isSupplierOfferPage ? (
+          <button
+            type="button"
+            onClick={() => navigate('/supplier/board')}
+            className="flex min-w-0 items-center gap-1.5 rounded-xl px-2 py-1 hover:bg-secondary/50 transition-colors -ml-1"
+            aria-label="Voltar ao mural"
+          >
+            <ArrowLeft size={15} className="shrink-0 text-muted-foreground" />
+            <h1 className="truncate font-display text-sm font-semibold sm:text-base lg:text-lg">
+              {pageTitle}
+            </h1>
+          </button>
+        ) : orderDetailBackPath ? (
+          <div className="flex min-w-0 items-center gap-1 sm:gap-1.5 -ml-1">
+            <button
+              type="button"
+              onClick={() => navigate(orderDetailBackPath)}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl hover:bg-secondary/50 transition-colors"
+              aria-label="Voltar aos pedidos"
+            >
+              <ArrowLeft size={15} className="text-muted-foreground" />
+            </button>
+            {orderDetailId && (
+              <div className="inline-flex h-6 shrink-0 items-center rounded-full border border-border bg-transparent px-2 font-mono text-[10px] font-semibold leading-none tracking-wider text-foreground sm:px-2.5 sm:text-xs">
+                ID#{orderDetailId.slice(0, 8).toUpperCase()}
+              </div>
+            )}
+          </div>
         ) : pathname === '/buyer/feed' ? (
           <div className="flex h-9 w-52 sm:w-80 items-center gap-2 rounded-xl border border-border bg-secondary/50 px-3 py-1 focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2">
             <Search className="h-4 w-4 text-muted-foreground shrink-0" />

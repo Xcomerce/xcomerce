@@ -19,10 +19,13 @@ export function validateCronSecret(req: Request): boolean {
 
 export async function requireUser(req: Request) {
   const authHeader = req.headers.get('Authorization')
-  if (!authHeader) return { user: null, response: error('UNAUTHORIZED', 'Não autenticado.', 401) }
+  if (!authHeader?.startsWith('Bearer ')) {
+    return { user: null, response: error('UNAUTHORIZED', 'Não autenticado.', 401) }
+  }
 
+  const token = authHeader.slice(7)
   const supabase = createUserClient(authHeader)
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  const { data: { user }, error: authError } = await supabase.auth.getUser(token)
   if (authError || !user) {
     return { user: null, response: error('UNAUTHORIZED', 'Token inválido ou expirado.', 401) }
   }

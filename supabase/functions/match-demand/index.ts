@@ -283,6 +283,24 @@ Deno.serve(async (req) => {
 
     matchesCreated++
 
+    const { data: autoOfferResult, error: autoOfferErr } = await supabase.rpc(
+      'try_create_auto_offer',
+      {
+        p_demand_id: demand_id,
+        p_supplier_id: supplier.user_id,
+      },
+    )
+
+    if (autoOfferErr) {
+      console.error('try_create_auto_offer:', autoOfferErr)
+    } else if (autoOfferResult?.status === 'sent') {
+      console.info('auto_offer_sent', {
+        demand_id,
+        supplier_id: supplier.user_id,
+        offer_id: autoOfferResult.offer_id,
+      })
+    }
+
     const notifRes = await invokeSendNotification({
       user_id: supplier.user_id,
       type: 'demand.matched',

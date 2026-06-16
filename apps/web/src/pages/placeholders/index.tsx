@@ -7,6 +7,7 @@ import { ProductFormPage } from '@/pages/supplier/ProductFormPage'
 import { OfferDetailPage } from '@/pages/supplier/OfferDetailPage'
 import { SupplierOrdersPage } from '@/pages/supplier/SupplierOrdersPage'
 import { SupplierOrderDetailPage } from '@/pages/supplier/SupplierOrderDetailPage'
+import { AutoOfferSettingsPage } from '@/pages/supplier/AutoOfferSettingsPage'
 import { BuyerDashboardPage } from '@/pages/buyer/BuyerDashboardPage'
 import { BuyerFeedPage } from '@/pages/buyer/BuyerFeedPage'
 import { NewDemandPage } from '@/pages/buyer/NewDemandPage'
@@ -32,6 +33,7 @@ export const buyerPages = {
 
 export const supplierPages = {
   onboarding: <OnboardingPage />,
+  autoOffers: <AutoOfferSettingsPage />,
   board: <SupplierBoardPage />,
   catalog: <CatalogPage />,
   catalogNew: <ProductFormPage />,

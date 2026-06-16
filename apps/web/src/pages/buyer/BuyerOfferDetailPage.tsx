@@ -4,7 +4,9 @@ import { toast } from 'sonner'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import {
+  ArrowLeft,
   Check,
+  ChevronRight,
   Eye,
   Loader2,
   MessageSquare,
@@ -67,11 +69,104 @@ function getProductImage(nome: string): string | null {
   return null
 }
 
+type BuyerOfferChatPanelProps = {
+  messages: Array<{ id: string; sender_id: string; body: string }>
+  messagesLoading: boolean
+  userId?: string
+  chatBody: string
+  onChatBodyChange: (value: string) => void
+  onSendChat: (e: React.FormEvent) => void
+  sending: boolean
+  messagesEndRef: React.RefObject<HTMLDivElement | null>
+  className?: string
+}
+
+function BuyerOfferChatPanel({
+  messages,
+  messagesLoading,
+  userId,
+  chatBody,
+  onChatBodyChange,
+  onSendChat,
+  sending,
+  messagesEndRef,
+  className,
+}: BuyerOfferChatPanelProps) {
+  return (
+    <div className={cn('flex min-h-0 flex-1 flex-col overflow-hidden', className)}>
+      <div
+        className={cn(
+          'scrollbar-custom min-h-0 flex-1 space-y-2 bg-muted/10 px-4 py-3 lg:px-6',
+          messages.length > 0 ? 'overflow-y-auto' : 'overflow-hidden',
+        )}
+      >
+        {messagesLoading && (
+          <p className="text-center text-sm text-muted-foreground">Carregando...</p>
+        )}
+        {!messagesLoading && messages.length === 0 && (
+          <p className="flex h-full items-center justify-center text-center text-sm text-muted-foreground">
+            Nenhuma mensagem ainda.
+          </p>
+        )}
+        {messages.map((msg) => {
+          const mine = msg.sender_id === userId
+          return (
+            <div
+              key={msg.id}
+              className={cn('flex', mine ? 'justify-end' : 'justify-start')}
+            >
+              <div
+                className={cn(
+                  'max-w-[85%] rounded-xl px-3 py-2 text-sm',
+                  mine ? 'bg-primary text-primary-foreground' : 'bg-card border',
+                )}
+              >
+                {msg.body}
+              </div>
+            </div>
+          )
+        })}
+        <div ref={messagesEndRef} />
+      </div>
+
+      <div className="shrink-0 border-t border-sidebar-border bg-background p-4 pb-safe-bottom lg:pb-4">
+        {!messagesLoading && messages.length === 0 && (
+          <div className="mb-3 flex flex-wrap gap-1.5">
+            {QUICK_MESSAGES.map((msg) => (
+              <button
+                key={msg}
+                type="button"
+                onClick={() => onChatBodyChange(msg)}
+                className="inline-flex items-center rounded-lg border border-border/30 bg-secondary px-2 py-1 text-[10px] font-medium text-muted-foreground transition-all duration-200 hover:bg-secondary/70 active:scale-95"
+              >
+                {msg}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <form onSubmit={onSendChat} className="flex gap-2">
+          <Input
+            placeholder="Negocie prazos, valores..."
+            value={chatBody}
+            onChange={(e) => onChatBodyChange(e.target.value)}
+            disabled={sending}
+          />
+          <Button type="submit" size="icon" disabled={!chatBody.trim() || sending}>
+            <Send className="h-4 w-4" />
+          </Button>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 export function BuyerOfferDetailPage() {
   const { id: offerId } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { user } = useAuth()
   const [chatBody, setChatBody] = useState('')
+  const [mobileChatOpen, setMobileChatOpen] = useState(false)
   const [showAcceptModal, setShowAcceptModal] = useState(false)
   const [showRejectModal, setShowRejectModal] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -121,7 +216,17 @@ export function BuyerOfferDetailPage() {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+  }, [messages, mobileChatOpen])
+
+  useEffect(() => {
+    if (!mobileChatOpen) return
+    const html = document.documentElement
+    const previousOverflow = html.style.overflow
+    html.style.overflow = 'hidden'
+    return () => {
+      html.style.overflow = previousOverflow
+    }
+  }, [mobileChatOpen])
 
   async function handleReveal() {
     if (!offer) return
@@ -213,12 +318,14 @@ export function BuyerOfferDetailPage() {
   const showFooter = canAccept && offer.status === 'enviada'
 
   return (
-    <div className={cn(
-      "h-full max-h-full min-h-0 flex w-full flex-col overflow-hidden lg:flex-row",
-      showFooter ? "pb-[9.5rem] lg:pb-20" : "pb-0 lg:pb-0"
-    )}>
+    <div className="h-full max-h-full min-h-0 flex w-full flex-col overflow-hidden lg:flex-row">
       {/* Coluna do Conteúdo — único scroll */}
-      <section className="scrollbar-custom min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 lg:p-6 space-y-6">
+      <section
+        className={cn(
+          'scrollbar-custom min-h-0 flex-1 overflow-y-auto overscroll-contain space-y-6 p-4 lg:p-6',
+          showFooter && 'lg:pb-20',
+        )}
+      >
         {/* Imagem do Produto correspondente à categoria (separada na parte de cima) */}
         <div className="relative h-64 w-full bg-muted overflow-hidden rounded-2xl border border-border/50 shadow-sm shrink-0">
           {imageUrl ? (
@@ -471,108 +578,109 @@ export function BuyerOfferDetailPage() {
               </div>
             )}
           </div>
+
+          <button
+            type="button"
+            onClick={() => setMobileChatOpen(true)}
+            className="flex w-full items-center gap-3 rounded-xl border border-border bg-card px-4 py-3.5 text-left transition-colors hover:bg-muted/40 active:bg-muted/60 lg:hidden"
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <MessageSquare className="h-5 w-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold">Chat com fornecedor</p>
+              <p className="text-xs text-muted-foreground">
+                Negocie prazos, valores e condições desta proposta
+              </p>
+            </div>
+            {messages.length > 0 && (
+              <span className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-primary-foreground">
+                {messages.length}
+              </span>
+            )}
+            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+          </button>
         </div>
       </section>
 
-      {/* Chat de Negociação (Painel Lateral) */}
-      <section className="hidden lg:flex min-h-0 w-full shrink-0 flex-col overflow-hidden lg:w-72 lg:border-l xl:w-80">
-        <aside className="glass-sidebar flex h-full min-h-0 w-full flex-col overflow-hidden">
-          <div className="shrink-0 px-6 pt-4 pb-2">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-              Chat de Negociação
-            </p>
-            <p className="text-xs text-muted-foreground mt-1 leading-normal">
-              Converse diretamente com o fornecedor sobre esta proposta
-            </p>
-          </div>
+      {/* Chat de Negociação (Painel Lateral — desktop) */}
+      <aside className="glass-sidebar hidden min-h-0 w-full shrink-0 flex-col overflow-hidden lg:flex lg:h-full lg:w-72 lg:border-l xl:w-80">
+        <div className="shrink-0 px-4 pt-4 pb-2 lg:px-6">
+          <p className="flex items-center gap-2 text-sm font-semibold">
+            <MessageSquare className="h-4 w-4" />
+            Chat com fornecedor
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Negocie prazos, valores e condições desta proposta
+          </p>
+        </div>
 
-          <div className={cn(
-            "scrollbar-custom min-h-0 flex-1 px-6 py-4 space-y-3 bg-muted/10",
-            messages.length > 0 ? "overflow-y-auto" : "overflow-hidden"
-          )}>
-            {messagesLoading && (
-              <div className="flex justify-center items-center h-full">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            )}
-            {!messagesLoading && messages.length === 0 && (
-              <div className="flex flex-col items-center justify-center h-full text-center p-4">
-                <MessageSquare className="h-8 w-8 text-muted-foreground/30 mb-2" />
-                <p className="text-sm font-medium text-muted-foreground">Nenhuma mensagem ainda.</p>
-                <p className="text-xs text-muted-foreground/60 mt-0.5">Envie uma mensagem para iniciar a negociação.</p>
-              </div>
-            )}
-            {messages.map((msg) => {
-              const mine = msg.sender_id === user?.id
-              return (
-                <div
-                  key={msg.id}
-                  className={cn('flex', mine ? 'justify-end' : 'justify-start')}
-                >
-                  <div
-                    className={cn(
-                      'max-w-[85%] rounded-2xl px-3.5 py-2 text-xs leading-relaxed shadow-sm',
-                      mine 
-                        ? 'bg-primary text-primary-foreground font-medium rounded-tr-none' 
-                        : 'bg-card border border-border/40 text-foreground rounded-tl-none',
-                    )}
-                  >
-                    {msg.body}
-                  </div>
-                </div>
-              )
-            })}
-            <div ref={messagesEndRef} />
-          </div>
+        <BuyerOfferChatPanel
+          messages={messages}
+          messagesLoading={messagesLoading}
+          userId={user?.id}
+          chatBody={chatBody}
+          onChatBodyChange={setChatBody}
+          onSendChat={handleSendChat}
+          sending={sendMessage.isPending}
+          messagesEndRef={messagesEndRef}
+        />
+      </aside>
 
-          <div className="shrink-0 border-t border-sidebar-border p-4 bg-background flex flex-col gap-3">
-            {/* Badges de Mensagens Rápidas */}
-            {!messagesLoading && messages.length === 0 && (
-              <div className="flex flex-wrap gap-1.5 pb-1">
-                {QUICK_MESSAGES.map((msg) => (
-                  <button
-                    key={msg}
-                    type="button"
-                    onClick={() => setChatBody(msg)}
-                    className="inline-flex items-center rounded-lg bg-secondary hover:bg-secondary/70 border border-border/30 px-2 py-1 text-[10px] font-medium text-muted-foreground transition-all duration-200 active:scale-95"
-                  >
-                    {msg}
-                  </button>
-                ))}
-              </div>
-            )}
+      {mobileChatOpen && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-background lg:hidden">
+          <header className="flex shrink-0 items-center gap-2 border-b border-border px-2 py-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="shrink-0 rounded-xl"
+              aria-label="Fechar chat"
+              onClick={() => setMobileChatOpen(false)}
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold">Chat com fornecedor</p>
+              <p className="truncate text-xs text-muted-foreground">
+                {offer.supplier_name ?? demand.titulo}
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="shrink-0 rounded-xl"
+              aria-label="Fechar chat"
+              onClick={() => setMobileChatOpen(false)}
+            >
+              <X className="h-5 w-5" />
+            </Button>
+          </header>
 
-            <form onSubmit={handleSendChat} className="flex gap-2">
-              <Input
-                placeholder="Negocie prazos, valores..."
-                value={chatBody}
-                onChange={(e) => setChatBody(e.target.value)}
-                disabled={sendMessage.isPending}
-                className="rounded-xl h-10 border-border/40 text-xs bg-secondary/80 focus-visible:bg-background transition-all duration-200"
-              />
-              <Button 
-                type="submit" 
-                size="icon" 
-                disabled={!chatBody.trim() || sendMessage.isPending}
-                className="rounded-xl h-10 w-10 bg-primary hover:bg-primary/95 text-primary-foreground shadow-sm shrink-0"
-              >
-                <Send className="h-4 w-4" />
-              </Button>
-            </form>
-          </div>
-        </aside>
-      </section>
+          <BuyerOfferChatPanel
+            messages={messages}
+            messagesLoading={messagesLoading}
+            userId={user?.id}
+            chatBody={chatBody}
+            onChatBodyChange={setChatBody}
+            onSendChat={handleSendChat}
+            sending={sendMessage.isPending}
+            messagesEndRef={messagesEndRef}
+          />
+        </div>
+      )}
 
       {/* Botões de Decisão Fixos no Footer */}
       {showFooter && (
-        <div className="fixed bottom-[4.5rem] lg:bottom-0 left-0 right-0 z-30 border-t border-border bg-background/80 backdrop-blur-md px-6 py-4 lg:left-60 shadow-[0_-4px_12px_rgba(0,0,0,0.03)]">
-          <div className="mx-auto max-w-7xl flex items-center justify-end gap-3">
+        <footer className="shrink-0 border-t border-border bg-background/95 px-4 py-3 pb-safe-bottom backdrop-blur-sm lg:fixed lg:bottom-0 lg:left-60 lg:right-0 lg:z-30 lg:px-6 lg:shadow-[0_-4px_12px_rgba(0,0,0,0.03)]">
+          <div className="mx-auto flex max-w-7xl flex-row items-center gap-2 sm:justify-end sm:gap-3">
             <Button
               type="button"
               variant="outline"
               onClick={handleReject}
               disabled={rejectOffer.isPending || acceptOffer.isPending}
-              className="w-full sm:w-auto min-w-[150px] rounded-xl border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive h-[42px] font-bold text-sm flex items-center justify-center gap-2"
+              className="flex h-[42px] min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl border border-destructive/20 bg-destructive/10 px-2 text-xs font-bold text-destructive hover:bg-destructive/15 hover:text-destructive dark:border-destructive/30 dark:bg-destructive/15 dark:hover:bg-destructive/20 sm:flex-none sm:w-auto sm:min-w-[150px] sm:gap-2 sm:px-4 sm:text-sm"
             >
               {rejectOffer.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -585,7 +693,7 @@ export function BuyerOfferDetailPage() {
               type="button"
               onClick={handleAccept}
               disabled={rejectOffer.isPending || acceptOffer.isPending}
-              className="w-full sm:w-auto min-w-[150px] rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white h-[42px] font-bold text-sm flex items-center justify-center gap-2 shadow-sm"
+              className="flex h-[42px] min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 sm:flex-none sm:w-auto sm:min-w-[150px] sm:gap-2 sm:px-4 sm:text-sm"
             >
               {acceptOffer.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -595,7 +703,7 @@ export function BuyerOfferDetailPage() {
               Aceitar Proposta
             </Button>
           </div>
-        </div>
+        </footer>
       )}
       {/* Modal de Confirmação - Aceitar */}
       {showAcceptModal && (

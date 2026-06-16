@@ -1,9 +1,22 @@
-import { useState, useRef, useEffect, useMemo } from 'react'
+import { useState, useRef, useEffect, useMemo, type ReactNode } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Package, ChevronLeft, ChevronRight, Rocket } from 'lucide-react'
 import { useFeedProducts } from '@/hooks/use-products'
 import { useCategories } from '@/hooks/use-categories'
 import { cn } from '@/lib/utils'
+import type { FeedProduct } from '@/services/products'
+
+const HORIZONTAL_ROW_CLASS =
+  'flex overflow-x-auto gap-3 sm:gap-4 pb-3 snap-x snap-mandatory scroll-smooth no-scrollbar -mx-4 px-4 scroll-px-4 md:-mx-0 md:px-0 md:scroll-px-0'
+
+const SCROLL_CHEVRON_CLASS =
+  'absolute top-[38%] z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-background p-0 text-foreground shadow-md transition-all duration-200 hover:bg-secondary'
+
+const HORIZONTAL_CARD_CLASS =
+  'w-[42%] min-w-[140px] max-w-[200px] flex-shrink-0 snap-start sm:w-[200px] md:w-[220px] lg:w-[240px]'
+
+const VERTICAL_GRID_CLASS =
+  'grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 md:gap-6 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6'
 
 
 
@@ -31,14 +44,179 @@ function getProductImage(nome: string, dbUrl: string | null): string | null {
   return null
 }
 
-function getBadgeVisibilityClass(index: number): string {
-  if (index === 0 || index === 1) return 'inline-flex'
-  if (index === 2) return 'hidden md:inline-flex'
-  if (index === 3) return 'hidden lg:inline-flex'
-  if (index === 4) return 'hidden xl:inline-flex'
-  if (index === 5) return 'hidden 2xl:inline-flex'
-  if (index === 6 || index === 7) return 'hidden 3xl:inline-flex'
-  return 'hidden'
+function FeedProductCard({
+  product,
+  onSelect,
+  layout,
+  badgeIndex,
+}: {
+  product: FeedProduct
+  onSelect: (product: FeedProduct) => void
+  layout: 'horizontal' | 'vertical'
+  badgeIndex?: number
+}) {
+  return (
+    <div
+      onClick={() => onSelect(product)}
+      className={cn('cursor-pointer', layout === 'horizontal' && HORIZONTAL_CARD_CLASS)}
+    >
+      <div className="relative aspect-[4/4.5] w-full overflow-hidden rounded-xl border border-border/40 bg-secondary transition-all duration-300 hover:border-primary/45 hover:scale-[1.03] hover:shadow-sm">
+        {badgeIndex !== undefined && (
+          <span className="absolute left-2.5 top-2.5 z-10 inline-flex items-center rounded-full bg-[#7F3CEF] px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white shadow-sm">
+            Destaque
+          </span>
+        )}
+        {getProductImage(product.nome, product.image_url) ? (
+          <img
+            src={getProductImage(product.nome, product.image_url) || ''}
+            alt={product.nome}
+            className="h-full w-full object-cover"
+            loading="lazy"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+            <Package size={32} />
+          </div>
+        )}
+      </div>
+
+      <div className="mt-2.5 space-y-1.5 px-0.5">
+        <div className="min-w-0 space-y-0.5">
+          <h4
+            className="truncate font-display text-sm font-semibold leading-tight text-foreground transition-colors hover:text-primary"
+            title={product.nome}
+          >
+            {product.nome}
+          </h4>
+          <p className="truncate text-xs text-muted-foreground">
+            {product.supplier?.company
+              ? `${product.supplier.company.nome_fantasia || product.supplier.company.razao_social} ${product.category?.name ? `· ${product.category.name}` : ''}`
+              : product.category?.name || ''}
+          </p>
+        </div>
+
+        <div className="flex items-center justify-between gap-1.5 pt-0.5">
+          <span className="font-display text-sm font-bold text-foreground">
+            {formatCurrency(product.preco_referencia)}
+          </span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ProductHorizontalRow({
+  children,
+  ariaLabel,
+}: {
+  children: ReactNode
+  ariaLabel: string
+}) {
+  const rowRef = useRef<HTMLDivElement>(null)
+  const [showLeftArrow, setShowLeftArrow] = useState(false)
+  const [showRightArrow, setShowRightArrow] = useState(true)
+
+  function updateArrows() {
+    if (!rowRef.current) return
+    const { scrollLeft, scrollWidth, clientWidth } = rowRef.current
+    setShowLeftArrow(scrollLeft > 5)
+    setShowRightArrow(scrollLeft + clientWidth < scrollWidth - 5)
+  }
+
+  useEffect(() => {
+    const timer = setTimeout(updateArrows, 150)
+    window.addEventListener('resize', updateArrows)
+
+    const row = rowRef.current
+    const observer =
+      typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => updateArrows()) : null
+    if (row && observer) observer.observe(row)
+
+    return () => {
+      clearTimeout(timer)
+      window.removeEventListener('resize', updateArrows)
+      observer?.disconnect()
+    }
+  }, [children])
+
+  function scrollRow(direction: 'left' | 'right') {
+    if (!rowRef.current) return
+    const scrollAmount = Math.max(rowRef.current.clientWidth * 0.8, 280)
+    rowRef.current.scrollBy({
+      left: direction === 'left' ? -scrollAmount : scrollAmount,
+      behavior: 'smooth',
+    })
+    setTimeout(updateArrows, 350)
+  }
+
+  return (
+    <div className="relative min-w-0">
+      <button
+        type="button"
+        onClick={() => scrollRow('left')}
+        className={cn(SCROLL_CHEVRON_CLASS, '-left-[18px]', showLeftArrow ? 'hidden md:flex' : 'hidden')}
+        aria-label="Rolar produtos para esquerda"
+      >
+        <ChevronLeft size={18} />
+      </button>
+
+      <div
+        ref={rowRef}
+        onScroll={updateArrows}
+        className={HORIZONTAL_ROW_CLASS}
+        role="list"
+        aria-label={ariaLabel}
+      >
+        {children}
+      </div>
+
+      <button
+        type="button"
+        onClick={() => scrollRow('right')}
+        className={cn(SCROLL_CHEVRON_CLASS, '-right-[18px]', showRightArrow ? 'hidden md:flex' : 'hidden')}
+        aria-label="Rolar produtos para direita"
+      >
+        <ChevronRight size={18} />
+      </button>
+    </div>
+  )
+}
+
+function ProductVerticalGrid({ children }: { children: ReactNode }) {
+  return <div className={VERTICAL_GRID_CLASS}>{children}</div>
+}
+
+function ProductSkeleton({ layout }: { layout: 'horizontal' | 'vertical' }) {
+  const card = (
+    <div className="space-y-2.5">
+      <div className="aspect-[4/4.5] w-full animate-pulse rounded-xl bg-secondary" />
+      <div className="space-y-2 px-0.5">
+        <div className="h-4 w-2/3 animate-pulse rounded bg-secondary" />
+        <div className="h-3 w-1/2 animate-pulse rounded bg-secondary" />
+        <div className="mt-1 h-4 w-1/3 animate-pulse rounded bg-secondary" />
+      </div>
+    </div>
+  )
+
+  if (layout === 'horizontal') {
+    return (
+      <ProductHorizontalRow ariaLabel="Carregando produtos">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className={HORIZONTAL_CARD_CLASS}>
+            {card}
+          </div>
+        ))}
+      </ProductHorizontalRow>
+    )
+  }
+
+  return (
+    <ProductVerticalGrid>
+      {Array.from({ length: 8 }).map((_, i) => (
+        <div key={i}>{card}</div>
+      ))}
+    </ProductVerticalGrid>
+  )
 }
 
 export function BuyerFeedPage() {
@@ -59,14 +237,41 @@ export function BuyerFeedPage() {
     uf: selectedUf || undefined,
   })
 
-  // Group products by category
+  const isFilteredView = Boolean(selectedCategory || searchQuery || selectedUf)
+
+  const filteredTitle = useMemo(() => {
+    if (searchQuery) return `Resultados para "${searchQuery}"`
+    if (selectedCategory) {
+      const category = categories.find((cat) => cat.id === selectedCategory)
+      return category?.name ?? 'Categoria'
+    }
+    if (selectedUf) return `Produtos em ${selectedUf}`
+    return 'Em destaque'
+  }, [categories, searchQuery, selectedCategory, selectedUf])
+
+  function handleProductSelect(product: FeedProduct) {
+    navigate('/buyer/demands/new', {
+      state: {
+        categoryId: product.category_id,
+        title: product.nome,
+        description: product.descricao || '',
+        city: product.cidade || '',
+        uf: product.uf || '',
+        precoReferencia: product.preco_referencia,
+      },
+    })
+  }
+
+  // Group products by category (home browse only)
   const groupedProducts = useMemo(() => {
+    if (isFilteredView) return []
+
     const groups: { [categoryId: string]: { categoryName: string; products: typeof products } } = {}
-    
+
     products.forEach((product) => {
       const catId = product.category_id || 'other'
       const catName = product.category?.name || 'Outros'
-      
+
       if (!groups[catId]) {
         groups[catId] = {
           categoryName: catName,
@@ -75,27 +280,13 @@ export function BuyerFeedPage() {
       }
       groups[catId].products.push(product)
     })
-    
-    return Object.entries(groups).map(([id, group]) => {
-      const categoryProducts = group.products
-      const paddedProducts = [...categoryProducts]
-      if (categoryProducts.length > 0) {
-        while (paddedProducts.length < 12) {
-          paddedProducts.push(
-            ...categoryProducts.map((p, idx) => ({
-              ...p,
-              id: `${p.id}-dup-${paddedProducts.length + idx}`
-            }))
-          )
-        }
-      }
-      return {
-        categoryId: id,
-        categoryName: group.categoryName,
-        products: paddedProducts.slice(0, 12),
-      }
-    })
-  }, [products])
+
+    return Object.entries(groups).map(([id, group]) => ({
+      categoryId: id,
+      categoryName: group.categoryName,
+      products: group.products.slice(0, 12),
+    }))
+  }, [isFilteredView, products])
 
   function handleScroll() {
     if (categoriesRef.current) {
@@ -187,13 +378,13 @@ export function BuyerFeedPage() {
       </div>
 
       {/* Categorias (Chips) */}
-      <div className="relative flex items-center h-10">
+      <div className="relative min-w-0">
         <button
           type="button"
           onClick={() => scrollCategories('left')}
           className={cn(
-            "absolute -left-[18px] z-10 h-8 w-8 items-center justify-center rounded-full border border-border bg-background p-0 text-foreground shadow-md transition-all duration-200 hover:bg-secondary top-1/2 -translate-y-1/2 -mt-0.5",
-            showLeftArrow ? "hidden md:flex" : "hidden"
+            'absolute -left-[18px] top-1/2 z-10 -mt-0.5 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-background p-0 text-foreground shadow-md transition-all duration-200 hover:bg-secondary',
+            showLeftArrow ? 'hidden md:flex' : 'hidden',
           )}
           aria-label="Rolar para esquerda"
         >
@@ -203,22 +394,22 @@ export function BuyerFeedPage() {
         <div
           ref={categoriesRef}
           onScroll={handleScroll}
-          className="flex overflow-x-auto gap-2 pb-2 no-scrollbar w-full scroll-smooth -mx-4 px-4 md:mx-0 md:px-0"
+          className="flex min-w-0 w-[calc(100%+2rem)] -mx-4 gap-2 overflow-x-auto scroll-smooth px-4 pb-2 scroll-px-4 no-scrollbar md:mx-0 md:w-full md:px-0 md:scroll-px-0"
         >
           <button
             type="button"
             onClick={() => setSelectedCategory('')}
-            className={`whitespace-nowrap rounded-full px-4 h-9 flex items-center justify-center text-sm font-semibold border transition-all duration-200 ${
+            className={`flex h-9 shrink-0 items-center justify-center whitespace-nowrap rounded-full border px-4 text-sm font-semibold transition-all duration-200 ${
               selectedCategory === ''
-                ? 'bg-primary border-primary text-primary-foreground shadow-sm'
-                : 'bg-secondary/40 border-border/60 hover:bg-secondary/70 text-foreground'
+                ? 'border-primary bg-primary text-primary-foreground shadow-sm'
+                : 'border-border/60 bg-secondary/40 text-foreground hover:bg-secondary/70'
             }`}
           >
             Todas
           </button>
           {loadingCategories ? (
             Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="h-9 w-20 animate-pulse rounded-full bg-secondary" />
+              <div key={i} className="h-9 w-20 shrink-0 animate-pulse rounded-full bg-secondary" />
             ))
           ) : (
             categories.map((cat) => (
@@ -226,24 +417,25 @@ export function BuyerFeedPage() {
                 key={cat.id}
                 type="button"
                 onClick={() => setSelectedCategory(cat.id)}
-                className={`whitespace-nowrap rounded-full px-4 h-9 flex items-center justify-center text-sm font-semibold border transition-all duration-200 ${
+                className={`flex h-9 shrink-0 items-center justify-center whitespace-nowrap rounded-full border px-4 text-sm font-semibold transition-all duration-200 ${
                   selectedCategory === cat.id
-                    ? 'bg-primary border-primary text-primary-foreground shadow-sm'
-                    : 'bg-secondary/40 border-border/60 hover:bg-secondary/70 text-foreground'
+                    ? 'border-primary bg-primary text-primary-foreground shadow-sm'
+                    : 'border-border/60 bg-secondary/40 text-foreground hover:bg-secondary/70'
                 }`}
               >
                 {cat.name}
               </button>
             ))
           )}
+          <div className="w-4 shrink-0 md:hidden" aria-hidden />
         </div>
 
         <button
           type="button"
           onClick={() => scrollCategories('right')}
           className={cn(
-            "absolute -right-[18px] z-10 h-8 w-8 items-center justify-center rounded-full border border-border bg-background p-0 text-foreground shadow-md transition-all duration-200 hover:bg-secondary top-1/2 -translate-y-1/2 -mt-0.5",
-            showRightArrow ? "hidden md:flex" : "hidden"
+            'absolute -right-[18px] top-1/2 z-10 -mt-0.5 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-background p-0 text-foreground shadow-md transition-all duration-200 hover:bg-secondary',
+            showRightArrow ? 'hidden md:flex' : 'hidden',
           )}
           aria-label="Rolar para direita"
         >
@@ -254,25 +446,26 @@ export function BuyerFeedPage() {
       {/* Título da Seção */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h3 className="font-display text-lg font-normal text-foreground">
-          Em destaque
+          {filteredTitle}
         </h3>
+        {isFilteredView && (
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedCategory('')
+              navigate('/buyer/feed', { replace: true })
+            }}
+            className="self-start text-sm font-medium text-primary transition-colors hover:text-primary/80"
+          >
+            Voltar ao feed
+          </button>
+        )}
       </div>
 
-      {/* Grid de Produtos */}
+      {/* Produtos */}
       <div className="space-y-4">
         {loadingProducts ? (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 md:gap-6 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="space-y-2.5">
-                <div className="aspect-[4/4.5] w-full animate-pulse bg-secondary rounded-xl" />
-                <div className="space-y-2 px-0.5">
-                  <div className="h-4 w-2/3 animate-pulse rounded bg-secondary" />
-                  <div className="h-3 w-1/2 animate-pulse rounded bg-secondary" />
-                  <div className="h-4 w-1/3 animate-pulse rounded bg-secondary mt-1" />
-                </div>
-              </div>
-            ))}
-          </div>
+          <ProductSkeleton layout={isFilteredView ? 'vertical' : 'horizontal'} />
         ) : products.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed py-12 text-center">
             <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-secondary text-muted-foreground">
@@ -283,135 +476,49 @@ export function BuyerFeedPage() {
               Tente redefinir seus filtros ou altere a busca para encontrar produtos dos fornecedores.
             </p>
           </div>
+        ) : isFilteredView ? (
+          <ProductVerticalGrid>
+            {products.map((product) => (
+              <FeedProductCard
+                key={product.id}
+                product={product}
+                onSelect={handleProductSelect}
+                layout="vertical"
+              />
+            ))}
+          </ProductVerticalGrid>
         ) : (
-          <div className="space-y-16">
-            {/* Seção Em Destaque (Primeira Seção) */}
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 md:gap-6 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6">
+          <div className="space-y-10">
+            <section className="space-y-4">
+              <ProductHorizontalRow ariaLabel="Produtos em destaque">
                 {products.slice(0, 12).map((product, index) => (
-                  <div
+                  <FeedProductCard
                     key={`destaque-${product.id}`}
-                    onClick={() =>
-                      navigate('/buyer/demands/new', {
-                        state: {
-                          categoryId: product.category_id,
-                          title: product.nome,
-                          description: product.descricao || '',
-                          city: product.cidade || '',
-                          uf: product.uf || '',
-                        },
-                      })
-                    }
-                    className="cursor-pointer"
-                  >
-                    {/* Imagem do Produto */}
-                    <div className="relative aspect-[4/4.5] w-full bg-secondary overflow-hidden rounded-xl border border-border/40 hover:border-primary/45 transition-all duration-300 hover:scale-[1.03] hover:shadow-sm">
-                      <span className={cn(
-                        "absolute top-2.5 left-2.5 z-10 items-center rounded-full bg-[#7F3CEF] px-2.5 py-0.5 text-[9px] font-bold text-white shadow-sm uppercase tracking-wider",
-                        getBadgeVisibilityClass(index)
-                      )}>
-                        Destaque
-                      </span>
-                      {getProductImage(product.nome, product.image_url) ? (
-                        <img
-                          src={getProductImage(product.nome, product.image_url) || ''}
-                          alt={product.nome}
-                          className="h-full w-full object-cover"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center text-muted-foreground">
-                          <Package size={32} />
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Conteúdo (Informações embaixo da foto) */}
-                    <div className="mt-2.5 px-0.5 space-y-1.5">
-                      <div className="space-y-0.5 min-w-0">
-                        <h4 className="font-display font-semibold text-sm leading-tight text-foreground hover:text-primary transition-colors truncate" title={product.nome}>
-                          {product.nome}
-                        </h4>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {product.supplier?.company
-                            ? `${product.supplier.company.nome_fantasia || product.supplier.company.razao_social} ${product.category?.name ? `· ${product.category.name}` : ''}`
-                            : product.category?.name || ''}
-                        </p>
-                      </div>
-
-                      <div className="flex items-center justify-between gap-1.5 pt-0.5">
-                        <span className="font-display text-sm font-bold text-foreground">
-                          {formatCurrency(product.preco_referencia)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+                    product={product}
+                    onSelect={handleProductSelect}
+                    layout="horizontal"
+                    badgeIndex={index}
+                  />
                 ))}
-              </div>
-            </div>
+              </ProductHorizontalRow>
+            </section>
 
-            {/* Categorias (Seções Mais Procurados) */}
             {groupedProducts.map((group) => (
-              <div key={group.categoryId} className="space-y-4">
-                <h4 className="font-display text-base font-semibold text-foreground/80 pl-0.5 mt-8">
+              <section key={group.categoryId} className="space-y-4">
+                <h4 className="pl-0.5 font-display text-base font-semibold text-foreground/80">
                   Mais procurados em {group.categoryName}
                 </h4>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 md:gap-6 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6">
+                <ProductHorizontalRow ariaLabel={`Produtos em ${group.categoryName}`}>
                   {group.products.map((product) => (
-                    <div
+                    <FeedProductCard
                       key={product.id}
-                      onClick={() =>
-                        navigate('/buyer/demands/new', {
-                          state: {
-                            categoryId: product.category_id,
-                            title: product.nome,
-                            description: product.descricao || '',
-                            city: product.cidade || '',
-                            uf: product.uf || '',
-                          },
-                        })
-                      }
-                      className="cursor-pointer"
-                    >
-                      {/* Imagem do Produto */}
-                      <div className="relative aspect-[4/4.5] w-full bg-secondary overflow-hidden rounded-xl border border-border/40 hover:border-primary/45 transition-all duration-300 hover:scale-[1.03] hover:shadow-sm">
-                        {getProductImage(product.nome, product.image_url) ? (
-                          <img
-                            src={getProductImage(product.nome, product.image_url) || ''}
-                            alt={product.nome}
-                            className="h-full w-full object-cover"
-                            loading="lazy"
-                          />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center text-muted-foreground">
-                            <Package size={32} />
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Conteúdo (Informações embaixo da foto) */}
-                      <div className="mt-2.5 px-0.5 space-y-1.5">
-                        <div className="space-y-0.5 min-w-0">
-                          <h4 className="font-display font-semibold text-sm leading-tight text-foreground hover:text-primary transition-colors truncate" title={product.nome}>
-                            {product.nome}
-                          </h4>
-                          <p className="text-xs text-muted-foreground truncate">
-                            {product.supplier?.company
-                              ? `${product.supplier.company.nome_fantasia || product.supplier.company.razao_social} ${product.category?.name ? `· ${product.category.name}` : ''}`
-                              : product.category?.name || ''}
-                          </p>
-                        </div>
-
-                        <div className="flex items-center justify-between gap-1.5 pt-0.5">
-                          <span className="font-display text-sm font-bold text-foreground">
-                            {formatCurrency(product.preco_referencia)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
+                      product={product}
+                      onSelect={handleProductSelect}
+                      layout="horizontal"
+                    />
                   ))}
-                </div>
-              </div>
+                </ProductHorizontalRow>
+              </section>
             ))}
           </div>
         )}

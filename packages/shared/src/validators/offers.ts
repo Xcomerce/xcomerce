@@ -1,4 +1,10 @@
 import { z } from 'zod'
+import {
+  getMinTotalPrice,
+  getMinUnitPrice,
+  isOfferTotalViable,
+  OFFER_MARKET_DOWNWARD_MARGIN_PERCENT,
+} from '../pricing/offer-bounds'
 
 export const offerSchema = z.object({
   demand_id: z.string().uuid(),
@@ -10,3 +16,26 @@ export const offerSchema = z.object({
 })
 
 export type OfferInput = z.infer<typeof offerSchema>
+
+export function createOfferSchema(marketUnitPrice?: number | null) {
+  if (marketUnitPrice == null || marketUnitPrice <= 0) {
+    return offerSchema
+  }
+
+  const minUnit = getMinUnitPrice(marketUnitPrice)
+
+  return offerSchema.superRefine((data, ctx) => {
+    if (!isOfferTotalViable(data.valor, data.quantidade, marketUnitPrice)) {
+      const minTotal = getMinTotalPrice(marketUnitPrice, data.quantidade)
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['valor'],
+        message: `Valor abaixo do limite viável. Mínimo: ${formatBrl(minTotal)} (preço unitário mín. ${formatBrl(minUnit)}, margem máx. ${OFFER_MARKET_DOWNWARD_MARGIN_PERCENT}% abaixo do mercado).`,
+      })
+    }
+  })
+}
+
+function formatBrl(value: number): string {
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
+}

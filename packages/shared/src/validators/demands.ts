@@ -11,6 +11,7 @@ export const demandSchema = z.object({
   raio_km: z.coerce.number().int().min(1).max(500).default(50),
   prazo_desejado: z.string().optional(),
   observacoes: z.string().optional(),
+  preco_referencia_mercado: z.coerce.number().min(0).optional(),
 })
 
 export type DemandInput = z.infer<typeof demandSchema>

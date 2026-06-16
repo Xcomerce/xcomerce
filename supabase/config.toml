@@ -47,3 +47,6 @@ enable_confirmations = false
 
 [realtime]
 enabled = true
+
+[functions.lookup-cnpj]
+verify_jwt = false

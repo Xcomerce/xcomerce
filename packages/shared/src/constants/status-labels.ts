@@ -33,3 +33,18 @@ export const SUPPLIER_STATUS_LABELS: Record<string, string> = {
   aprovado: 'Aprovado',
   recusado: 'Recusado',
 }
+
+export const NOTIFICATION_TYPE_LABELS: Record<string, string> = {
+  'demand.matched': 'Nova oportunidade de demanda',
+  'offer.received': 'Nova proposta recebida',
+  'offer.auto_sent': 'Proposta automática enviada',
+  'offer.contact_revealed': 'Contato revelado',
+  'chat.message': 'Nova mensagem',
+  'order.status_changed': 'Status do pedido alterado',
+  'sla.reminder': 'Lembrete de prazo',
+  'sla.expired': 'Prazo expirado',
+  'supplier.approved': 'Cadastro aprovado',
+  'supplier.rejected': 'Cadastro recusado',
+  'subscription.activated': 'Assinatura ativada',
+  'subscription.past_due': 'Pagamento em atraso',
+}

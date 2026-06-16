@@ -48,10 +48,15 @@ async function checkRateLimit(
 ): Promise<boolean> {
   const minute = Math.floor(Date.now() / 60000)
   const prefix = `ratelimit:lookup-cnpj:${userId}:${minute}`
-  const { count } = await supabase
+  const { count, error: rateError } = await supabase
     .from('idempotency_keys')
     .select('*', { count: 'exact', head: true })
     .like('key', `${prefix}%`)
+
+  if (rateError) {
+    console.error('Rate limit check failed:', rateError.message)
+    return true
+  }
 
   return (count ?? 0) < CNPJ_RATE_LIMIT
 }
@@ -71,73 +76,169 @@ async function recordRateHit(
   })
 }
 
-Deno.serve(async (req) => {
-  const cors = handleCors(req)
-  if (cors) return cors
+const CNPJ_FETCH_TIMEOUT_MS = 15_000
+const CNPJ_FETCH_RETRIES = 2
 
-  if (req.method !== 'GET') {
-    return error('METHOD_NOT_ALLOWED', 'Use GET.', 405)
+async function fetchCnpjFromApi(cnpj: string): Promise<Response> {
+  const apiUrl = Deno.env.get('CNPJ_API_URL') ?? 'https://brasilapi.com.br/api/cnpj/v1'
+  const token = Deno.env.get('CNPJ_API_TOKEN')
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+    'User-Agent': 'Keve-B2B/1.0',
+  }
+  if (token) headers.Authorization = `Bearer ${token}`
+
+  let lastResponse: Response | null = null
+
+  for (let attempt = 0; attempt <= CNPJ_FETCH_RETRIES; attempt++) {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), CNPJ_FETCH_TIMEOUT_MS)
+
+    try {
+      const response = await fetch(`${apiUrl}/${cnpj}`, {
+        signal: controller.signal,
+        headers,
+      })
+      lastResponse = response
+
+      if (response.ok || response.status === 404) return response
+      if (response.status < 500 && response.status !== 429) return response
+    } catch (err) {
+      console.error(`BrasilAPI attempt ${attempt + 1} failed:`, err)
+    } finally {
+      clearTimeout(timeout)
+    }
+
+    if (attempt < CNPJ_FETCH_RETRIES) {
+      await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)))
+    }
   }
 
-  const { user, response: authError } = await requireUser(req)
-  if (authError) return authError
+  if (lastResponse) return lastResponse
+  throw new Error('CNPJ_API_UNREACHABLE')
+}
 
+async function parseCnpjFromRequest(req: Request): Promise<string | null> {
   const url = new URL(req.url)
-  const cnpj = normalizeCnpj(url.searchParams.get('cnpj') ?? '')
-  if (!cnpj || !validateCnpjDigits(cnpj)) {
-    return error('INVALID_CNPJ', 'CNPJ inválido.', 400)
+
+  if (req.method === 'GET') {
+    return normalizeCnpj(url.searchParams.get('cnpj') ?? '')
   }
 
-  const supabase = createServiceClient()
-
-  if (!(await checkRateLimit(supabase, user!.id))) {
-    return error('RATE_LIMIT_EXCEEDED', 'Limite de 10 consultas por minuto.', 429)
+  if (req.method === 'POST') {
+    try {
+      const body = await req.json()
+      const raw = typeof body?.cnpj === 'string' ? body.cnpj : ''
+      return normalizeCnpj(raw)
+    } catch {
+      return null
+    }
   }
+
+  return null
+}
+
+Deno.serve(async (req) => {
+  try {
+    const cors = handleCors(req)
+    if (cors) return cors
+
+    if (req.method !== 'GET' && req.method !== 'POST') {
+      return error('METHOD_NOT_ALLOWED', 'Use GET ou POST.', 405)
+    }
+
+    const { user, response: authError } = await requireUser(req)
+    if (authError) return authError
+
+    const cnpj = await parseCnpjFromRequest(req)
+    if (!cnpj || !validateCnpjDigits(cnpj)) {
+      return error('INVALID_CNPJ', 'CNPJ inválido.', 400)
+    }
+
+    const supabase = createServiceClient()
+
+    if (!(await checkRateLimit(supabase, user!.id))) {
+      return error('RATE_LIMIT_EXCEEDED', 'Limite de 10 consultas por minuto.', 429)
+    }
 
   const { data: existingCompany } = await supabase
     .from('companies')
-    .select('id')
+    .select('id, cnpj, razao_social, nome_fantasia, situacao, logradouro, bairro, cidade, uf, cep')
     .eq('cnpj', cnpj)
     .maybeSingle()
 
   if (existingCompany) {
-    return error('CNPJ_ALREADY_REGISTERED', 'Este CNPJ já está cadastrado na plataforma.', 409)
-  }
+    const { data: ownedProfile } = await supabase
+      .from('supplier_profiles')
+      .select('user_id')
+      .eq('company_id', existingCompany.id)
+      .eq('user_id', user!.id)
+      .maybeSingle()
 
-  const { data: cached } = await supabase
-    .from('cnpj_cache')
-    .select('payload, fetched_at')
-    .eq('cnpj', cnpj)
-    .maybeSingle()
-
-  const cacheTtlMs = 24 * 3600 * 1000
-  if (cached?.payload && cached.fetched_at) {
-    const age = Date.now() - new Date(cached.fetched_at).getTime()
-    if (age < cacheTtlMs) {
-      await recordRateHit(supabase, user!.id)
-      return json({ ...mapBrasilApi(cached.payload as Record<string, unknown>, cnpj), cached: true })
+    if (!ownedProfile) {
+      return error('CNPJ_ALREADY_REGISTERED', 'Este CNPJ já está cadastrado na plataforma.', 409)
     }
+
+    await recordRateHit(supabase, user!.id)
+    return json({
+      cnpj: existingCompany.cnpj,
+      razao_social: existingCompany.razao_social,
+      nome_fantasia: existingCompany.nome_fantasia,
+      situacao: existingCompany.situacao ?? 'ATIVA',
+      endereco: {
+        logradouro: existingCompany.logradouro ?? '',
+        bairro: existingCompany.bairro ?? '',
+        cidade: existingCompany.cidade,
+        uf: existingCompany.uf,
+        cep: existingCompany.cep ?? '',
+      },
+      cached: true,
+    })
   }
 
-  const apiUrl = Deno.env.get('CNPJ_API_URL') ?? 'https://brasilapi.com.br/api/cnpj/v1'
-  const apiRes = await fetch(`${apiUrl}/${cnpj}`, {
-    headers: Deno.env.get('CNPJ_API_TOKEN')
-      ? { Authorization: `Bearer ${Deno.env.get('CNPJ_API_TOKEN')}` }
-      : {},
-  })
+    const { data: cached } = await supabase
+      .from('cnpj_cache')
+      .select('payload, fetched_at')
+      .eq('cnpj', cnpj)
+      .maybeSingle()
 
-  if (apiRes.status === 404) {
-    return error('CNPJ_NOT_FOUND', 'CNPJ não encontrado na Receita Federal.', 404)
+    const cacheTtlMs = 24 * 3600 * 1000
+    if (cached?.payload && cached.fetched_at) {
+      const age = Date.now() - new Date(cached.fetched_at).getTime()
+      if (age < cacheTtlMs) {
+        await recordRateHit(supabase, user!.id)
+        return json({ ...mapBrasilApi(cached.payload as Record<string, unknown>, cnpj), cached: true })
+      }
+    }
+
+    let apiRes: Response
+    try {
+      apiRes = await fetchCnpjFromApi(cnpj)
+    } catch (err) {
+      console.error('BrasilAPI unreachable:', err)
+      return error('CNPJ_API_ERROR', 'Serviço de consulta CNPJ indisponível. Tente novamente.', 503)
+    }
+
+    if (apiRes.status === 404) {
+      return error('CNPJ_NOT_FOUND', 'CNPJ não encontrado na Receita Federal.', 404)
+    }
+
+    if (!apiRes.ok) {
+      console.error('BrasilAPI error:', apiRes.status, await apiRes.text())
+      return error('CNPJ_API_ERROR', 'Falha ao consultar CNPJ. Tente novamente em instantes.', 502)
+    }
+
+    const payload = await apiRes.json()
+    await supabase.from('cnpj_cache').upsert({
+      cnpj,
+      payload,
+      fetched_at: new Date().toISOString(),
+    })
+    await recordRateHit(supabase, user!.id)
+
+    return json({ ...mapBrasilApi(payload, cnpj), cached: false })
+  } catch (err) {
+    console.error('lookup-cnpj unhandled error:', err)
+    return error('INTERNAL_ERROR', 'Erro interno ao consultar CNPJ.', 500)
   }
-
-  if (!apiRes.ok) {
-    console.error('BrasilAPI error:', await apiRes.text())
-    return error('CNPJ_API_ERROR', 'Falha ao consultar CNPJ.', 502)
-  }
-
-  const payload = await apiRes.json()
-  await supabase.from('cnpj_cache').upsert({ cnpj, payload })
-  await recordRateHit(supabase, user!.id)
-
-  return json({ ...mapBrasilApi(payload, cnpj), cached: false })
 })
