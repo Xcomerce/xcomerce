@@ -1,4 +1,12 @@
-# Keve Marketplace B2B
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="apps/web/public/logo-clara.svg">
+    <source media="(prefers-color-scheme: light)" srcset="apps/web/public/logo-dark.svg">
+    <img alt="XCOMERCE Logo" src="apps/web/public/logo-dark.svg" width="300">
+  </picture>
+</p>
+
+# XCOMERCE
 
 Plataforma B2B de marketplace para conexão entre compradores e fornecedores verificados.
 
