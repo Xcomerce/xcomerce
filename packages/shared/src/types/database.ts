@@ -77,6 +77,7 @@ export type Database = {
           cnpj: string
           razao_social: string
           nome_fantasia: string | null
+          situacao: string | null
           cidade: string
           uf: string
           logradouro: string | null
@@ -188,7 +189,9 @@ export type Database = {
           supplier_id: string
           score: number
           status: 'notified' | 'viewed' | 'offer_sent' | 'dismissed'
+          notified_at: string
           viewed_at: string | null
+          created_at: string
         }
         Update: Partial<Database['public']['Tables']['demand_matches']['Row']>
       }
