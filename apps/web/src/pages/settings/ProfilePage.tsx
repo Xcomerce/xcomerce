@@ -425,6 +425,7 @@ export function ProfilePage() {
 
   const myAccountContent = (
     <MyAccountContent
+      profile={profile}
       roleLabel={roleLabel}
       roleColor={roleColor}
       joinDate={joinDate}
@@ -471,7 +472,7 @@ export function ProfilePage() {
       case 'integrations':
         return <IntegrationsSettings />
       case 'privacy':
-        return <PrivacyDataSettings profile={profile!} />
+        return <PrivacyDataSettings profile={profile} />
       case 'terms':
         return termsSettings
       default:
@@ -559,7 +560,7 @@ export function ProfilePage() {
       <div className="hidden md:grid w-full flex-1 min-h-0 md:grid-cols-[280px_minmax(0,1fr)] md:gap-6 px-6 py-6">
         <aside className="flex min-h-0 flex-col gap-4">
           {avatarSection}
-          <nav className="scrollbar-custom min-h-0 flex-1 overflow-y-auto pr-1 space-y-1">
+          <nav className="space-y-1">
             {menuItems.map((item) => {
               const active = desktopSection === item.id
               return (
@@ -761,6 +762,7 @@ function ProfileFieldControl({ children }: { children: ReactNode }) {
 }
 
 function MyAccountContent({
+  profile,
   roleLabel,
   roleColor,
   joinDate,
@@ -769,6 +771,7 @@ function MyAccountContent({
   onSubmit,
   className,
 }: {
+  profile: UserProfile
   roleLabel: string
   roleColor: string
   joinDate: string
@@ -1109,14 +1112,14 @@ function NotificationPreferencesSettings({
       {items.map((item) => (
         <div
           key={item.type}
-          className="flex flex-col md:flex-row md:items-center justify-between gap-4 rounded-xl border border-border p-4"
+          className="flex items-center justify-between gap-4 rounded-xl border border-border p-4"
         >
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium">{item.label}</p>
             <p className="mt-0.5 text-xs text-muted-foreground">{item.description}</p>
           </div>
-          <div className="flex items-center gap-6 md:shrink-0 mt-2 md:mt-0">
-            <label className="flex items-center gap-2 text-sm whitespace-nowrap cursor-pointer">
+          <div className="flex shrink-0 items-center gap-4">
+            <label className="flex items-center gap-2 text-sm whitespace-nowrap">
               <Switch
                 id={`${item.type}-in-app`}
                 checked={isChannelEnabled(item.type, 'in_app_enabled')}
@@ -1125,7 +1128,7 @@ function NotificationPreferencesSettings({
               />
               No app
             </label>
-            <label className="flex items-center gap-2 text-sm whitespace-nowrap cursor-pointer">
+            <label className="flex items-center gap-2 text-sm whitespace-nowrap">
               <Switch
                 id={`${item.type}-email`}
                 checked={isChannelEnabled(item.type, 'email_enabled')}

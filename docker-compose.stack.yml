@@ -42,7 +42,7 @@ services:
       labels:
         - "traefik.enable=true"
         - "traefik.docker.network=sagitta"
-        - "traefik.http.routers.xcommerce.rule=Host(`xcommerce.sagittadigital.com.br`)"
+        - "traefik.http.routers.xcommerce.rule=Host(`xcomerce.com.br`)"
         - "traefik.http.routers.xcommerce.entrypoints=websecure"
         - "traefik.http.routers.xcommerce.tls.certresolver=letsencryptresolver"
         - "traefik.http.routers.xcommerce.service=xcommerce-svc"
