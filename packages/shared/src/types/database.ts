@@ -92,12 +92,21 @@ export type Database = {
         Row: {
           user_id: string
           company_id: string | null
+          cep: string | null
+          logradouro: string | null
+          numero: string | null
+          bairro: string | null
+          complemento: string | null
           city: string | null
           uf: string | null
           avg_rating: number
           total_ratings: number
           orders_completed: number
         }
+        Insert: Partial<Database['public']['Tables']['buyer_profiles']['Row']> & {
+          user_id: string
+        }
+        Update: Partial<Database['public']['Tables']['buyer_profiles']['Row']>
       }
       supplier_profiles: {
         Row: {
@@ -151,6 +160,11 @@ export type Database = {
           cidade: string
           uf: string
           is_active: boolean
+          tem_cor: boolean
+          tem_tamanho: boolean
+          tipo_tamanho: 'roupa' | 'calcado' | 'numerico' | 'livre' | null
+          cores: string[]
+          tamanhos: string[]
         }
         Insert: Omit<Database['public']['Tables']['products']['Row'], 'id'> & { id?: string }
         Update: Partial<Database['public']['Tables']['products']['Row']>
@@ -171,6 +185,8 @@ export type Database = {
           prazo_desejado: string | null
           observacoes: string | null
           preco_referencia_mercado: number | null
+          cor: string | null
+          tamanho: string | null
           published_at: string | null
           expires_at: string | null
           created_at: string

@@ -21,6 +21,7 @@ import { formatSupabaseError } from '@/lib/errors'
 import { getSupabaseProjectLabel, isSupabaseConfigured } from '@/lib/supabase'
 import type { Demand } from '@/services/demands'
 import { cn } from '@/lib/utils'
+import { DemandVariantSummary } from '@/components/buyer/DemandVariantSummary'
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
@@ -374,6 +375,8 @@ function DemandItem({ demand }: { demand: Demand }) {
           {headerContent}
         </div>
       )}
+
+      <DemandVariantSummary demand={demand} className="text-xs md:text-sm" />
 
       {/* Grid of 4 Cards (Offers) - Horizontal Scroll on Mobile */}
       <div className="flex overflow-x-auto gap-4 pb-3 snap-x snap-mandatory md:grid md:grid-cols-4 md:gap-4 md:snap-none [&::-webkit-scrollbar]:hidden [scrollbar-width:none] min-w-0 w-[calc(100%+2rem)] -mx-4 px-4 scroll-px-4 md:w-full md:mx-0 md:px-0 md:scroll-px-0">

@@ -34,6 +34,7 @@ import {
   TermsOfUseSettings,
 } from '@/pages/settings/SettingsSections'
 import type { AppShellOutletContext } from '@/components/layout/AppShell'
+import { BuyerDeliveryAddressSettings } from '@/pages/settings/BuyerDeliveryAddressSettings'
 
 const ROLE_COLORS: Record<UserRole, string> = {
   buyer:
@@ -423,15 +424,17 @@ export function ProfilePage() {
     />
   ) : null
 
+  const showBuyerAddress = roles.includes('buyer')
+
   const myAccountContent = (
     <MyAccountContent
-      profile={profile}
       roleLabel={roleLabel}
       roleColor={roleColor}
       joinDate={joinDate}
       form={form}
       saveError={saveError}
       onSubmit={onSubmit}
+      showBuyerAddress={showBuyerAddress}
       className="flex-1"
     />
   )
@@ -762,22 +765,22 @@ function ProfileFieldControl({ children }: { children: ReactNode }) {
 }
 
 function MyAccountContent({
-  profile,
   roleLabel,
   roleColor,
   joinDate,
   form,
   saveError,
   onSubmit,
+  showBuyerAddress = false,
   className,
 }: {
-  profile: UserProfile
   roleLabel: string
   roleColor: string
   joinDate: string
   form: ReturnType<typeof useForm<ProfileFormValues>>
   saveError: string | null
   onSubmit: (values: ProfileFormValues) => Promise<void>
+  showBuyerAddress?: boolean
   className?: string
 }) {
   const formId = 'my-account-form'
@@ -801,6 +804,7 @@ function MyAccountContent({
                 hideSubmit
               />
             </div>
+            {showBuyerAddress && <BuyerDeliveryAddressSettings />}
           </div>
         </div>
       </div>

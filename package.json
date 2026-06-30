@@ -9,6 +9,7 @@
     "dev": "npm run dev -w web",
     "build": "npm run build -w web",
     "lint": "npm run lint -w web",
-    "deploy:functions:lookup-cnpj": "npx supabase functions deploy lookup-cnpj --no-verify-jwt --project-ref wjoyobxpwkdyhnfrwbiu"
+    "deploy:functions:lookup-cnpj": "npx supabase functions deploy lookup-cnpj --no-verify-jwt --project-ref wjoyobxpwkdyhnfrwbiu",
+    "deploy:functions:match": "npx supabase functions deploy match-demand request-demand-match sync-supplier-matches --project-ref wjoyobxpwkdyhnfrwbiu"
   }
 }

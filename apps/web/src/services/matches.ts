@@ -17,6 +17,8 @@ export type DemandMatchWithDemand = DemandMatch & {
     category_id: string
     published_at: string | null
     expires_at: string | null
+    cor: string | null
+    tamanho: string | null
   } | null
 }
 
@@ -44,7 +46,9 @@ export async function fetchMatches(
         status,
         category_id,
         published_at,
-        expires_at
+        expires_at,
+        cor,
+        tamanho
       )
     `,
     )
@@ -74,4 +78,16 @@ export async function markViewed(matchId: string): Promise<DemandMatch> {
 
   if (error) throw error
   return data as DemandMatch
+}
+
+export async function requestDemandMatch(demandId: string): Promise<void> {
+  const { error } = await supabase.functions.invoke('request-demand-match', {
+    body: { demand_id: demandId },
+  })
+  if (error) throw error
+}
+
+export async function syncSupplierMatches(): Promise<void> {
+  const { error } = await supabase.functions.invoke('sync-supplier-matches')
+  if (error) throw error
 }

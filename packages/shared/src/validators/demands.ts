@@ -12,6 +12,8 @@ export const demandSchema = z.object({
   prazo_desejado: z.string().optional(),
   observacoes: z.string().optional(),
   preco_referencia_mercado: z.coerce.number().min(0).optional(),
+  cor: z.string().trim().optional().or(z.literal('')),
+  tamanho: z.string().trim().optional().or(z.literal('')),
 })
 
 export type DemandInput = z.infer<typeof demandSchema>

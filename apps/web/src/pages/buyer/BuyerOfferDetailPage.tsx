@@ -23,6 +23,7 @@ import { useOfferDetail, useRevealContact, useAcceptOffer, useRejectOffer, useOf
 import { useChatMessages, useSendMessage, useChatSubscription } from '@/hooks/use-chat'
 import { useAuth } from '@/contexts/auth-context'
 import { formatSupabaseError } from '@/lib/errors'
+import { DemandVariantSummary } from '@/components/buyer/DemandVariantSummary'
 import { cn } from '@/lib/utils'
 import { ScrollPageShell, SCROLL_PAGE_SECTION_CLASS } from '@/components/layout/ScrollPageShell'
 
@@ -507,6 +508,14 @@ export function BuyerOfferDetailPage() {
                       </td>
                       <td className="py-2.5 text-muted-foreground italic">
                         Refere-se a esta especificação
+                      </td>
+                    </tr>
+                  )}
+                  {(demand.cor || demand.tamanho) && (
+                    <tr>
+                      <td className="py-2.5 font-medium text-muted-foreground">Variações</td>
+                      <td className="py-2.5 text-foreground" colSpan={2}>
+                        <DemandVariantSummary demand={demand} inline />
                       </td>
                     </tr>
                   )}

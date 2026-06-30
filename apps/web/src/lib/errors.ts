@@ -71,5 +71,23 @@ export function translateSupabaseError(message: string): string {
   if (message.includes('infinite recursion') || message.includes('500')) {
     return 'Erro no banco (500). Confira se as migrations foram aplicadas no projeto configurado em .env.local.'
   }
+  if (
+    message.includes('23505') ||
+    message.includes('idx_products_supplier_sku_unique') ||
+    message.includes('duplicate key value violates unique constraint')
+  ) {
+    return 'Já existe um produto seu com este SKU. Use outro código ou deixe o campo SKU em branco.'
+  }
+  if (message.includes('products_tipo_tamanho_check')) {
+    return 'Selecione o tipo de tamanho ao marcar que o produto tem variação de tamanho.'
+  }
+  if (
+    message.includes('tem_cor') ||
+    message.includes('tem_tamanho') ||
+    message.includes('tipo_tamanho') ||
+    message.includes('PGRST204')
+  ) {
+    return 'Colunas de cor/tamanho ainda não existem no banco. Aplique a migration 20260701120000_product_demand_variants.sql no Supabase.'
+  }
   return message
 }
