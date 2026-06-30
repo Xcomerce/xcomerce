@@ -201,12 +201,17 @@ export function computeMetricTrend(current: number, previous: number): MetricTre
   }
 }
 
+function unwrapRelation<T>(value: T | T[] | null | undefined): T | null {
+  if (value == null) return null
+  return Array.isArray(value) ? (value[0] ?? null) : value
+}
+
 function sumActiveSubscriptionMrr(
-  rows: { status: string; plan: { price?: number } | null }[] | null | undefined,
+  rows: { status: string; plan: { price?: number } | { price?: number }[] | null }[] | null | undefined,
 ): number {
   return (rows ?? []).reduce((sum, row) => {
     if (row.status !== 'active') return sum
-    const plan = row.plan as { price?: number } | null
+    const plan = unwrapRelation(row.plan)
     return sum + (plan?.price ?? 0)
   }, 0)
 }
@@ -614,7 +619,7 @@ export async function fetchFinancialReports(): Promise<FinancialReports> {
     const status = sub.status ?? 'unknown'
     subscriptionsByStatus[status] = (subscriptionsByStatus[status] ?? 0) + 1
 
-    const plan = sub.plan as { id: string; code: string; name: string; price: number } | null
+    const plan = unwrapRelation(sub.plan) as { id: string; code: string; name: string; price: number } | null
     if (!plan) continue
 
     const existing = planMap.get(plan.id) ?? {
@@ -816,16 +821,12 @@ export async function fetchAdminUsers(): Promise<AdminUser[]> {
 
   const buyerIds = new Set((buyersRes.data ?? []).map((row) => row.user_id))
 
-  type SubRow = {
-    user_id: string
-    status: SubscriptionStatus
-    plan: { name: string } | null
-  }
   const subscriptionByUser = new Map<string, { status: SubscriptionStatus; planName: string | null }>()
-  for (const row of (subsRes.data ?? []) as SubRow[]) {
+  for (const row of subsRes.data ?? []) {
+    const plan = unwrapRelation(row.plan)
     subscriptionByUser.set(row.user_id, {
       status: row.status,
-      planName: row.plan?.name ?? null,
+      planName: plan?.name ?? null,
     })
   }
 

@@ -155,7 +155,7 @@ function RoleBadges({ roles }: { roles: UserRole[] }) {
   return (
     <div className="flex flex-wrap gap-1">
       {roles.map((role) => (
-        <Badge key={role} variant="secondary" className="text-xs font-normal">
+        <Badge key={role} className="border-transparent bg-secondary text-secondary-foreground text-xs font-normal">
           {ROLE_LABELS[role]}
         </Badge>
       ))}
@@ -191,10 +191,12 @@ function UserDetailDialog({
 
   if (!user) return null
 
-  const showApprovalsLink =
-    user.supplier_status === 'pendente' || user.supplier_status === 'em_revisao'
+  const currentUser = user
 
-  const nextIsActive = !user.is_active
+  const showApprovalsLink =
+    currentUser.supplier_status === 'pendente' || currentUser.supplier_status === 'em_revisao'
+
+  const nextIsActive = !currentUser.is_active
 
   function openConfirm() {
     setConfirmOpen(true)
@@ -202,8 +204,8 @@ function UserDetailDialog({
 
   async function handleConfirmStatusChange() {
     try {
-      await updateUserActive.mutateAsync({ userId: user.id, isActive: nextIsActive })
-      onUserUpdated({ ...user, is_active: nextIsActive })
+      await updateUserActive.mutateAsync({ userId: currentUser.id, isActive: nextIsActive })
+      onUserUpdated({ ...currentUser, is_active: nextIsActive })
       toast.success(nextIsActive ? 'Usuário reativado' : 'Usuário inativado')
       setConfirmOpen(false)
     } catch (err) {

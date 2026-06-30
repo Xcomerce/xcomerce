@@ -366,6 +366,8 @@ export function ProfilePage() {
     )
   }
 
+  const currentProfile = profile
+
   const displayRole = settingsRole ?? profile.primary_role ?? roles[0]
   const roleLabel =
     displayRole && displayRole in ROLE_LABELS
@@ -475,7 +477,7 @@ export function ProfilePage() {
       case 'integrations':
         return <IntegrationsSettings />
       case 'privacy':
-        return <PrivacyDataSettings profile={profile} />
+        return <PrivacyDataSettings profile={currentProfile} />
       case 'terms':
         return termsSettings
       default:
