@@ -198,7 +198,7 @@ export function Header({ onMenuClick, className }: HeaderProps) {
         <button
           type="button"
           onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-          className="flex h-10 w-10 items-center justify-center rounded-xl hover:bg-secondary/50"
+          className="hidden h-10 w-10 items-center justify-center rounded-xl hover:bg-secondary/50 lg:flex"
           aria-label="Alternar tema"
         >
           {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
@@ -206,7 +206,10 @@ export function Header({ onMenuClick, className }: HeaderProps) {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button type="button" className="flex items-center gap-2 rounded-xl p-1.5 hover:bg-secondary/50">
+            <button
+              type="button"
+              className="hidden items-center gap-2 rounded-xl p-1.5 hover:bg-secondary/50 lg:flex"
+            >
               <Avatar className="h-8 w-8">
                 <AvatarFallback className="text-xs">{getInitials(profile?.full_name ?? 'U')}</AvatarFallback>
               </Avatar>

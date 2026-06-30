@@ -83,7 +83,7 @@ export const buyerNav: RoleNavConfig = {
       { to: '/buyer/orders', icon: Package, label: 'Pedidos' },
       { to: '/settings/profile', icon: User, label: 'Perfil' },
     ],
-    fab: { to: '/buyer/demands/new', icon: PlusCircle, label: 'Solicitar oferta' },
+    fab: { to: '/buyer/demands/new', icon: PlusCircle, label: 'Solicitar' },
   },
 }
 
@@ -111,12 +111,12 @@ export const supplierNav: RoleNavConfig = {
   ],
   bottomNav: {
     left: [
-      { to: '/supplier/board', icon: LayoutGrid, hasNotification: true },
-      { to: '/supplier/catalog', icon: Boxes },
+      { to: '/supplier/board', icon: LayoutGrid, label: 'Oportunidades', hasNotification: true },
+      { to: '/supplier/catalog', icon: Boxes, label: 'Catálogo' },
     ],
     right: [
-      { to: '/supplier/orders', icon: Package },
-      { to: '/settings/profile', icon: User },
+      { to: '/supplier/orders', icon: Package, label: 'Pedidos' },
+      { to: '/settings/profile', icon: User, label: 'Perfil' },
     ],
     fab: { to: '/supplier/board', icon: LayoutGrid, label: 'Oportunidades' },
   },
@@ -147,12 +147,12 @@ export const adminNav: RoleNavConfig = {
   ],
   bottomNav: {
     left: [
-      { to: '/admin/metrics', icon: BarChart3 },
-      { to: '/admin/approvals', icon: ShieldCheck },
+      { to: '/admin/metrics', icon: BarChart3, label: 'Métricas' },
+      { to: '/admin/approvals', icon: ShieldCheck, label: 'Aprovações' },
     ],
     right: [
-      { to: '/admin/categories', icon: Tags },
-      { to: '/settings/profile', icon: User },
+      { to: '/admin/categories', icon: Tags, label: 'Categorias' },
+      { to: '/settings/profile', icon: User, label: 'Perfil' },
     ],
     fab: { to: '/admin/metrics', icon: BarChart3, label: 'Métricas' },
   },
