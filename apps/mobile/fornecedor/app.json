@@ -1,0 +1,49 @@
+{
+  "expo": {
+    "name": "XCOMERCE Fornecedor",
+    "slug": "xcommerce-fornecedor",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "xcommerce-fornecedor",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#0D1F4D"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "br.com.xcommerce.fornecedor"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0D1F4D"
+      },
+      "package": "br.com.xcommerce.fornecedor"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Permitir localização para definir sua área de atendimento."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Permitir acesso às fotos para imagens de produto e documentos."
+        }
+      ],
+      [
+        "expo-document-picker",
+        {
+          "iCloudContainerEnvironment": "Production"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

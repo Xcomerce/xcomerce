@@ -1,0 +1,43 @@
+{
+  "expo": {
+    "name": "XCOMERCE Comprador",
+    "slug": "xcommerce-comprador",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "xcommerce-comprador",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#0D1F4D"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "br.com.xcommerce.comprador"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0D1F4D"
+      },
+      "package": "br.com.xcommerce.comprador"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Permitir localização para sugerir cidade na sua demanda."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Permitir acesso às fotos para anexos."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
