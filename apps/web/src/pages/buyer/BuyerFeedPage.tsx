@@ -258,6 +258,11 @@ export function BuyerFeedPage() {
         city: product.cidade || '',
         uf: product.uf || '',
         precoReferencia: product.preco_referencia,
+        temCor: product.tem_cor,
+        temTamanho: product.tem_tamanho,
+        tipoTamanho: product.tipo_tamanho,
+        cores: product.cores ?? [],
+        tamanhos: product.tamanhos ?? [],
       },
     })
   }

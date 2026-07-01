@@ -1,10 +1,19 @@
 import { Link } from 'react-router-dom'
-import { ArrowRight, Search, ShieldCheck, Zap } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { GridSkeleton } from '@/components/common/LoadingSkeleton'
 import { LeadCaptureForm } from '@/components/landing/LeadCaptureForm'
+import {
+  AudienceSection,
+  CtaSection,
+  FaqSection,
+  FeaturesSection,
+  HowItWorksSection,
+  PricingTeaserSection,
+  SocialProofBar,
+} from '@/components/landing/LandingSections'
 import { fetchPlans } from '@/services/billing'
 
 export function LandingPage() {
@@ -14,13 +23,23 @@ export function LandingPage() {
         <div className="mx-auto max-w-7xl">
           <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
             <div className="max-w-2xl">
-              <p className="mb-4 text-sm font-medium uppercase tracking-wider text-white/70">Marketplace B2B</p>
-              <h1 className="font-display text-3xl font-bold leading-tight md:text-5xl lg:text-6xl">
-                Publique demandas. Receba propostas qualificadas.
+              <div className="mb-4 flex items-center gap-2">
+                <img src="/logo-icon-light.svg" className="h-8 w-auto object-contain md:h-10" alt="XCOMERCE" />
+                <span className="font-display text-xl font-medium tracking-wider text-white md:text-2xl">
+                  XCOMERCE
+                </span>
+              </div>
+              <h1 className="font-display text-3xl font-bold uppercase leading-tight md:text-5xl lg:text-6xl">
+                Encontre fornecedores
+                <br />
+                para seus pedidos
+                <br />
+                em minutos
               </h1>
               <p className="mt-6 text-base text-white/80 md:text-lg">
-                Busca reversa para compradores e fornecedores regionais. Negocie na plataforma, feche fora — com
-                reputação e confiança.
+                Cansado de ir até fornecedores ou mandar mensagens para saber se tem produto disponível? Publique sua
+                demanda e a XCOMERCE encontra fornecedores verificados prontos para atender você — por categoria e
+                região.
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <Button variant="accent" size="lg" asChild>
@@ -29,7 +48,12 @@ export function LandingPage() {
                     <ArrowRight size={18} />
                   </Link>
                 </Button>
-                <Button size="lg" variant="outline" className="border-white/30 bg-transparent text-white hover:bg-white/10" asChild>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="border-white/30 bg-transparent text-white hover:bg-white/10"
+                  asChild
+                >
                   <Link to="/auth/register/supplier">Sou fornecedor</Link>
                 </Button>
               </div>
@@ -41,77 +65,112 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 py-16 lg:px-6">
-        <h2 className="font-display text-center text-2xl font-semibold md:text-3xl">Como funciona</h2>
-        <div className="mt-10 grid gap-6 md:grid-cols-3">
-          {[
-            { icon: Search, title: '1. Publique', text: 'Comprador descreve a demanda com categoria e localização.' },
-            { icon: Zap, title: '2. Match', text: 'Fornecedores elegíveis são notificados automaticamente.' },
-            { icon: ShieldCheck, title: '3. Compare', text: 'Propostas agrupadas, chat e pedido com integridade.' },
-          ].map((step) => (
-            <Card key={step.title}>
-              <CardHeader>
-                <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                  <step.icon size={20} />
-                </div>
-                <CardTitle className="font-display text-lg">{step.title}</CardTitle>
-                <CardDescription>{step.text}</CardDescription>
-              </CardHeader>
-            </Card>
-          ))}
-        </div>
-      </section>
+      <SocialProofBar />
+      <HowItWorksSection />
+      <FeaturesSection />
+      <AudienceSection />
+      <PricingTeaserSection />
+      <FaqSection />
+      <CtaSection />
     </>
   )
 }
 
 export function ParaCompradoresPage() {
   return (
-    <div className="mx-auto max-w-5xl px-4 py-16 lg:px-6">
-      <div className="grid gap-12 lg:grid-cols-2">
-        <div>
-          <h1 className="font-display text-3xl font-bold">Para compradores</h1>
-          <p className="mt-4 text-muted-foreground">
-            Centralize cotações, compare propostas na mesma tela e negocie com fornecedores verificados da sua região.
+    <>
+      <section className="border-b bg-brand-muted/30 px-4 py-14 lg:py-16">
+        <div className="mx-auto max-w-5xl lg:px-6">
+          <p className="text-sm font-medium text-primary">Para compradores</p>
+          <h1 className="mt-2 font-display text-3xl font-bold md:text-4xl">
+            Centralize cotações e compare fornecedores na mesma tela
+          </h1>
+          <p className="mt-4 max-w-2xl text-lg text-muted-foreground">
+            Publique demandas com categoria e raio geográfico, receba propostas agrupadas e negocie com fornecedores
+            verificados — sem planilhas ou mensagens perdidas.
           </p>
-          <ul className="mt-8 space-y-3 text-sm">
-            <li>• Publique demandas com categoria e raio geográfico</li>
-            <li>• Receba propostas agrupadas por demanda</li>
-            <li>• Chat contextual e reveal de contato</li>
-            <li>• Workflow de pedidos com SLAs e reputação</li>
-          </ul>
-          <Button variant="accent" className="mt-8" asChild>
-            <Link to="/auth/register/buyer">Criar conta grátis</Link>
-          </Button>
         </div>
-        <LeadCaptureForm defaultProfileType="buyer" source="landing-buyer" />
+      </section>
+      <div className="mx-auto max-w-5xl px-4 py-16 lg:px-6">
+        <div className="grid gap-12 lg:grid-cols-2">
+          <div>
+            <h2 className="font-display text-xl font-semibold">O que você ganha</h2>
+            <ul className="mt-6 space-y-4 text-sm text-muted-foreground">
+              <li className="flex gap-3">
+                <span className="font-semibold text-foreground">•</span>
+                Publique demandas com categoria, quantidade e localização em minutos
+              </li>
+              <li className="flex gap-3">
+                <span className="font-semibold text-foreground">•</span>
+                Receba propostas agrupadas por demanda, prontas para comparar
+              </li>
+              <li className="flex gap-3">
+                <span className="font-semibold text-foreground">•</span>
+                Chat contextual com reveal de contato controlado
+              </li>
+              <li className="flex gap-3">
+                <span className="font-semibold text-foreground">•</span>
+                Workflow de pedidos com SLAs, reputação e histórico
+              </li>
+            </ul>
+            <Button variant="accent" className="mt-8" asChild>
+              <Link to="/auth/register/buyer">Criar conta grátis</Link>
+            </Button>
+          </div>
+          <LeadCaptureForm defaultProfileType="buyer" source="landing-buyer" />
+        </div>
       </div>
-    </div>
+      <CtaSection />
+    </>
   )
 }
 
 export function ParaFornecedoresPage() {
   return (
-    <div className="mx-auto max-w-5xl px-4 py-16 lg:px-6">
-      <div className="grid gap-12 lg:grid-cols-2">
-        <div>
-          <h1 className="font-display text-3xl font-bold">Para fornecedores</h1>
-          <p className="mt-4 text-muted-foreground">
-            Receba oportunidades qualificadas na sua região, envie propostas e construa reputação na plataforma.
+    <>
+      <section className="border-b bg-brand-muted/30 px-4 py-14 lg:py-16">
+        <div className="mx-auto max-w-5xl lg:px-6">
+          <p className="text-sm font-medium text-primary">Para fornecedores</p>
+          <h1 className="mt-2 font-display text-3xl font-bold md:text-4xl">
+            Receba oportunidades qualificadas na sua região
+          </h1>
+          <p className="mt-4 max-w-2xl text-lg text-muted-foreground">
+            Match automático por categoria e localização, catálogo integrado e selo verificado após aprovação. Venda
+            B2B com demandas reais, não prospecção fria.
           </p>
-          <ul className="mt-8 space-y-3 text-sm">
-            <li>• Match automático por categoria e localização</li>
-            <li>• Catálogo de produtos integrado</li>
-            <li>• Selo verificado após aprovação</li>
-            <li>• Planos com prioridade no match (Gold)</li>
-          </ul>
-          <Button variant="accent" className="mt-8" asChild>
-            <Link to="/auth/register/supplier">Cadastrar empresa</Link>
-          </Button>
         </div>
-        <LeadCaptureForm defaultProfileType="supplier" source="landing-supplier" />
+      </section>
+      <div className="mx-auto max-w-5xl px-4 py-16 lg:px-6">
+        <div className="grid gap-12 lg:grid-cols-2">
+          <div>
+            <h2 className="font-display text-xl font-semibold">Por que vender na XCOMERCE</h2>
+            <ul className="mt-6 space-y-4 text-sm text-muted-foreground">
+              <li className="flex gap-3">
+                <span className="font-semibold text-foreground">•</span>
+                Match automático por categoria, raio geográfico e catálogo
+              </li>
+              <li className="flex gap-3">
+                <span className="font-semibold text-foreground">•</span>
+                Catálogo de produtos integrado às propostas
+              </li>
+              <li className="flex gap-3">
+                <span className="font-semibold text-foreground">•</span>
+                Selo verificado após onboarding e aprovação
+              </li>
+              <li className="flex gap-3">
+                <span className="font-semibold text-foreground">•</span>
+                Planos com prioridade no match (Gold) e trial de 14 dias
+              </li>
+            </ul>
+            <Button variant="accent" className="mt-8" asChild>
+              <Link to="/auth/register/supplier">Cadastrar empresa</Link>
+            </Button>
+          </div>
+          <LeadCaptureForm defaultProfileType="supplier" source="landing-supplier" />
+        </div>
       </div>
-    </div>
+      <CtaSection />
+    </>
   )
 }
 
@@ -130,41 +189,51 @@ export function PricingPage() {
   })
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-16 lg:px-6">
-      <div className="text-center">
-        <h1 className="font-display text-3xl font-bold md:text-4xl">Planos</h1>
-        <p className="mt-3 text-muted-foreground">Assinatura SaaS via Asaas · Trial de 14 dias nos planos pagos</p>
-      </div>
-      {isLoading ? (
-        <div className="mt-10">
+    <>
+      <section className="border-b bg-brand-muted/30 px-4 py-14 lg:py-16">
+        <div className="mx-auto max-w-7xl text-center lg:px-6">
+          <h1 className="font-display text-3xl font-bold md:text-4xl">Planos e preços</h1>
+          <p className="mt-3 text-muted-foreground">
+            Assinatura SaaS via Asaas · Trial de 14 dias nos planos pagos · Comece grátis no plano Free
+          </p>
+        </div>
+      </section>
+      <div className="mx-auto max-w-7xl px-4 py-16 lg:px-6">
+        {isLoading ? (
           <GridSkeleton count={3} />
-        </div>
-      ) : (
-        <div className="mt-10 grid gap-6 md:grid-cols-3">
-          {(plans ?? []).map((plan) => (
-            <Card key={plan.id} className={plan.code === 'gold' ? 'border-accent/40' : undefined}>
-              <CardHeader>
-                <CardTitle className="font-display">{plan.name}</CardTitle>
-                <CardDescription className="text-2xl font-semibold text-foreground">
-                  {plan.price === 0 ? 'Grátis' : formatCurrency(plan.price)}
-                  {plan.price > 0 && <span className="text-sm font-normal text-muted-foreground">/mês</span>}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm text-muted-foreground">
-                <p>Demandas: {formatLimit(plan.max_demands_monthly, '/mês')}</p>
-                <p>Propostas: {formatLimit(plan.max_offers_monthly, '/mês')}</p>
-                <p>Catálogo: {plan.max_catalog_items} itens</p>
-                {plan.match_priority && <p className="text-accent">Prioridade no match</p>}
-                <Button variant={plan.code === 'gold' ? 'accent' : 'default'} className="mt-4 w-full" asChild>
-                  <Link to="/auth/register/buyer">
-                    {plan.price === 0 ? 'Começar grátis' : 'Assinar'}
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-    </div>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-3">
+            {(plans ?? []).map((plan) => (
+              <Card key={plan.id} className={plan.code === 'gold' ? 'border-accent/40 shadow-md' : undefined}>
+                <CardHeader>
+                  <CardTitle className="font-display">{plan.name}</CardTitle>
+                  <CardDescription className="text-2xl font-semibold text-foreground">
+                    {plan.price === 0 ? 'Grátis' : formatCurrency(plan.price)}
+                    {plan.price > 0 && <span className="text-sm font-normal text-muted-foreground">/mês</span>}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm text-muted-foreground">
+                  <p>Demandas: {formatLimit(plan.max_demands_monthly, '/mês')}</p>
+                  <p>Propostas: {formatLimit(plan.max_offers_monthly, '/mês')}</p>
+                  <p>Catálogo: {plan.max_catalog_items} itens</p>
+                  {plan.match_priority && <p className="font-medium text-accent">Prioridade no match</p>}
+                  <Button variant={plan.code === 'gold' ? 'accent' : 'default'} className="mt-4 w-full" asChild>
+                    <Link to="/auth/register/buyer">{plan.price === 0 ? 'Começar grátis' : 'Assinar'}</Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+        <p className="mt-10 text-center text-sm text-muted-foreground">
+          Dúvidas sobre qual plano escolher?{' '}
+          <Link to="/" className="font-medium text-primary hover:underline">
+            Fale conosco na página inicial
+          </Link>
+          .
+        </p>
+      </div>
+      <FaqSection />
+    </>
   )
 }

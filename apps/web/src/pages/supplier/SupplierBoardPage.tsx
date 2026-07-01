@@ -10,6 +10,7 @@ import { useMatches, useMarkMatchViewed } from '@/hooks/use-matches'
 import type { MatchFilters, DemandMatchWithDemand } from '@/services/matches'
 import type { DemandMatch } from '@/services/matches'
 import { DEMAND_STATUS_LABELS } from '@keve/shared'
+import { DemandVariantSummary } from '@/components/buyer/DemandVariantSummary'
 import { cn, formatExpiresAt, formatReceivedAt } from '@/lib/utils'
 
 type StatusFilter = 'all' | DemandMatch['status']
@@ -167,6 +168,7 @@ function MatchCard({
         <p className="line-clamp-2 h-10 shrink-0 overflow-hidden text-sm leading-snug text-muted-foreground">
           {demand.descricao}
         </p>
+        <DemandVariantSummary demand={demand} className="mt-1 text-xs" />
         <div className="mt-3 -mx-6 flex min-h-6 items-center gap-2 overflow-x-auto px-6 pb-0.5 scroll-px-6 no-scrollbar">
           <Badge className="shrink-0 whitespace-nowrap border border-border bg-transparent text-xs">
             {demandStatusLabel}

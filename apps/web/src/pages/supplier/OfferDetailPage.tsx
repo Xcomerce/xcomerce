@@ -17,6 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Alert } from '@/components/ui/alert'
 import { StatusBadge } from '@/components/common/StatusBadge'
+import { DemandVariantSummary } from '@/components/buyer/DemandVariantSummary'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import { useDemand } from '@/hooks/use-demands'
 import { useCategories } from '@/hooks/use-categories'
@@ -281,6 +282,7 @@ export function OfferDetailPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm leading-relaxed">{demand.descricao}</p>
+              <DemandVariantSummary demand={demand} />
 
               <dl className="grid grid-cols-2 gap-x-3 gap-y-3">
                 <div className="min-w-0 space-y-0.5">

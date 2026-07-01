@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { requestDemandMatch } from '@/services/matches'
 import type { DemandInput } from '@keve/shared'
 import type { Tables } from '@keve/shared'
 
@@ -48,6 +49,8 @@ export async function createDemand(buyerId: string, input: DemandInput): Promise
       prazo_desejado: input.prazo_desejado || null,
       observacoes: input.observacoes || null,
       preco_referencia_mercado: input.preco_referencia_mercado ?? null,
+      cor: input.cor?.trim() || null,
+      tamanho: input.tamanho?.trim() || null,
       status: 'RASCUNHO',
     })
     .select()
@@ -72,6 +75,8 @@ export async function updateDemand(id: string, input: Partial<DemandInput>): Pro
   if (input.preco_referencia_mercado !== undefined) {
     payload.preco_referencia_mercado = input.preco_referencia_mercado ?? null
   }
+  if (input.cor !== undefined) payload.cor = input.cor?.trim() || null
+  if (input.tamanho !== undefined) payload.tamanho = input.tamanho?.trim() || null
 
   const { data, error } = await supabase.from('demands').update(payload).eq('id', id).select().single()
   if (error) throw error
@@ -140,5 +145,12 @@ export async function publishDemand(id: string): Promise<Demand> {
     .single()
 
   if (error) throw error
+
+  try {
+    await requestDemandMatch(id)
+  } catch (matchError) {
+    console.warn('Falha ao processar match da demanda:', matchError)
+  }
+
   return data as Demand
 }

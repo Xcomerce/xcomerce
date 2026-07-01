@@ -1,7 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/contexts/auth-context'
 import * as products from '@/services/products'
+import { syncSupplierMatches } from '@/services/matches'
+import { matchKeys } from '@/hooks/use-matches'
 import type { ProductInput } from '@keve/shared'
+
+async function syncMatchesAfterCatalogChange(queryClient: ReturnType<typeof useQueryClient>, userId?: string) {
+  try {
+    await syncSupplierMatches()
+    if (userId) {
+      queryClient.invalidateQueries({ queryKey: matchKeys.all })
+    }
+  } catch (err) {
+    console.warn('Falha ao sincronizar oportunidades do catálogo:', err)
+  }
+}
 
 export const productKeys = {
   all: ['products'] as const,
@@ -43,11 +56,12 @@ export function useCreateProduct() {
 
   return useMutation({
     mutationFn: (input: ProductInput) => products.createProduct(user!.id, input),
-    onSuccess: () => {
+    onSuccess: async () => {
       if (user?.id) {
         queryClient.invalidateQueries({ queryKey: productKeys.list(user.id) })
         queryClient.invalidateQueries({ queryKey: productKeys.count(user.id) })
       }
+      await syncMatchesAfterCatalogChange(queryClient, user?.id)
     },
   })
 }
@@ -59,11 +73,12 @@ export function useUpdateProduct() {
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: Partial<ProductInput> }) =>
       products.updateProduct(id, input),
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: productKeys.detail(data.id) })
       if (user?.id) {
         queryClient.invalidateQueries({ queryKey: productKeys.list(user.id) })
       }
+      await syncMatchesAfterCatalogChange(queryClient, user?.id)
     },
   })
 }

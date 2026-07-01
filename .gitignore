@@ -27,7 +27,6 @@ Thumbs.db
 
 # Supabase local
 .supabase/
-supabase/.temp/
 
 # Vite / tooling cache
 .vite/

@@ -80,6 +80,20 @@ export function ProductGrid({
                     {categoryName}
                   </span>
                 )}
+                {(product.tem_cor || product.tem_tamanho) && (
+                  <div className="flex flex-wrap gap-1">
+                    {product.tem_cor && (
+                      <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+                        Cor
+                      </span>
+                    )}
+                    {product.tem_tamanho && (
+                      <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+                        Tamanho
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="pt-0.5">

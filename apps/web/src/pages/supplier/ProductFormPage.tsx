@@ -27,9 +27,11 @@ import { useSubscription } from '@/hooks/use-billing'
 import { useAuth } from '@/contexts/auth-context'
 import { updateProductImage } from '@/services/products'
 import { uploadFile, productImagePath } from '@/lib/storage'
-import { translateSupabaseError } from '@/lib/errors'
+import { formatSupabaseError, translateSupabaseError } from '@/lib/errors'
 import { BRAZILIAN_STATES } from '@/lib/brazil-locations'
 import { cn } from '@/lib/utils'
+
+import { ProductVariantsSection } from '@/components/catalog/ProductVariantsSection'
 
 const PRODUCT_IMAGE_ACCEPT = 'image/jpeg,image/png,image/webp'
 const PRODUCT_IMAGE_MAX_BYTES = 5 * 1024 * 1024
@@ -109,6 +111,11 @@ export function ProductFormPage() {
       cidade: '',
       uf: '',
       is_active: true,
+      tem_cor: false,
+      tem_tamanho: false,
+      tipo_tamanho: null,
+      cores: [],
+      tamanhos: [],
     },
   })
 
@@ -141,6 +148,11 @@ export function ProductFormPage() {
         cidade: product.cidade,
         uf: product.uf,
         is_active: product.is_active,
+        tem_cor: product.tem_cor ?? false,
+        tem_tamanho: product.tem_tamanho ?? false,
+        tipo_tamanho: product.tipo_tamanho ?? null,
+        cores: product.cores ?? [],
+        tamanhos: product.tamanhos ?? [],
       })
       if (product.image_url) {
         setImagePreview(product.image_url)
@@ -191,11 +203,11 @@ export function ProductFormPage() {
       }
       navigate('/supplier/catalog')
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Erro ao salvar'
-      if (msg.includes('QUOTA') || msg.includes('quota')) {
+      const msg = formatSupabaseError(err)
+      if (msg.includes('QUOTA') || msg.includes('quota') || msg.includes('Limite do plano')) {
         setPaywallOpen(true)
       } else {
-        toast.error(translateSupabaseError(msg))
+        toast.error(msg)
       }
     }
   }
@@ -520,6 +532,7 @@ export function ProductFormPage() {
                   )}
                 />
               </div>
+              <ProductVariantsSection />
             </form>
           </Form>
         </CardContent>

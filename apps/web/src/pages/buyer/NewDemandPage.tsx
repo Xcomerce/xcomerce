@@ -2,17 +2,27 @@ import { useEffect, useState, type DragEvent } from 'react'
 import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Loader2, FileText, Upload, X } from 'lucide-react'
+import { FileText, Upload, X } from 'lucide-react'
 import { toast } from 'sonner'
-import { demandSchema, type DemandInput } from '@keve/shared'
+import {
+  demandSchema,
+  formatBuyerAddressSummary,
+  isBuyerAddressComplete,
+  type BuyerAddress,
+  type BuyerAddressInput,
+  type DemandInput,
+} from '@keve/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Alert } from '@/components/ui/alert'
 import { PaywallModal } from '@/components/common/PaywallModal'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
+import { DemandVariantFields } from '@/components/buyer/DemandVariantFields'
+import { BuyerAddressForm, buyerAddressToDemandLocation } from '@/components/buyer/BuyerAddressForm'
 import { usePageTitle } from '@/hooks/use-page-title'
 import { useCategories } from '@/hooks/use-categories'
+import { useBuyerAddress, useUpdateBuyerAddress } from '@/hooks/use-buyer-address'
 import {
   useCreateDemand,
   useDemand,
@@ -20,12 +30,10 @@ import {
   useUpdateDemand,
 } from '@/hooks/use-demands'
 import { translateSupabaseError, formatSupabaseError, isQuotaExceededError } from '@/lib/errors'
-import { fetchAddressByCep, formatCep } from '@/lib/cep'
 import { cn } from '@/lib/utils'
 import { ScrollPageShell, SCROLL_PAGE_SECTION_CLASS } from '@/components/layout/ScrollPageShell'
 import {
   ATTACHMENT_ACCEPT,
-  BRAZILIAN_UFS,
   MAX_ATTACHMENTS,
   NATIVE_FIELD_CLASS,
 } from '@/pages/buyer/new-demand/constants'
@@ -47,21 +55,34 @@ export function NewDemandPage() {
     city?: string
     uf?: string
     precoReferencia?: number | null
+    temCor?: boolean
+    temTamanho?: boolean
+    tipoTamanho?: 'roupa' | 'calcado' | 'numerico' | 'livre' | null
+    cores?: string[]
+    tamanhos?: string[]
   } | null
+
+  const productVariantSource = !isEditing && stateData
+    ? {
+        temCor: stateData.temCor,
+        temTamanho: stateData.temTamanho,
+        tipoTamanho: stateData.tipoTamanho,
+        cores: stateData.cores,
+        tamanhos: stateData.tamanhos,
+      }
+    : null
 
   const { data: existingDemand, isLoading: loadingDemand, error: demandError } = useDemand(editId)
   const { data: categories, isLoading: loadingCategories, error: categoriesError } = useCategories()
   const createDemand = useCreateDemand()
   const updateDemand = useUpdateDemand()
   const publishDemand = usePublishDemand()
+  const { data: buyerAddress, isLoading: loadingBuyerAddress } = useBuyerAddress()
+  const updateBuyerAddress = useUpdateBuyerAddress()
 
   const [paywallOpen, setPaywallOpen] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
-  const [cep, setCep] = useState('')
-  const [cepLoading, setCepLoading] = useState(false)
-  const [logradouro, setLogradouro] = useState('')
-  const [numero, setNumero] = useState('')
-  const [bairro, setBairro] = useState('')
+  const [displayAddress, setDisplayAddress] = useState<Partial<BuyerAddress> | null>(null)
   const [isSearchingSuppliers, setIsSearchingSuppliers] = useState(false)
   const [attachments, setAttachments] = useState<File[]>([])
   const [isDragOver, setIsDragOver] = useState(false)
@@ -79,6 +100,8 @@ export function NewDemandPage() {
       raio_km: 50,
       prazo_desejado: '',
       observacoes: '',
+      cor: '',
+      tamanho: '',
     },
   })
 
@@ -87,13 +110,16 @@ export function NewDemandPage() {
   const watchedUf = form.watch('uf')
   const selectedCategory = categories?.find((c) => c.id === selectedCategoryId)
   const eligible = getEligibleSuppliers(selectedCategory?.slug)
-  const deliverySummary = [logradouro, numero && `nº ${numero}`, bairro].filter(Boolean).join(', ')
-  const isSearchingSidebar = isSearchingSuppliers || cepLoading
+  const savedAddress = displayAddress ?? buyerAddress
+  const hasCompleteAddress = isBuyerAddressComplete(savedAddress)
+  const deliverySummary = savedAddress ? formatBuyerAddressSummary(savedAddress) : undefined
+  const isSearchingSidebar = isSearchingSuppliers
 
   const isSaving =
     createDemand.isPending ||
     updateDemand.isPending ||
     publishDemand.isPending ||
+    updateBuyerAddress.isPending ||
     form.formState.isSubmitting
 
   useEffect(() => {
@@ -109,6 +135,19 @@ export function NewDemandPage() {
   }, [stateData, isEditing, form])
 
   useEffect(() => {
+    if (buyerAddress) {
+      setDisplayAddress(buyerAddress)
+    }
+  }, [buyerAddress])
+
+  useEffect(() => {
+    if (!savedAddress || !hasCompleteAddress || isEditing) return
+    const location = buyerAddressToDemandLocation(savedAddress as BuyerAddress)
+    if (!stateData?.city) form.setValue('cidade', location.cidade, { shouldValidate: true })
+    if (!stateData?.uf) form.setValue('uf', location.uf, { shouldValidate: true })
+  }, [savedAddress, hasCompleteAddress, isEditing, stateData, form])
+
+  useEffect(() => {
     if (!existingDemand) return
     form.reset({
       titulo: existingDemand.titulo,
@@ -122,6 +161,8 @@ export function NewDemandPage() {
       prazo_desejado: existingDemand.prazo_desejado ?? '',
       observacoes: existingDemand.observacoes ?? '',
       preco_referencia_mercado: existingDemand.preco_referencia_mercado ?? undefined,
+      cor: existingDemand.cor ?? '',
+      tamanho: existingDemand.tamanho ?? '',
     })
   }, [existingDemand, form])
 
@@ -131,9 +172,9 @@ export function NewDemandPage() {
       return
     }
     setIsSearchingSuppliers(true)
-    const timer = window.setTimeout(() => setIsSearchingSuppliers(false), cepLoading ? 1200 : 700)
+    const timer = window.setTimeout(() => setIsSearchingSuppliers(false), 700)
     return () => window.clearTimeout(timer)
-  }, [selectedCategoryId, watchedCity, watchedUf, cepLoading])
+  }, [selectedCategoryId, watchedCity, watchedUf])
 
   async function saveDraft(values: DemandInput) {
     setFormError(null)
@@ -160,26 +201,17 @@ export function NewDemandPage() {
     navigate('/buyer/dashboard')
   }
 
-  async function handleCepLookup(rawCep: string) {
-    const digits = rawCep.replace(/\D/g, '')
-    if (digits.length !== 8) return
-
-    setCepLoading(true)
+  async function handleSaveAddress(input: BuyerAddressInput) {
     try {
-      const address = await fetchAddressByCep(digits)
-      if (!address) {
-        toast.error('CEP não encontrado')
-        return
-      }
-      form.setValue('cidade', address.cidade, { shouldValidate: true })
-      form.setValue('uf', address.uf, { shouldValidate: true })
-      if (address.logradouro) setLogradouro(address.logradouro)
-      if (address.bairro) setBairro(address.bairro)
-      toast.success('Endereço preenchido pelo CEP')
-    } catch {
-      toast.error('Não foi possível consultar o CEP. Tente novamente.')
-    } finally {
-      setCepLoading(false)
+      const saved = await updateBuyerAddress.mutateAsync(input)
+      setDisplayAddress(saved)
+      const location = buyerAddressToDemandLocation(input)
+      form.setValue('cidade', location.cidade, { shouldValidate: true })
+      form.setValue('uf', location.uf, { shouldValidate: true })
+      toast.success('Endereço de entrega salvo')
+    } catch (err) {
+      toast.error(translateSupabaseError(err instanceof Error ? err.message : 'Erro ao salvar endereço'))
+      throw err
     }
   }
 
@@ -203,6 +235,10 @@ export function NewDemandPage() {
   }
 
   async function handlePublish() {
+    if (!hasCompleteAddress) {
+      toast.error('Complete seu endereço de entrega para publicar a demanda')
+      return
+    }
     const valid = await form.trigger()
     if (!valid) return
     const values = form.getValues()
@@ -318,25 +354,103 @@ export function NewDemandPage() {
                   />
                 </div>
 
-                <FormField
-                  control={form.control}
-                  name="descricao"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Descrição da demanda</FormLabel>
-                      <FormControl>
-                        <textarea
-                          className={cn(NATIVE_FIELD_CLASS, 'min-h-[100px] py-2')}
-                          placeholder="Necessito 500 capacetes de obra com CA válido, cor branca..."
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="flex flex-col gap-6">
+                  <div className="contents lg:grid lg:grid-cols-2 lg:items-stretch lg:gap-4">
+                    <FormField
+                      control={form.control}
+                      name="descricao"
+                      render={({ field }) => (
+                        <FormItem className="order-1 flex h-full flex-col">
+                          <FormLabel>Descrição da demanda</FormLabel>
+                          <FormControl>
+                            <textarea
+                              className={cn(NATIVE_FIELD_CLASS, 'min-h-[100px] flex-1 py-2 lg:min-h-[120px]')}
+                              placeholder="Descreva o produto, quantidade, certificações e demais requisitos..."
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                <div className="grid gap-4 sm:grid-cols-3">
+                    <div className="order-4 flex h-full flex-col gap-3 lg:order-none">
+                      <FormLabel>Anexos</FormLabel>
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        className={cn(
+                          'flex min-h-[100px] flex-1 cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-border bg-muted/20 px-3 py-2 text-center transition-colors lg:min-h-[120px]',
+                          isDragOver && 'border-primary bg-primary/5',
+                        )}
+                        onDragEnter={(e) => {
+                          e.preventDefault()
+                          setIsDragOver(true)
+                        }}
+                        onDragOver={(e) => {
+                          e.preventDefault()
+                          setIsDragOver(true)
+                        }}
+                        onDragLeave={(e) => {
+                          e.preventDefault()
+                          if (e.currentTarget === e.target) setIsDragOver(false)
+                        }}
+                        onDrop={handleAttachmentDrop}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            document.getElementById('demand-attachments-input')?.click()
+                          }
+                        }}
+                        onClick={() => document.getElementById('demand-attachments-input')?.click()}
+                      >
+                        <Upload className="h-6 w-6 text-muted-foreground" />
+                        <p className="text-sm font-medium leading-tight text-foreground">
+                          Arraste documentos aqui ou clique para selecionar
+                        </p>
+                        <p className="text-xs leading-tight text-muted-foreground">
+                          PDF, imagens ou planilhas — até {MAX_ATTACHMENTS} arquivos
+                        </p>
+                        <input
+                          id="demand-attachments-input"
+                          type="file"
+                          multiple
+                          accept={ATTACHMENT_ACCEPT}
+                          className="sr-only"
+                          onChange={(e) => {
+                            if (e.target.files) addAttachmentFiles(e.target.files)
+                            e.target.value = ''
+                          }}
+                        />
+                      </div>
+                      {attachments.length > 0 && (
+                        <ul className="flex flex-wrap gap-3">
+                          {attachments.map((file, index) => (
+                            <li
+                              key={`${file.name}-${file.size}-${index}`}
+                              className="inline-flex items-center gap-2 rounded-xl border border-border bg-muted/40 px-3.5 py-2 text-sm"
+                            >
+                              <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                              <span className="max-w-[200px] truncate">{file.name}</span>
+                              <button
+                                type="button"
+                                className="rounded-md p-0.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
+                                aria-label={`Remover ${file.name}`}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setAttachments((prev) => prev.filter((_, i) => i !== index))
+                                }}
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  </div>
+
+                <div className="order-2 grid gap-4 sm:grid-cols-3 lg:order-none">
                   <div className="space-y-2">
                     <FormLabel>Quantidade</FormLabel>
                     <div className="flex gap-2">
@@ -366,231 +480,71 @@ export function NewDemandPage() {
                       />
                     </div>
                   </div>
-                  <FormField
-                    control={form.control}
-                    name="prazo_desejado"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Prazo desejado</FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="raio_km"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Raio de busca (km)</FormLabel>
-                        <FormControl>
-                          <Input type="number" min={1} max={500} {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <div className="grid grid-cols-2 gap-4 sm:contents">
+                    <FormField
+                      control={form.control}
+                      name="prazo_desejado"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Prazo desejado</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="raio_km"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Raio de busca (km)</FormLabel>
+                          <FormControl>
+                            <Input type="number" min={1} max={500} {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 </div>
 
-                <fieldset className="space-y-4 rounded-2xl border border-border/70 bg-muted/15 p-4 sm:p-5">
-                  <legend className="px-1 text-sm font-semibold text-foreground">Endereço de entrega</legend>
-                  <p className="text-xs text-muted-foreground">
-                    Informe o CEP para preencher logradouro, bairro, cidade e estado.
-                  </p>
-
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-12">
-                    <div className="space-y-2 sm:col-span-2 lg:col-span-5">
-                      <label htmlFor="demand-cep" className="text-sm font-medium">
-                        CEP
-                      </label>
-                      <div className="flex gap-2">
-                        <Input
-                          id="demand-cep"
-                          inputMode="numeric"
-                          placeholder="00000-000"
-                          value={formatCep(cep)}
-                          disabled={cepLoading}
-                          onChange={(e) => setCep(e.target.value.replace(/\D/g, '').slice(0, 8))}
-                          onBlur={() => void handleCepLookup(cep)}
-                        />
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="shrink-0"
-                          disabled={cep.replace(/\D/g, '').length !== 8 || cepLoading}
-                          onClick={() => void handleCepLookup(cep)}
-                        >
-                          {cepLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Buscar'}
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2 lg:col-span-2">
-                      <label htmlFor="demand-numero" className="text-sm font-medium">
-                        Número
-                      </label>
-                      <Input
-                        id="demand-numero"
-                        placeholder="123"
-                        value={numero}
-                        onChange={(e) => setNumero(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="space-y-2 sm:col-span-2 lg:col-span-5">
-                      <label htmlFor="demand-bairro" className="text-sm font-medium">
-                        Bairro
-                      </label>
-                      <Input
-                        id="demand-bairro"
-                        placeholder="Ex.: Centro"
-                        value={bairro}
-                        onChange={(e) => setBairro(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="space-y-2 sm:col-span-2 lg:col-span-12">
-                      <label htmlFor="demand-logradouro" className="text-sm font-medium">
-                        Logradouro
-                      </label>
-                      <Input
-                        id="demand-logradouro"
-                        placeholder="Rua, avenida, rodovia..."
-                        value={logradouro}
-                        onChange={(e) => setLogradouro(e.target.value)}
-                      />
-                    </div>
-
-                    <FormField
-                      control={form.control}
-                      name="cidade"
-                      render={({ field }) => (
-                        <FormItem className="sm:col-span-2 lg:col-span-8">
-                          <FormLabel>Cidade</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Ex.: São Paulo" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="uf"
-                      render={({ field }) => (
-                        <FormItem className="lg:col-span-4">
-                          <FormLabel>Estado (UF)</FormLabel>
-                          <FormControl>
-                            <select className={cn(NATIVE_FIELD_CLASS, 'h-10 uppercase')} {...field}>
-                              <option value="">Selecione</option>
-                              {BRAZILIAN_UFS.map((uf) => (
-                                <option key={uf} value={uf}>
-                                  {uf}
-                                </option>
-                              ))}
-                            </select>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </fieldset>
-
-                <FormField
+                <DemandVariantFields
                   control={form.control}
-                  name="observacoes"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Observações (opcional)</FormLabel>
-                      <FormControl>
-                        <textarea
-                          className={cn(NATIVE_FIELD_CLASS, 'min-h-[80px] py-2')}
-                          placeholder="Alguma instrução adicional..."
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                  corName="cor"
+                  tamanhoName="tamanho"
+                  optionSource={productVariantSource}
+                  nativeFieldClass={NATIVE_FIELD_CLASS}
                 />
 
-                <div className="space-y-3">
-                  <FormLabel>Anexos</FormLabel>
-                  <div
-                    role="button"
-                    tabIndex={0}
-                    className={cn(
-                      'flex min-h-[120px] cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-muted/20 px-4 py-6 text-center transition-colors',
-                      isDragOver && 'border-primary bg-primary/5',
-                    )}
-                    onDragEnter={(e) => {
-                      e.preventDefault()
-                      setIsDragOver(true)
-                    }}
-                    onDragOver={(e) => {
-                      e.preventDefault()
-                      setIsDragOver(true)
-                    }}
-                    onDragLeave={(e) => {
-                      e.preventDefault()
-                      if (e.currentTarget === e.target) setIsDragOver(false)
-                    }}
-                    onDrop={handleAttachmentDrop}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault()
-                        document.getElementById('demand-attachments-input')?.click()
+                <div className="order-3 lg:order-none">
+                {loadingBuyerAddress ? (
+                  <LoadingSkeleton className="h-40 w-full rounded-xl" />
+                ) : (
+                  <BuyerAddressForm
+                    idPrefix="demand-address"
+                    value={savedAddress ?? undefined}
+                    readOnly={hasCompleteAddress}
+                    requiredHint={
+                      !hasCompleteAddress
+                        ? 'Complete seu endereço de entrega para continuar. Ele será salvo como padrão para próximas solicitações.'
+                        : undefined
+                    }
+                    saving={updateBuyerAddress.isPending}
+                    onSave={handleSaveAddress}
+                    onAddressChange={(address) => {
+                      setDisplayAddress(address)
+                      if (isBuyerAddressComplete(address)) {
+                        const location = buyerAddressToDemandLocation(address)
+                        form.setValue('cidade', location.cidade, { shouldValidate: true })
+                        form.setValue('uf', location.uf, { shouldValidate: true })
                       }
                     }}
-                    onClick={() => document.getElementById('demand-attachments-input')?.click()}
-                  >
-                    <Upload className="h-8 w-8 text-muted-foreground" />
-                    <p className="text-sm font-medium text-foreground">
-                      Arraste documentos aqui ou clique para selecionar
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      PDF, imagens ou planilhas — até {MAX_ATTACHMENTS} arquivos
-                    </p>
-                    <input
-                      id="demand-attachments-input"
-                      type="file"
-                      multiple
-                      accept={ATTACHMENT_ACCEPT}
-                      className="sr-only"
-                      onChange={(e) => {
-                        if (e.target.files) addAttachmentFiles(e.target.files)
-                        e.target.value = ''
-                      }}
-                    />
-                  </div>
-                  {attachments.length > 0 && (
-                    <ul className="flex flex-wrap gap-3">
-                      {attachments.map((file, index) => (
-                        <li
-                          key={`${file.name}-${file.size}-${index}`}
-                          className="inline-flex items-center gap-2 rounded-xl border border-border bg-muted/40 px-3.5 py-2 text-sm"
-                        >
-                          <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-                          <span className="max-w-[200px] truncate">{file.name}</span>
-                          <button
-                            type="button"
-                            className="rounded-md p-0.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
-                            aria-label={`Remover ${file.name}`}
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setAttachments((prev) => prev.filter((_, i) => i !== index))
-                            }}
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+                  />
+                )}
+                </div>
+
                 </div>
               </div>
             </section>

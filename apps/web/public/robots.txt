@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+Allow: /para-compradores
+Allow: /para-fornecedores
+Allow: /pricing
+
+Disallow: /buyer/
+Disallow: /supplier/
+Disallow: /admin/
+Disallow: /auth/
+Disallow: /settings/
+
+Sitemap: https://xcomerce.com.br/sitemap.xml

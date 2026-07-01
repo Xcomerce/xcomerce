@@ -34,6 +34,7 @@ import {
   TermsOfUseSettings,
 } from '@/pages/settings/SettingsSections'
 import type { AppShellOutletContext } from '@/components/layout/AppShell'
+import { BuyerDeliveryAddressSettings } from '@/pages/settings/BuyerDeliveryAddressSettings'
 
 const ROLE_COLORS: Record<UserRole, string> = {
   buyer:
@@ -423,6 +424,8 @@ export function ProfilePage() {
     />
   ) : null
 
+  const showBuyerAddress = roles.includes('buyer')
+
   const myAccountContent = (
     <MyAccountContent
       roleLabel={roleLabel}
@@ -431,6 +434,7 @@ export function ProfilePage() {
       form={form}
       saveError={saveError}
       onSubmit={onSubmit}
+      showBuyerAddress={showBuyerAddress}
       className="flex-1"
     />
   )
@@ -471,7 +475,7 @@ export function ProfilePage() {
       case 'integrations':
         return <IntegrationsSettings />
       case 'privacy':
-        return <PrivacyDataSettings profile={profile!} />
+        return <PrivacyDataSettings profile={profile} />
       case 'terms':
         return termsSettings
       default:
@@ -559,7 +563,7 @@ export function ProfilePage() {
       <div className="hidden md:grid w-full flex-1 min-h-0 md:grid-cols-[280px_minmax(0,1fr)] md:gap-6 px-6 py-6">
         <aside className="flex min-h-0 flex-col gap-4">
           {avatarSection}
-          <nav className="scrollbar-custom min-h-0 flex-1 overflow-y-auto pr-1 space-y-1">
+          <nav className="space-y-1">
             {menuItems.map((item) => {
               const active = desktopSection === item.id
               return (
@@ -767,6 +771,7 @@ function MyAccountContent({
   form,
   saveError,
   onSubmit,
+  showBuyerAddress = false,
   className,
 }: {
   roleLabel: string
@@ -775,6 +780,7 @@ function MyAccountContent({
   form: ReturnType<typeof useForm<ProfileFormValues>>
   saveError: string | null
   onSubmit: (values: ProfileFormValues) => Promise<void>
+  showBuyerAddress?: boolean
   className?: string
 }) {
   const formId = 'my-account-form'
@@ -798,6 +804,7 @@ function MyAccountContent({
                 hideSubmit
               />
             </div>
+            {showBuyerAddress && <BuyerDeliveryAddressSettings />}
           </div>
         </div>
       </div>
@@ -1109,14 +1116,14 @@ function NotificationPreferencesSettings({
       {items.map((item) => (
         <div
           key={item.type}
-          className="flex flex-col md:flex-row md:items-center justify-between gap-4 rounded-xl border border-border p-4"
+          className="flex items-center justify-between gap-4 rounded-xl border border-border p-4"
         >
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium">{item.label}</p>
             <p className="mt-0.5 text-xs text-muted-foreground">{item.description}</p>
           </div>
-          <div className="flex items-center gap-6 md:shrink-0 mt-2 md:mt-0">
-            <label className="flex items-center gap-2 text-sm whitespace-nowrap cursor-pointer">
+          <div className="flex shrink-0 items-center gap-4">
+            <label className="flex items-center gap-2 text-sm whitespace-nowrap">
               <Switch
                 id={`${item.type}-in-app`}
                 checked={isChannelEnabled(item.type, 'in_app_enabled')}
@@ -1125,7 +1132,7 @@ function NotificationPreferencesSettings({
               />
               No app
             </label>
-            <label className="flex items-center gap-2 text-sm whitespace-nowrap cursor-pointer">
+            <label className="flex items-center gap-2 text-sm whitespace-nowrap">
               <Switch
                 id={`${item.type}-email`}
                 checked={isChannelEnabled(item.type, 'email_enabled')}
