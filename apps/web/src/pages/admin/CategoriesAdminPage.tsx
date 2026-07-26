@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
-import { ChevronLeft, ChevronRight, FolderTree, Pencil, Plus, Search, Trash2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, FolderTree, Pencil, Plus, Search, Trash2, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
@@ -75,6 +75,129 @@ function CategoriesPaginationFooter({
   )
 }
 
+function ChildrenModal({
+  parent,
+  children,
+  togglingId,
+  updating,
+  onClose,
+  onToggle,
+  onEdit,
+  onDelete,
+}: {
+  parent: Category
+  children: Category[]
+  togglingId: string | null
+  updating: boolean
+  onClose: () => void
+  onToggle: (cat: Category, next: boolean) => void
+  onEdit: (cat: Category) => void
+  onDelete: (cat: Category) => void
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200"
+      onClick={onClose}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="children-modal-title"
+        className="flex max-h-[min(90vh,720px)] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-xl animate-in zoom-in-95 duration-200"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-3 border-b px-6 py-4">
+          <div className="min-w-0">
+            <h3 id="children-modal-title" className="truncate text-lg font-bold text-foreground">
+              {parent.name}
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              {children.length} subcategoria{children.length === 1 ? '' : 's'}
+            </p>
+          </div>
+          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={onClose}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+
+        <div className="flex items-center justify-between gap-3 border-b px-6 py-3">
+          <div>
+            <p className="text-sm font-medium">Categoria principal</p>
+            <p className="font-mono text-xs text-muted-foreground">{parent.slug}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Switch
+              checked={parent.is_active}
+              disabled={togglingId === parent.id || updating}
+              onCheckedChange={(checked) => onToggle(parent, checked)}
+            />
+            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => onEdit(parent)}>
+              <Pencil className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        <div className="scrollbar-custom min-h-0 flex-1 overflow-y-auto px-2 py-2">
+          {children.length === 0 ? (
+            <p className="px-4 py-8 text-center text-sm text-muted-foreground">
+              Nenhuma subcategoria cadastrada.
+            </p>
+          ) : (
+            <ul className="divide-y">
+              {children.map((child) => (
+                <li
+                  key={child.id}
+                  className={cn(
+                    'flex items-center gap-3 px-4 py-3',
+                    !child.is_active && 'opacity-70',
+                  )}
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{child.name}</p>
+                    <p className="truncate font-mono text-[11px] text-muted-foreground">
+                      {child.slug}
+                    </p>
+                  </div>
+                  <Badge
+                    className={
+                      child.is_active
+                        ? 'bg-emerald-500/10 text-[10px] font-normal text-emerald-700'
+                        : 'border border-border bg-transparent text-[10px] font-normal text-muted-foreground'
+                    }
+                  >
+                    {child.is_active ? 'Ativa' : 'Inativa'}
+                  </Badge>
+                  <Switch
+                    checked={child.is_active}
+                    disabled={togglingId === child.id || updating}
+                    onCheckedChange={(checked) => onToggle(child, checked)}
+                  />
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 shrink-0"
+                    onClick={() => onEdit(child)}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 shrink-0 text-destructive"
+                    onClick={() => onDelete(child)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function CategoriesAdminPage() {
   const { data: categories = [], isLoading } = useAdminCategories()
   const createCategory = useCreateCategory()
@@ -82,56 +205,87 @@ export function CategoriesAdminPage() {
   const deleteCategory = useDeleteCategory()
 
   const [search, setSearch] = useState('')
-  const [activeFilter, setActiveFilter] = useState<ActiveFilter>('active')
+  // "Todos" por padrão — categorias antigas inativas precisam aparecer
+  const [activeFilter, setActiveFilter] = useState<ActiveFilter>('')
   const [page, setPage] = useState(1)
   const [editing, setEditing] = useState<Category | null>(null)
   const [formOpen, setFormOpen] = useState(false)
   const [deletingCategory, setDeletingCategory] = useState<Category | null>(null)
   const [togglingId, setTogglingId] = useState<string | null>(null)
+  const [selectedRoot, setSelectedRoot] = useState<Category | null>(null)
 
-  const parentById = useMemo(() => {
-    const map = new Map<string, Category>()
-    for (const cat of categories) map.set(cat.id, cat)
+  const childrenByParent = useMemo(() => {
+    const map = new Map<string, Category[]>()
+    for (const cat of categories) {
+      if (!cat.parent_id) continue
+      const list = map.get(cat.parent_id) ?? []
+      list.push(cat)
+      map.set(cat.parent_id, list)
+    }
+    for (const list of map.values()) {
+      list.sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name, 'pt-BR'))
+    }
     return map
   }, [categories])
 
-  const filteredCategories = useMemo(() => {
-    let rows = [...categories]
+  const filteredRoots = useMemo(() => {
+    let roots = categories.filter((cat) => !cat.parent_id)
 
     if (activeFilter === 'active') {
-      rows = rows.filter((cat) => cat.is_active)
+      roots = roots.filter((cat) => cat.is_active)
     } else if (activeFilter === 'inactive') {
-      rows = rows.filter((cat) => !cat.is_active)
+      roots = roots.filter((cat) => !cat.is_active)
     }
 
     const query = search.trim().toLowerCase()
     if (query) {
-      rows = rows.filter((cat) => {
-        const name = cat.name.toLowerCase()
-        const slug = cat.slug.toLowerCase()
-        const description = cat.description?.toLowerCase() ?? ''
-        return name.includes(query) || slug.includes(query) || description.includes(query)
+      roots = roots.filter((root) => {
+        const inRoot =
+          root.name.toLowerCase().includes(query) ||
+          root.slug.toLowerCase().includes(query) ||
+          (root.description?.toLowerCase().includes(query) ?? false)
+        if (inRoot) return true
+        const children = childrenByParent.get(root.id) ?? []
+        return children.some(
+          (child) =>
+            child.name.toLowerCase().includes(query) ||
+            child.slug.toLowerCase().includes(query),
+        )
       })
     }
 
-    rows.sort((a, b) => {
-      const aRoot = a.parent_id ? 1 : 0
-      const bRoot = b.parent_id ? 1 : 0
-      if (aRoot !== bRoot) return aRoot - bRoot
+    roots.sort((a, b) => {
+      if (a.is_active !== b.is_active) return a.is_active ? -1 : 1
       if (a.sort_order !== b.sort_order) return a.sort_order - b.sort_order
       return a.name.localeCompare(b.name, 'pt-BR')
     })
 
-    return rows
-  }, [categories, search, activeFilter])
+    return roots
+  }, [categories, search, activeFilter, childrenByParent])
 
-  const total = filteredCategories.length
+  const total = filteredRoots.length
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
-  const paginatedCategories = useMemo(() => {
+  const paginatedRoots = useMemo(() => {
     const start = (page - 1) * PAGE_SIZE
-    return filteredCategories.slice(start, start + PAGE_SIZE)
-  }, [filteredCategories, page])
+    return filteredRoots.slice(start, start + PAGE_SIZE)
+  }, [filteredRoots, page])
+
+  const selectedChildren = useMemo(() => {
+    if (!selectedRoot) return []
+    return childrenByParent.get(selectedRoot.id) ?? []
+  }, [selectedRoot, childrenByParent])
+
+  // Keep selected root in sync after toggles/refetch
+  useEffect(() => {
+    if (!selectedRoot) return
+    const fresh = categories.find((c) => c.id === selectedRoot.id)
+    if (!fresh) {
+      setSelectedRoot(null)
+      return
+    }
+    if (fresh !== selectedRoot) setSelectedRoot(fresh)
+  }, [categories, selectedRoot])
 
   useEffect(() => {
     setPage(1)
@@ -217,7 +371,7 @@ export function CategoriesAdminPage() {
             <div className="relative min-w-[200px] flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Buscar categoria"
+                placeholder="Buscar categoria ou subcategoria"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-9"
@@ -239,6 +393,9 @@ export function CategoriesAdminPage() {
             Nova categoria
           </Button>
         </div>
+        <p className="text-sm text-muted-foreground">
+          Clique em uma categoria principal para gerenciar as subcategorias.
+        </p>
       </div>
 
       <div className="scrollbar-custom mt-4 min-h-0 flex-1 overflow-y-auto overscroll-contain pb-3">
@@ -254,7 +411,7 @@ export function CategoriesAdminPage() {
           />
         )}
 
-        {!isLoading && categories.length > 0 && filteredCategories.length === 0 && (
+        {!isLoading && categories.length > 0 && filteredRoots.length === 0 && (
           <EmptyState
             icon={FolderTree}
             title="Nenhum resultado"
@@ -262,59 +419,69 @@ export function CategoriesAdminPage() {
           />
         )}
 
-        {!isLoading && filteredCategories.length > 0 && (
+        {!isLoading && filteredRoots.length > 0 && (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-            {paginatedCategories.map((cat) => {
-              const parent = cat.parent_id ? parentById.get(cat.parent_id) : null
+            {paginatedRoots.map((root) => {
+              const childCount = childrenByParent.get(root.id)?.length ?? 0
+              const activeChildren =
+                childrenByParent.get(root.id)?.filter((c) => c.is_active).length ?? 0
               return (
                 <Card
-                  key={cat.id}
-                  className={cn('flex flex-col', !cat.is_active && 'opacity-70')}
+                  key={root.id}
+                  className={cn(
+                    'flex cursor-pointer flex-col transition-colors hover:border-primary/40',
+                    !root.is_active && 'opacity-70',
+                  )}
+                  onClick={() => setSelectedRoot(root)}
                 >
                   <CardContent className="flex flex-1 flex-col gap-3 py-4">
                     <div className="min-h-0 flex-1 space-y-1">
-                      <p className="line-clamp-2 text-sm font-medium leading-snug">{cat.name}</p>
+                      <p className="line-clamp-2 text-sm font-medium leading-snug">{root.name}</p>
                       <p className="truncate font-mono text-[11px] text-muted-foreground">
-                        {cat.slug}
+                        {root.slug}
                       </p>
                       <div className="flex flex-wrap gap-1 pt-1">
-                        {parent ? (
-                          <Badge className="border border-border bg-transparent text-[10px] font-normal">
-                            {parent.name}
-                          </Badge>
-                        ) : (
-                          <Badge className="bg-primary/10 text-[10px] font-normal text-primary">
-                            Raiz
-                          </Badge>
-                        )}
+                        <Badge className="bg-primary/10 text-[10px] font-normal text-primary">
+                          Principal
+                        </Badge>
                         <Badge
                           className={
-                            cat.is_active
+                            root.is_active
                               ? 'bg-emerald-500/10 text-[10px] font-normal text-emerald-700'
                               : 'border border-border bg-transparent text-[10px] font-normal text-muted-foreground'
                           }
                         >
-                          {cat.is_active ? 'Ativa' : 'Inativa'}
+                          {root.is_active ? 'Ativa' : 'Inativa'}
+                        </Badge>
+                        <Badge className="border border-border bg-transparent text-[10px] font-normal">
+                          {activeChildren}/{childCount} subs
                         </Badge>
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between gap-2 border-t pt-3">
+                    <div
+                      className="flex items-center justify-between gap-2 border-t pt-3"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <Switch
-                        checked={cat.is_active}
-                        disabled={togglingId === cat.id || updateCategory.isPending}
-                        onCheckedChange={(checked) => void toggleActive(cat, checked)}
-                        aria-label={cat.is_active ? 'Desativar categoria' : 'Ativar categoria'}
+                        checked={root.is_active}
+                        disabled={togglingId === root.id || updateCategory.isPending}
+                        onCheckedChange={(checked) => void toggleActive(root, checked)}
                       />
                       <div className="flex items-center gap-0.5">
-                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEdit(cat)}>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8"
+                          onClick={() => openEdit(root)}
+                        >
                           <Pencil className="h-4 w-4" />
                         </Button>
                         <Button
                           size="icon"
                           variant="ghost"
                           className="h-8 w-8 text-destructive"
-                          onClick={() => setDeletingCategory(cat)}
+                          onClick={() => setDeletingCategory(root)}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -336,6 +503,19 @@ export function CategoriesAdminPage() {
           onPageChange={setPage}
         />
       )}
+
+      {selectedRoot ? (
+        <ChildrenModal
+          parent={selectedRoot}
+          children={selectedChildren}
+          togglingId={togglingId}
+          updating={updateCategory.isPending}
+          onClose={() => setSelectedRoot(null)}
+          onToggle={(cat, next) => void toggleActive(cat, next)}
+          onEdit={openEdit}
+          onDelete={setDeletingCategory}
+        />
+      ) : null}
 
       <FormDialog
         open={formOpen}
