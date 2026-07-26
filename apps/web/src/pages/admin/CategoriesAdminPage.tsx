@@ -77,7 +77,7 @@ function CategoriesPaginationFooter({
 
 function ChildrenModal({
   parent,
-  children,
+  items,
   togglingId,
   updating,
   onClose,
@@ -86,7 +86,7 @@ function ChildrenModal({
   onDelete,
 }: {
   parent: Category
-  children: Category[]
+  items: Category[]
   togglingId: string | null
   updating: boolean
   onClose: () => void
@@ -112,7 +112,7 @@ function ChildrenModal({
               {parent.name}
             </h3>
             <p className="text-sm text-muted-foreground">
-              {children.length} subcategoria{children.length === 1 ? '' : 's'}
+              {items.length} subcategoria{items.length === 1 ? '' : 's'}
             </p>
           </div>
           <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={onClose}>
@@ -138,13 +138,13 @@ function ChildrenModal({
         </div>
 
         <div className="scrollbar-custom min-h-0 flex-1 overflow-y-auto px-2 py-2">
-          {children.length === 0 ? (
+          {items.length === 0 ? (
             <p className="px-4 py-8 text-center text-sm text-muted-foreground">
               Nenhuma subcategoria cadastrada.
             </p>
           ) : (
             <ul className="divide-y">
-              {children.map((child) => (
+              {items.map((child) => (
                 <li
                   key={child.id}
                   className={cn(
@@ -507,7 +507,7 @@ export function CategoriesAdminPage() {
       {selectedRoot ? (
         <ChildrenModal
           parent={selectedRoot}
-          children={selectedChildren}
+          items={selectedChildren}
           togglingId={togglingId}
           updating={updateCategory.isPending}
           onClose={() => setSelectedRoot(null)}
