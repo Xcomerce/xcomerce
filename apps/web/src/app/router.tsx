@@ -35,6 +35,7 @@ export const router = createBrowserRouter([
       { path: 'para-compradores', element: <ParaCompradoresPage /> },
       { path: 'para-fornecedores', element: <ParaFornecedoresPage /> },
       { path: 'pricing', element: <PricingPage /> },
+      { path: 'email/unsubscribe', element: sharedPages.unsubscribe },
     ],
   },
   {
@@ -125,6 +126,10 @@ export const router = createBrowserRouter([
             children: [
               { path: 'admin/approvals', element: adminPages.approvals },
               { path: 'admin/metrics', element: adminPages.metrics },
+              { path: 'admin/leads', element: adminPages.leads },
+              { path: 'admin/leads/:id', element: adminPages.leadDetail },
+              { path: 'admin/email-templates', element: adminPages.emailTemplates },
+              { path: 'admin/email-providers', element: adminPages.emailProviders },
               { path: 'admin/financial-reports', element: adminPages.financialReports },
               { path: 'admin/plans', element: adminPages.plans },
               { path: 'admin/subscriptions', element: adminPages.subscriptions },

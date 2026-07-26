@@ -22,9 +22,14 @@ import { PlansAdminPage } from '@/pages/admin/PlansAdminPage'
 import { FinancialReportsPage } from '@/pages/admin/FinancialReportsPage'
 import { SubscriptionsAdminPage } from '@/pages/admin/SubscriptionsAdminPage'
 import { UsersAdminPage } from '@/pages/admin/UsersAdminPage'
+import { LeadsAdminPage } from '@/pages/admin/LeadsAdminPage'
+import { LeadDetailPage } from '@/pages/admin/LeadDetailPage'
+import { EmailTemplatesAdminPage } from '@/pages/admin/EmailTemplatesAdminPage'
+import { EmailProvidersAdminPage } from '@/pages/admin/EmailProvidersAdminPage'
 import { NotificationsPage } from '@/pages/shared/NotificationsPage'
 import { PublicProfilePage } from '@/pages/shared/PublicProfilePage'
 import { SupportPage } from '@/pages/shared/SupportPage'
+import { UnsubscribePage } from '@/pages/shared/UnsubscribePage'
 
 export const buyerPages = {
   feed: <BuyerFeedPage />,
@@ -56,6 +61,10 @@ export const adminPages = {
   users: <UsersAdminPage />,
   categories: <CategoriesAdminPage />,
   audit: <AuditPage />,
+  leads: <LeadsAdminPage />,
+  leadDetail: <LeadDetailPage />,
+  emailTemplates: <EmailTemplatesAdminPage />,
+  emailProviders: <EmailProvidersAdminPage />,
 }
 
 export const sharedPages = {
@@ -64,4 +73,5 @@ export const sharedPages = {
   notifications: <NotificationsPage />,
   publicProfile: <PublicProfilePage />,
   support: <SupportPage />,
+  unsubscribe: <UnsubscribePage />,
 }

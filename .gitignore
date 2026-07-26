@@ -35,3 +35,4 @@ coverage/
 # Archives and internal notes (not for version control)
 *.zip
 trans.md
+supabase/.temp/

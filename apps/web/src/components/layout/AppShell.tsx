@@ -20,6 +20,7 @@ const FULL_HEIGHT_LAYOUT_PATHS = [
   '/supplier/onboarding',
   '/admin/subscriptions',
   '/admin/users',
+  '/admin/leads',
   '/admin/categories',
 ]
 const FULL_WIDTH_LAYOUT_PATHS = [

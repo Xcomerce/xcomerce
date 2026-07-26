@@ -376,11 +376,95 @@ export type Database = {
           lgpd_consent_at: string | null
           notes: string | null
           created_at: string
+          status: 'novo' | 'contatado' | 'qualificado' | 'convertido' | 'descartado'
+          assigned_to: string | null
+          invite_token: string | null
+          invite_sent_at: string | null
+          converted_user_id: string | null
+          nurture_sent_at: string | null
+          email_opt_out: boolean
+          unsubscribe_token: string
+          updated_at: string
         }
-        Insert: Omit<Database['public']['Tables']['crm_leads']['Row'], 'id' | 'created_at' | 'source'> & {
+        Insert: Omit<
+          Database['public']['Tables']['crm_leads']['Row'],
+          | 'id'
+          | 'created_at'
+          | 'source'
+          | 'status'
+          | 'email_opt_out'
+          | 'unsubscribe_token'
+          | 'updated_at'
+        > & {
           id?: string
           source?: string
+          status?: Database['public']['Tables']['crm_leads']['Row']['status']
+          email_opt_out?: boolean
+          unsubscribe_token?: string
+          updated_at?: string
         }
+        Update: Partial<Database['public']['Tables']['crm_leads']['Insert']>
+      }
+      email_providers: {
+        Row: {
+          id: string
+          slug: string
+          name: string
+          kind: 'smtp' | 'http_api'
+          is_enabled: boolean
+          is_default: boolean
+          config: Json
+          secrets_ref: string | null
+          status: 'active' | 'planned' | 'disabled'
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['email_providers']['Row'], 'id' | 'created_at' | 'updated_at'> & {
+          id?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['email_providers']['Insert']>
+      }
+      email_templates: {
+        Row: {
+          id: string
+          key: string
+          name: string
+          category: 'crm' | 'transactional'
+          subject: string
+          html_body: string
+          text_body: string | null
+          variables: Json
+          is_active: boolean
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: Omit<Database['public']['Tables']['email_templates']['Row'], 'id' | 'updated_at'> & {
+          id?: string
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['email_templates']['Insert']>
+      }
+      email_sends: {
+        Row: {
+          id: string
+          template_key: string
+          to_email: string
+          lead_id: string | null
+          user_id: string | null
+          provider_slug: string
+          status: 'queued' | 'sent' | 'failed'
+          provider_message_id: string | null
+          error: string | null
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['email_sends']['Row'], 'id' | 'created_at' | 'status'> & {
+          id?: string
+          created_at?: string
+          status?: Database['public']['Tables']['email_sends']['Row']['status']
+        }
+        Update: Partial<Database['public']['Tables']['email_sends']['Insert']>
       }
     }
     Views: {
