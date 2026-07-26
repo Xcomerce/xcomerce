@@ -53,13 +53,10 @@ export function EmailProvidersAdminPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="font-display text-2xl font-semibold tracking-tight">Provedores de e-mail</h1>
-        <p className="text-sm text-muted-foreground">
-          Hostinger SMTP no v1. Secrets ficam nas Edge Functions — nunca no banco.
-        </p>
-      </div>
+    <div className="space-y-6">
+      <p className="text-sm text-muted-foreground">
+        Hostinger SMTP no v1. Secrets ficam nas Edge Functions — nunca no banco.
+      </p>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {providersQ.data.map((p) => {

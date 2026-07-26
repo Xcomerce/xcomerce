@@ -37,7 +37,7 @@ export function LeadDetailPage() {
   if (leadQ.isLoading) return <LoadingSkeleton className="h-64" />
   if (!lead) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-6">
         <p>Lead não encontrado.</p>
         <Button asChild variant="outline">
           <Link to="/admin/leads">Voltar</Link>
@@ -107,7 +107,7 @@ export function LeadDetailPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4">
+    <div className="mx-auto max-w-3xl space-y-6">
       <div className="flex flex-wrap items-center gap-3">
         <Button asChild variant="ghost" size="sm">
           <Link to="/admin/leads">

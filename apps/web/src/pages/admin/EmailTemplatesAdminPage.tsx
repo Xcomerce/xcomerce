@@ -77,30 +77,34 @@ export function EmailTemplatesAdminPage() {
     }
   }
 
-  if (templatesQ.isLoading) return <LoadingSkeleton className="h-64" />
+  if (templatesQ.isLoading) {
+    return (
+      <div className="flex h-full min-h-0 flex-col overflow-hidden p-4 lg:p-6">
+        <LoadingSkeleton className="h-64 w-full" />
+      </div>
+    )
+  }
+
   if (!templates.length) {
     return (
-      <EmptyState
-        icon={Mail}
-        title="Nenhum template"
-        description="Rode a migration de e-mail para popular os templates."
-      />
+      <div className="flex h-full min-h-0 flex-col overflow-hidden p-4 lg:p-6">
+        <EmptyState
+          icon={Mail}
+          title="Nenhum template"
+          description="Rode a migration de e-mail para popular os templates."
+        />
+      </div>
     )
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-4">
-      <div>
-        <h1 className="font-display text-2xl font-semibold tracking-tight">Templates de e-mail</h1>
-        <p className="text-sm text-muted-foreground">CRM e transacionais — variáveis com {'{{nome}}'}</p>
-      </div>
-
+    <div className="flex h-full min-h-0 flex-col overflow-hidden p-4 lg:p-6">
       <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[280px_1fr]">
-        <Card className="overflow-hidden">
-          <CardHeader className="py-3">
+        <Card className="flex min-h-0 flex-col overflow-hidden">
+          <CardHeader className="shrink-0 py-3">
             <CardTitle className="text-sm">Lista</CardTitle>
           </CardHeader>
-          <CardContent className="max-h-[70vh] space-y-1 overflow-y-auto p-2">
+          <CardContent className="scrollbar-custom min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain p-2">
             {templates.map((tpl) => (
               <button
                 key={tpl.id}
@@ -127,7 +131,7 @@ export function EmailTemplatesAdminPage() {
 
         {selected ? (
           <Card className="flex min-h-0 flex-col overflow-hidden">
-            <CardHeader className="space-y-1">
+            <CardHeader className="shrink-0 space-y-1">
               <CardTitle className="text-base">{selected.name}</CardTitle>
               <p className="font-mono text-xs text-muted-foreground">{selected.key}</p>
               <div className="flex flex-wrap gap-1 pt-1">
@@ -138,7 +142,7 @@ export function EmailTemplatesAdminPage() {
                 ))}
               </div>
             </CardHeader>
-            <CardContent className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
+            <CardContent className="scrollbar-custom flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Assunto</label>
                 <Input value={subject} onChange={(e) => setSubject(e.target.value)} />
@@ -168,31 +172,31 @@ export function EmailTemplatesAdminPage() {
                   srcDoc={htmlBody}
                 />
               </div>
-              <div className="flex flex-wrap items-end gap-2 border-t pt-3">
-                <Button onClick={save} disabled={updateTpl.isPending}>
-                  <Save className="mr-1 h-4 w-4" />
-                  Salvar
-                </Button>
-                <div className="flex flex-1 flex-wrap items-end gap-2">
-                  <div className="min-w-[200px] flex-1 space-y-1">
-                    <label className="text-xs text-muted-foreground">Enviar teste para</label>
-                    <Input
-                      type="email"
-                      value={testTo}
-                      onChange={(e) => setTestTo(e.target.value)}
-                    />
-                  </div>
-                  <Button
-                    variant="outline"
-                    onClick={sendTestEmail}
-                    disabled={sendTest.isPending || !testTo}
-                  >
-                    <Send className="mr-1 h-4 w-4" />
-                    Testar
-                  </Button>
-                </div>
-              </div>
             </CardContent>
+            <div className="flex shrink-0 flex-wrap items-end gap-2 border-t px-6 py-4">
+              <Button onClick={save} disabled={updateTpl.isPending}>
+                <Save className="mr-1 h-4 w-4" />
+                Salvar
+              </Button>
+              <div className="flex min-w-[200px] flex-1 flex-wrap items-end gap-2">
+                <div className="min-w-[200px] flex-1 space-y-1">
+                  <label className="text-xs text-muted-foreground">Enviar teste para</label>
+                  <Input
+                    type="email"
+                    value={testTo}
+                    onChange={(e) => setTestTo(e.target.value)}
+                  />
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={sendTestEmail}
+                  disabled={sendTest.isPending || !testTo}
+                >
+                  <Send className="mr-1 h-4 w-4" />
+                  Testar
+                </Button>
+              </div>
+            </div>
           </Card>
         ) : null}
       </div>

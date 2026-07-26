@@ -21,6 +21,7 @@ const FULL_HEIGHT_LAYOUT_PATHS = [
   '/admin/subscriptions',
   '/admin/users',
   '/admin/leads',
+  '/admin/email-templates',
   '/admin/categories',
 ]
 const FULL_WIDTH_LAYOUT_PATHS = [
