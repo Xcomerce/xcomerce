@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import { Switch } from '@/components/ui/switch'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { FormDialog } from '@/components/common/FormDialog'
 import { EmptyState } from '@/components/common/EmptyState'
@@ -20,11 +21,12 @@ import {
 import type { CategoryInput } from '@/services/admin'
 import type { Category } from '@/services/admin'
 import { translateSupabaseError } from '@/lib/errors'
+import { cn } from '@/lib/utils'
 
 type FormValues = CategoryInput
 type ActiveFilter = '' | 'active' | 'inactive'
 
-const PAGE_SIZE = 10
+const PAGE_SIZE = 25
 
 function CategoriesPaginationFooter({
   page,
@@ -80,14 +82,21 @@ export function CategoriesAdminPage() {
   const deleteCategory = useDeleteCategory()
 
   const [search, setSearch] = useState('')
-  const [activeFilter, setActiveFilter] = useState<ActiveFilter>('')
+  const [activeFilter, setActiveFilter] = useState<ActiveFilter>('active')
   const [page, setPage] = useState(1)
   const [editing, setEditing] = useState<Category | null>(null)
   const [formOpen, setFormOpen] = useState(false)
   const [deletingCategory, setDeletingCategory] = useState<Category | null>(null)
+  const [togglingId, setTogglingId] = useState<string | null>(null)
+
+  const parentById = useMemo(() => {
+    const map = new Map<string, Category>()
+    for (const cat of categories) map.set(cat.id, cat)
+    return map
+  }, [categories])
 
   const filteredCategories = useMemo(() => {
-    let rows = categories
+    let rows = [...categories]
 
     if (activeFilter === 'active') {
       rows = rows.filter((cat) => cat.is_active)
@@ -104,6 +113,14 @@ export function CategoriesAdminPage() {
         return name.includes(query) || slug.includes(query) || description.includes(query)
       })
     }
+
+    rows.sort((a, b) => {
+      const aRoot = a.parent_id ? 1 : 0
+      const bRoot = b.parent_id ? 1 : 0
+      if (aRoot !== bRoot) return aRoot - bRoot
+      if (a.sort_order !== b.sort_order) return a.sort_order - b.sort_order
+      return a.name.localeCompare(b.name, 'pt-BR')
+    })
 
     return rows
   }, [categories, search, activeFilter])
@@ -180,6 +197,18 @@ export function CategoriesAdminPage() {
     }
   }
 
+  async function toggleActive(cat: Category, next: boolean) {
+    setTogglingId(cat.id)
+    try {
+      await updateCategory.mutateAsync({ id: cat.id, input: { is_active: next } })
+      toast.success(next ? 'Categoria ativada' : 'Categoria desativada')
+    } catch (err) {
+      toast.error(translateSupabaseError(err instanceof Error ? err.message : 'Erro'))
+    } finally {
+      setTogglingId(null)
+    }
+  }
+
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden p-4 lg:p-6">
       <div className="relative z-10 shrink-0 space-y-4">
@@ -213,7 +242,7 @@ export function CategoriesAdminPage() {
       </div>
 
       <div className="scrollbar-custom mt-4 min-h-0 flex-1 overflow-y-auto overscroll-contain pb-3">
-        {isLoading && <GridSkeleton count={4} />}
+        {isLoading && <GridSkeleton count={10} />}
 
         {!isLoading && categories.length === 0 && (
           <EmptyState
@@ -234,36 +263,67 @@ export function CategoriesAdminPage() {
         )}
 
         {!isLoading && filteredCategories.length > 0 && (
-          <div className="space-y-2">
-            {paginatedCategories.map((cat) => (
-              <Card key={cat.id}>
-                <CardContent className="flex items-center justify-between py-4">
-                  <div>
-                    <p className="font-medium">{cat.name}</p>
-                    <p className="text-xs text-muted-foreground">{cat.slug}</p>
-                    {cat.description && (
-                      <p className="mt-1 text-sm text-muted-foreground">{cat.description}</p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {!cat.is_active && (
-                      <Badge className="border border-border bg-transparent">Inativa</Badge>
-                    )}
-                    <Button size="icon" variant="ghost" onClick={() => openEdit(cat)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="text-destructive"
-                      onClick={() => setDeletingCategory(cat)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+            {paginatedCategories.map((cat) => {
+              const parent = cat.parent_id ? parentById.get(cat.parent_id) : null
+              return (
+                <Card
+                  key={cat.id}
+                  className={cn('flex flex-col', !cat.is_active && 'opacity-70')}
+                >
+                  <CardContent className="flex flex-1 flex-col gap-3 py-4">
+                    <div className="min-h-0 flex-1 space-y-1">
+                      <p className="line-clamp-2 text-sm font-medium leading-snug">{cat.name}</p>
+                      <p className="truncate font-mono text-[11px] text-muted-foreground">
+                        {cat.slug}
+                      </p>
+                      <div className="flex flex-wrap gap-1 pt-1">
+                        {parent ? (
+                          <Badge className="border border-border bg-transparent text-[10px] font-normal">
+                            {parent.name}
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-primary/10 text-[10px] font-normal text-primary">
+                            Raiz
+                          </Badge>
+                        )}
+                        <Badge
+                          className={
+                            cat.is_active
+                              ? 'bg-emerald-500/10 text-[10px] font-normal text-emerald-700'
+                              : 'border border-border bg-transparent text-[10px] font-normal text-muted-foreground'
+                          }
+                        >
+                          {cat.is_active ? 'Ativa' : 'Inativa'}
+                        </Badge>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-2 border-t pt-3">
+                      <Switch
+                        checked={cat.is_active}
+                        disabled={togglingId === cat.id || updateCategory.isPending}
+                        onCheckedChange={(checked) => void toggleActive(cat, checked)}
+                        aria-label={cat.is_active ? 'Desativar categoria' : 'Ativar categoria'}
+                      />
+                      <div className="flex items-center gap-0.5">
+                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEdit(cat)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 text-destructive"
+                          onClick={() => setDeletingCategory(cat)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })}
           </div>
         )}
       </div>
