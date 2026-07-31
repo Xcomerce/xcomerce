@@ -216,32 +216,24 @@ export async function saveCompany(userId: string, input: CompanyInput): Promise<
     return data as Company
   }
 
-  const { data: company, error: companyError } = await supabase
-    .from('companies')
-    .insert({
-      cnpj,
-      razao_social: input.razao_social,
-      nome_fantasia: input.nome_fantasia ?? null,
-      cidade: input.cidade,
-      uf: input.uf.toUpperCase(),
-      logradouro: input.logradouro ?? null,
-      numero: input.numero ?? null,
-      bairro: input.bairro ?? null,
-      cep: input.cep?.replace(/\D/g, '') ?? null,
-      situacao: input.situacao ?? null,
-    })
-    .select()
-    .single()
-
-  if (companyError) throw companyError
-
-  const { error: profileError } = await supabase.from('supplier_profiles').insert({
-    user_id: userId,
-    company_id: company.id,
-    status: 'pendente',
+  const { data: company, error: companyError } = await supabase.rpc('create_supplier_company', {
+    p_cnpj: cnpj,
+    p_razao_social: input.razao_social,
+    p_cidade: input.cidade,
+    p_uf: input.uf.toUpperCase(),
+    p_nome_fantasia: input.nome_fantasia ?? null,
+    p_logradouro: input.logradouro ?? null,
+    p_numero: input.numero ?? null,
+    p_bairro: input.bairro ?? null,
+    p_cep: input.cep?.replace(/\D/g, '') ?? null,
+    p_situacao: input.situacao ?? null,
   })
 
-  if (profileError) throw profileError
+  if (companyError) throw companyError
+  if (!company) {
+    throw new Error('Não foi possível salvar os dados da empresa.')
+  }
+
   return company as Company
 }
 
