@@ -1,0 +1,40 @@
+const MESSAGES: Record<string, string> = {
+  'Invalid login credentials': 'E-mail ou senha incorretos.',
+  'Email not confirmed': 'Confirme seu e-mail antes de entrar.',
+  'User already registered': 'Este e-mail já está cadastrado.',
+  'Password should be at least 6 characters': 'A senha deve ter no mínimo 6 caracteres.',
+  'Email rate limit exceeded': 'Muitas tentativas. Aguarde alguns minutos.',
+  'JWT expired': 'Sessão expirada. Faça login novamente.',
+}
+
+export function formatSupabaseError(error: unknown): string {
+  if (error instanceof Error) {
+    return translateSupabaseError(error.message)
+  }
+  if (error && typeof error === 'object') {
+    const e = error as { message?: string; details?: string; hint?: string; code?: string }
+    const parts = [e.message, e.details, e.hint, e.code ? `(${e.code})` : ''].filter(Boolean)
+    if (parts.length > 0) return translateSupabaseError(parts.join(' — '))
+  }
+  return 'Erro ao comunicar com o Supabase.'
+}
+
+export function isQuotaExceededError(error: unknown): boolean {
+  if (error instanceof Error) {
+    if (/QUOTA_EXCEEDED|QUOTA|limite mensal/i.test(error.message)) return true
+  }
+  return false
+}
+
+export function translateSupabaseError(message: string): string {
+  for (const [key, pt] of Object.entries(MESSAGES)) {
+    if (message.includes(key)) return pt
+  }
+  if (message.includes('quota') || message.includes('QUOTA')) {
+    return 'Limite do plano atingido. Faça upgrade para continuar.'
+  }
+  if (message.includes('CONTACT_INFO_BLOCKED')) {
+    return 'Não é permitido compartilhar dados de contato antes da revelação.'
+  }
+  return message
+}
