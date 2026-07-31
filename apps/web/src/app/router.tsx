@@ -26,6 +26,7 @@ import {
   sharedPages,
   supplierPages,
 } from '@/pages/placeholders'
+import { BILLING_PAGE_ENABLED } from '@/config/features'
 
 export const router = createBrowserRouter([
   {
@@ -66,7 +67,14 @@ export const router = createBrowserRouter([
         element: <ActiveRoleAppLayout />,
         children: [
           { path: 'settings/profile', element: sharedPages.profile },
-          { path: 'settings/billing', element: sharedPages.billing },
+          {
+            path: 'settings/billing',
+            element: BILLING_PAGE_ENABLED ? (
+              sharedPages.billing
+            ) : (
+              <Navigate to="/settings/profile" replace />
+            ),
+          },
           { path: 'notifications', element: sharedPages.notifications },
           { path: 'profile/:userId', element: sharedPages.publicProfile },
           { path: 'support', element: sharedPages.support },

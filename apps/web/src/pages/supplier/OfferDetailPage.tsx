@@ -25,6 +25,7 @@ import { useCreateOffer, useOffersForDemand } from '@/hooks/use-offers'
 import { useChatMessages, useSendMessage, useChatSubscription } from '@/hooks/use-chat'
 import { useAuth } from '@/contexts/auth-context'
 import { translateSupabaseError } from '@/lib/errors'
+import { formatDemandDateTime } from '@/lib/datetime'
 import { fetchDemandMarketPrice } from '@/services/pricing'
 import { cn, formatExpiresAt } from '@/lib/utils'
 import { ScrollPageShell, SCROLL_PAGE_SECTION_CLASS } from '@/components/layout/ScrollPageShell'
@@ -34,12 +35,7 @@ function formatCurrency(value: number): string {
 }
 
 function formatDemandDate(value: string | null | undefined): string {
-  if (!value) return 'Não informado'
-  return new Date(value).toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  })
+  return formatDemandDateTime(value)
 }
 
 type OfferChatPanelProps = {

@@ -13,7 +13,7 @@ import { PaywallModal } from '@/components/common/PaywallModal'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { QuotaBadge } from '@/components/common/QuotaBadge'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
-import { SearchableSelect } from '@/components/ui/searchable-select'
+import { AutocompleteSelect } from '@/components/ui/searchable-select'
 import {
   useCreateProduct,
   useDeleteProduct,
@@ -22,13 +22,13 @@ import {
   useUpdateProduct,
 } from '@/hooks/use-products'
 import { useCategories } from '@/hooks/use-categories'
-import { useBrazilianCities } from '@/hooks/use-brazilian-cities'
+import { useOnboardingState } from '@/hooks/use-onboarding'
 import { useSubscription } from '@/hooks/use-billing'
 import { useAuth } from '@/contexts/auth-context'
 import { updateProductImage } from '@/services/products'
+import type { OnboardingState } from '@/services/onboarding'
 import { uploadFile, productImagePath } from '@/lib/storage'
 import { formatSupabaseError, translateSupabaseError } from '@/lib/errors'
-import { BRAZILIAN_STATES } from '@/lib/brazil-locations'
 import { cn } from '@/lib/utils'
 
 import { ProductVariantsSection } from '@/components/catalog/ProductVariantsSection'
@@ -38,25 +38,8 @@ const PRODUCT_IMAGE_MAX_BYTES = 5 * 1024 * 1024
 const PRODUCT_IMAGE_MIN_DIMENSION = 800
 
 type ProductImageMeta = {
-  mime?: string
-  sizeBytes?: number
   width?: number
   height?: number
-}
-
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-}
-
-function formatImageType(mime: string): string {
-  const types: Record<string, string> = {
-    'image/jpeg': 'JPEG',
-    'image/png': 'PNG',
-    'image/webp': 'WebP',
-  }
-  return types[mime] ?? mime.replace('image/', '').toUpperCase()
 }
 
 async function readImageDimensions(file: File): Promise<{ width: number; height: number }> {
@@ -77,6 +60,19 @@ function isProductFormReady(values: ProductInput): boolean {
   return productSchema.safeParse(values).success
 }
 
+function getSupplierDefaultLocation(
+  state: OnboardingState | undefined,
+): { cidade: string; uf: string } | null {
+  if (!state) return null
+
+  const cidade = state.profile?.service_city?.trim() || state.company?.cidade?.trim()
+  const uf = state.profile?.service_uf?.trim() || state.company?.uf?.trim()
+
+  if (!cidade || !uf) return null
+
+  return { cidade, uf: uf.toUpperCase() }
+}
+
 export function ProductFormPage() {
   const { id } = useParams<{ id: string }>()
   const isEdit = Boolean(id)
@@ -91,6 +87,7 @@ export function ProductFormPage() {
 
   const { data: product, isLoading: productLoading } = useProduct(isEdit ? id : undefined)
   const { data: categories = [] } = useCategories()
+  const { data: onboardingState } = useOnboardingState()
   const { data: count = 0 } = useProductCount()
   const { data: subscription } = useSubscription()
   const createProduct = useCreateProduct()
@@ -119,17 +116,14 @@ export function ProductFormPage() {
     },
   })
 
-  const watchedUf = form.watch('uf')
-  const { data: cities = [], isLoading: citiesLoading } = useBrazilianCities(watchedUf)
-
-  const stateOptions = useMemo(
-    () => BRAZILIAN_STATES.map((state) => ({ value: state.uf, label: state.uf })),
-    [],
+  const supplierLocation = useMemo(
+    () => getSupplierDefaultLocation(onboardingState),
+    [onboardingState],
   )
 
-  const cityOptions = useMemo(
-    () => cities.map((city) => ({ value: city, label: city })),
-    [cities],
+  const categoryOptions = useMemo(
+    () => categories.map((category) => ({ value: category.id, label: category.name })),
+    [categories],
   )
 
   const formValues = form.watch()
@@ -145,8 +139,8 @@ export function ProductFormPage() {
         descricao: product.descricao ?? '',
         marca: product.marca ?? '',
         preco_referencia: product.preco_referencia ?? undefined,
-        cidade: product.cidade,
-        uf: product.uf,
+        cidade: supplierLocation?.cidade ?? '',
+        uf: supplierLocation?.uf ?? '',
         is_active: product.is_active,
         tem_cor: product.tem_cor ?? false,
         tem_tamanho: product.tem_tamanho ?? false,
@@ -159,7 +153,13 @@ export function ProductFormPage() {
         setImageMeta(null)
       }
     }
-  }, [product, form])
+  }, [product, form, supplierLocation])
+
+  useEffect(() => {
+    if (product || !supplierLocation) return
+    form.setValue('cidade', supplierLocation.cidade, { shouldValidate: true })
+    form.setValue('uf', supplierLocation.uf, { shouldValidate: true })
+  }, [product, supplierLocation, form])
 
   useEffect(() => {
     if (!isEdit && atLimit) setPaywallOpen(true)
@@ -191,13 +191,24 @@ export function ProductFormPage() {
       return
     }
 
+    if (!supplierLocation) {
+      toast.error('Configure o endereço da empresa no onboarding antes de salvar o produto.')
+      return
+    }
+
+    const payload: ProductInput = {
+      ...values,
+      cidade: supplierLocation.cidade,
+      uf: supplierLocation.uf,
+    }
+
     try {
       if (isEdit && id) {
-        await updateProduct.mutateAsync({ id, input: values })
+        await updateProduct.mutateAsync({ id, input: payload })
         if (imageFile) await uploadProductImage(id, imageFile)
         toast.success('Produto atualizado')
       } else {
-        const created = await createProduct.mutateAsync(values)
+        const created = await createProduct.mutateAsync(payload)
         if (imageFile) await uploadProductImage(created.id, imageFile)
         toast.success('Produto criado')
       }
@@ -228,11 +239,11 @@ export function ProductFormPage() {
     setImageFile(file)
     const url = URL.createObjectURL(file)
     setImagePreview(url)
-    setImageMeta({ mime: file.type, sizeBytes: file.size })
+    setImageMeta(null)
 
     void readImageDimensions(file)
       .then(({ width, height }) => {
-        setImageMeta({ mime: file.type, sizeBytes: file.size, width, height })
+        setImageMeta({ width, height })
       })
       .catch(() => {
         toast.error('Não foi possível ler as dimensões da imagem')
@@ -258,8 +269,6 @@ export function ProductFormPage() {
       ? Math.min(imageMeta.width, imageMeta.height)
       : null
   const isLowResolution = minDimension !== null && minDimension < PRODUCT_IMAGE_MIN_DIMENSION
-  const isNotSquare =
-    imageMeta?.width && imageMeta?.height ? imageMeta.width !== imageMeta.height : false
 
   if (isEdit && productLoading) {
     return (
@@ -346,42 +355,14 @@ export function ProductFormPage() {
               {PRODUCT_IMAGE_MIN_DIMENSION} px ou maior, proporção 1:1
             </p>
 
-            {imageMeta && (imageMeta.mime || imageMeta.sizeBytes || imageMeta.width) && (
-              <div className="space-y-1.5 rounded-lg border bg-muted/30 px-3 py-2 text-xs">
-                <p className="font-medium text-foreground">Detalhes da imagem</p>
-                <dl className="grid gap-1 text-muted-foreground">
-                  {imageMeta.mime && (
-                    <div className="flex justify-between gap-2">
-                      <dt>Tipo</dt>
-                      <dd className="text-foreground">{formatImageType(imageMeta.mime)}</dd>
-                    </div>
-                  )}
-                  {imageMeta.sizeBytes !== undefined && (
-                    <div className="flex justify-between gap-2">
-                      <dt>Tamanho</dt>
-                      <dd className="text-foreground">{formatFileSize(imageMeta.sizeBytes)}</dd>
-                    </div>
-                  )}
-                  {imageMeta.width && imageMeta.height && (
-                    <div className="flex justify-between gap-2">
-                      <dt>Resolução</dt>
-                      <dd className="text-foreground">
-                        {imageMeta.width}×{imageMeta.height} px
-                      </dd>
-                    </div>
-                  )}
-                </dl>
-                {isLowResolution && (
-                  <p className="text-amber-600 dark:text-amber-500">
-                    Resolução baixa — use pelo menos {PRODUCT_IMAGE_MIN_DIMENSION}×
-                    {PRODUCT_IMAGE_MIN_DIMENSION} px para melhor qualidade no catálogo.
-                  </p>
-                )}
-                {isNotSquare && !isLowResolution && (
-                  <p className="text-muted-foreground">
-                    Imagem não quadrada — recortes automáticos podem cortar as bordas na listagem.
-                  </p>
-                )}
+            {isLowResolution && (
+              <div className="space-y-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-500">
+                <p className="font-medium">Melhore a qualidade da imagem</p>
+                <p>
+                  Para deixar seu produto mais nítido no catálogo, recomendamos usar uma imagem com pelo
+                  menos {PRODUCT_IMAGE_MIN_DIMENSION} × {PRODUCT_IMAGE_MIN_DIMENSION} px. Você pode continuar
+                  com esta imagem.
+                </p>
               </div>
             )}
           </CardContent>
@@ -411,18 +392,13 @@ export function ProductFormPage() {
                   <FormItem>
                     <FormLabel required>Categoria</FormLabel>
                     <FormControl>
-                      <select
-                        className="flex h-10 w-full rounded-xl border border-input bg-background px-3 text-sm"
+                      <AutocompleteSelect
                         value={field.value}
-                        onChange={field.onChange}
-                      >
-                        <option value="">Selecione...</option>
-                        {categories.map((c) => (
-                          <option key={c.id} value={c.id}>
-                            {c.name}
-                          </option>
-                        ))}
-                      </select>
+                        onValueChange={field.onChange}
+                        options={categoryOptions}
+                        placeholder="Digite para buscar categoria..."
+                        emptyMessage="Nenhuma categoria encontrada"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -436,7 +412,7 @@ export function ProductFormPage() {
                     <FormItem>
                       <FormLabel>Marca</FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input placeholder="Opcional" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -449,7 +425,7 @@ export function ProductFormPage() {
                     <FormItem>
                       <FormLabel>SKU</FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input placeholder="Opcional" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -465,6 +441,7 @@ export function ProductFormPage() {
                     <FormControl>
                       <textarea
                         className="flex min-h-[80px] w-full rounded-xl border border-input bg-background px-3 py-2 text-sm"
+                        placeholder="Opcional"
                         {...field}
                       />
                     </FormControl>
@@ -477,61 +454,21 @@ export function ProductFormPage() {
                 name="preco_referencia"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Preço referência (R$)</FormLabel>
+                    <FormLabel required>Valor</FormLabel>
                     <FormControl>
-                      <Input type="number" step="0.01" min={0} {...field} value={field.value ?? ''} />
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min={0}
+                        required
+                        {...field}
+                        value={field.value ?? ''}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(140px,180px)]">
-                <FormField
-                  control={form.control}
-                  name="cidade"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel required>Cidade</FormLabel>
-                      <FormControl>
-                        <SearchableSelect
-                          value={field.value}
-                          onValueChange={field.onChange}
-                          options={cityOptions}
-                          placeholder={watchedUf ? 'Selecione a cidade' : 'Selecione o estado primeiro'}
-                          searchPlaceholder="Buscar cidade..."
-                          emptyMessage={citiesLoading ? 'Carregando cidades...' : 'Nenhuma cidade encontrada'}
-                          disabled={!watchedUf}
-                          loading={citiesLoading}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="uf"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel required>UF</FormLabel>
-                      <FormControl>
-                        <SearchableSelect
-                          value={field.value}
-                          onValueChange={(uf) => {
-                            field.onChange(uf)
-                            form.setValue('cidade', '')
-                          }}
-                          options={stateOptions}
-                          placeholder="Selecione"
-                          searchPlaceholder="Buscar UF..."
-                          emptyMessage="Nenhuma UF encontrada"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
               <ProductVariantsSection />
             </form>
           </Form>

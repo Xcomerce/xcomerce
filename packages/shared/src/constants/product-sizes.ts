@@ -1,3 +1,5 @@
+import type { DemandSpecification } from '../validators/demands'
+
 export type ProductSizeType = 'roupa' | 'calcado' | 'numerico' | 'livre'
 
 export const PRODUCT_SIZE_TYPE_LABELS: Record<ProductSizeType, string> = {
@@ -67,33 +69,61 @@ export type ProductVariantFields = {
 export type DemandVariantFields = {
   cor?: string | null
   tamanho?: string | null
+  especificacoes?: DemandSpecification[] | null
+}
+
+export function normalizeDemandSpecifications(demand: DemandVariantFields): DemandSpecification[] {
+  if (Array.isArray(demand.especificacoes) && demand.especificacoes.length > 0) {
+    return demand.especificacoes.map((spec) => ({
+      cor: spec.cor?.trim() ?? '',
+      tamanho: spec.tamanho?.trim() ?? '',
+      quantidade: spec.quantidade ?? 1,
+    }))
+  }
+
+  const cor = demand.cor?.trim() ?? ''
+  const tamanho = demand.tamanho?.trim() ?? ''
+  if (cor || tamanho) return [{ cor, tamanho, quantidade: 1 }]
+
+  return []
 }
 
 export function productMatchesDemandVariants(
   product: ProductVariantFields,
   demand: DemandVariantFields,
 ): boolean {
-  const cor = demand.cor?.trim() ?? ''
-  const tamanho = demand.tamanho?.trim() ?? ''
+  const specs = normalizeDemandSpecifications(demand).filter((spec) => spec.cor || spec.tamanho)
+  if (specs.length === 0) return true
 
-  const colorOk =
-    !cor || !product.tem_cor || variantArrayContains(product.cores, cor)
-
-  const sizeOk =
-    !tamanho || !product.tem_tamanho || variantArrayContains(product.tamanhos, tamanho)
-
-  return colorOk && sizeOk
+  return specs.some((spec) => {
+    const colorOk =
+      !spec.cor || !product.tem_cor || variantArrayContains(product.cores, spec.cor)
+    const sizeOk =
+      !spec.tamanho || !product.tem_tamanho || variantArrayContains(product.tamanhos, spec.tamanho)
+    return colorOk && sizeOk
+  })
 }
 
 export function demandHasVariantSpecs(demand: DemandVariantFields): boolean {
-  return Boolean(demand.cor?.trim() || demand.tamanho?.trim())
+  return normalizeDemandSpecifications(demand).some((spec) => spec.cor || spec.tamanho)
 }
 
 export function formatDemandVariantSummary(demand: DemandVariantFields): string | null {
-  const parts: string[] = []
-  const cor = demand.cor?.trim()
-  const tamanho = demand.tamanho?.trim()
-  if (cor) parts.push(`Cor: ${cor}`)
-  if (tamanho) parts.push(`Tamanho: ${tamanho}`)
-  return parts.length > 0 ? parts.join(' · ') : null
+  const specs = normalizeDemandSpecifications(demand).filter(
+    (spec) => spec.cor || spec.tamanho || (spec.quantidade ?? 0) > 0,
+  )
+  if (specs.length === 0) return null
+
+  return specs
+    .map((spec) => {
+      const parts: string[] = []
+      if (spec.cor) parts.push(`Cor: ${spec.cor}`)
+      if (spec.tamanho) parts.push(`Tamanho: ${spec.tamanho}`)
+      if (spec.quantidade != null && spec.quantidade > 0) {
+        parts.push(`Qtd: ${spec.quantidade}`)
+      }
+      return parts.join(' · ')
+    })
+    .filter(Boolean)
+    .join(' | ')
 }

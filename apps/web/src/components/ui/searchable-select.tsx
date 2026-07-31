@@ -208,3 +208,131 @@ export function SearchableSelect({
     </>
   )
 }
+
+type AutocompleteSelectProps = {
+  value?: string
+  onValueChange: (value: string) => void
+  options: SearchableSelectOption[]
+  placeholder?: string
+  emptyMessage?: string
+  disabled?: boolean
+  loading?: boolean
+  className?: string
+}
+
+export function AutocompleteSelect({
+  value = '',
+  onValueChange,
+  options,
+  placeholder = 'Digite para buscar...',
+  emptyMessage = 'Nenhum resultado encontrado',
+  disabled = false,
+  loading = false,
+  className,
+}: AutocompleteSelectProps) {
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const containerRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const selectedOption = options.find((option) => option.value === value)
+
+  const filteredOptions = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase()
+    if (!normalizedQuery) return options
+    return options.filter((option) => option.label.toLowerCase().includes(normalizedQuery))
+  }, [options, query])
+
+  useEffect(() => {
+    if (!open) {
+      setQuery(selectedOption?.label ?? '')
+    }
+  }, [open, selectedOption])
+
+  useEffect(() => {
+    if (!open) return
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (containerRef.current?.contains(event.target as Node)) return
+      setOpen(false)
+    }
+
+    document.addEventListener('mousedown', handlePointerDown)
+    return () => document.removeEventListener('mousedown', handlePointerDown)
+  }, [open])
+
+  function handleSelect(nextValue: string, label: string) {
+    onValueChange(nextValue)
+    setQuery(label)
+    setOpen(false)
+    inputRef.current?.blur()
+  }
+
+  function handleInputChange(nextQuery: string) {
+    setQuery(nextQuery)
+    setOpen(true)
+
+    const exactMatch = options.find(
+      (option) => option.label.toLowerCase() === nextQuery.trim().toLowerCase(),
+    )
+    if (exactMatch) {
+      onValueChange(exactMatch.value)
+      return
+    }
+
+    if (value && selectedOption?.label.toLowerCase() !== nextQuery.trim().toLowerCase()) {
+      onValueChange('')
+    }
+  }
+
+  function handleBlur() {
+    window.setTimeout(() => {
+      if (selectedOption) {
+        setQuery(selectedOption.label)
+      } else {
+        setQuery('')
+      }
+      setOpen(false)
+    }, 120)
+  }
+
+  return (
+    <div ref={containerRef} className={cn('relative', className)}>
+      <Input
+        ref={inputRef}
+        value={loading ? '' : query}
+        onChange={(event) => handleInputChange(event.target.value)}
+        onFocus={() => setOpen(true)}
+        onBlur={handleBlur}
+        placeholder={loading ? 'Carregando...' : placeholder}
+        disabled={disabled || loading}
+        autoComplete="off"
+      />
+
+      {open && !disabled && !loading && (
+        <ul className="absolute z-50 mt-1 max-h-56 w-full overflow-y-auto rounded-xl border border-border bg-popover p-1 text-popover-foreground shadow-lg scrollbar-custom">
+          {filteredOptions.length === 0 ? (
+            <li className="px-3 py-4 text-center text-sm text-muted-foreground">{emptyMessage}</li>
+          ) : (
+            filteredOptions.map((option) => (
+              <li key={option.value}>
+                <button
+                  type="button"
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => handleSelect(option.value, option.label)}
+                  className={cn(
+                    'flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-accent/10',
+                    option.value === value && 'bg-accent/10 font-medium',
+                  )}
+                >
+                  <span className="truncate">{option.label}</span>
+                  {option.value === value && <Check className="h-4 w-4 shrink-0 text-primary" />}
+                </button>
+              </li>
+            ))
+          )}
+        </ul>
+      )}
+    </div>
+  )
+}

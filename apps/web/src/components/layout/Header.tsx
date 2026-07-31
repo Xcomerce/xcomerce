@@ -1,5 +1,4 @@
-import { useTheme } from 'next-themes'
-import { ArrowLeft, Bell, Menu, Moon, Sun, Search } from 'lucide-react'
+import { ArrowLeft, Bell, Menu, Search } from 'lucide-react'
 import { Link, useLocation, useMatch, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   DropdownMenu,
@@ -27,7 +26,6 @@ type HeaderProps = {
 
 export function Header({ onMenuClick, className }: HeaderProps) {
   const pageTitle = usePageTitle()
-  const { theme, setTheme } = useTheme()
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const { profile, roles, signOut } = useAuth()
@@ -195,14 +193,6 @@ export function Header({ onMenuClick, className }: HeaderProps) {
             </span>
           )}
         </Link>
-        <button
-          type="button"
-          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-          className="hidden h-10 w-10 items-center justify-center rounded-xl hover:bg-secondary/50 lg:flex"
-          aria-label="Alternar tema"
-        >
-          {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
-        </button>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

@@ -287,7 +287,7 @@ export function ProductForm({ productId }: ProductFormProps) {
           name="preco_referencia"
           render={({ field: { onChange, onBlur, value } }) => (
             <Input
-              label="Preço referência (R$)"
+              label="Valor *"
               value={value != null ? String(value) : ''}
               onChangeText={(v) => onChange(v ? Number(v.replace(',', '.')) : undefined)}
               onBlur={onBlur}

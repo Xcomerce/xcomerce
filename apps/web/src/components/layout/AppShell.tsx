@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import type { UserRole } from '@keve/shared'
-import { NAV_BY_ROLE } from '@/config/navigation'
+import { NAV_BY_ROLE, isSupplierPathAllowedWhenUnapproved } from '@/config/navigation'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { MobileSidebar } from '@/components/layout/MobileSidebar'
 import { Header } from '@/components/layout/Header'
 import { BottomNav } from '@/components/layout/BottomNav'
-import { Outlet, useLocation } from 'react-router-dom'
+import { Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { useAuth } from '@/contexts/auth-context'
 import { cn } from '@/lib/utils'
 
 export type AppShellOutletContext = {
@@ -39,6 +40,9 @@ export function AppShell({ role }: { role: UserRole }) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const config = NAV_BY_ROLE[role]
   const { pathname } = useLocation()
+  const navigate = useNavigate()
+  const { supplierStatus } = useAuth()
+  const isSupplierPending = role === 'supplier' && supplierStatus !== 'aprovado'
   const isSupplierCatalogForm =
     pathname === '/supplier/catalog/new' ||
     (pathname.startsWith('/supplier/catalog/') && pathname.endsWith('/edit'))
@@ -74,6 +78,12 @@ export function AppShell({ role }: { role: UserRole }) {
       body.style.overflow = ''
     }
   }, [isFullHeightLayout])
+
+  useEffect(() => {
+    if (!isSupplierPending) return
+    if (isSupplierPathAllowedWhenUnapproved(pathname)) return
+    navigate('/supplier/onboarding', { replace: true })
+  }, [isSupplierPending, pathname, navigate])
 
   return (
     <div className={cn('bg-background', isFullHeightLayout ? 'h-dvh overflow-hidden' : 'min-h-screen')}>

@@ -6,6 +6,7 @@ import { categoryKeys } from '@/hooks/use-categories'
 export const adminKeys = {
   all: ['admin'] as const,
   pendingSuppliers: () => [...adminKeys.all, 'pending-suppliers'] as const,
+  supplierApprovalDetails: (userId: string) => [...adminKeys.all, 'supplier-approval-details', userId] as const,
   metrics: (period?: MetricsPeriod) => [...adminKeys.all, 'metrics', period ?? 30] as const,
   categories: () => [...adminKeys.all, 'categories'] as const,
   plans: () => [...adminKeys.all, 'plans'] as const,
@@ -20,6 +21,14 @@ export function usePendingSuppliers() {
   return useQuery({
     queryKey: adminKeys.pendingSuppliers(),
     queryFn: admin.fetchPendingSuppliers,
+  })
+}
+
+export function useSupplierApprovalDetails(userId: string | null) {
+  return useQuery({
+    queryKey: adminKeys.supplierApprovalDetails(userId ?? ''),
+    queryFn: () => admin.fetchSupplierApprovalDetails(userId!),
+    enabled: !!userId,
   })
 }
 

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { Check, UserCheck, X } from 'lucide-react'
+import { Check, Eye, UserCheck, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -10,8 +10,10 @@ import { EmptyState } from '@/components/common/EmptyState'
 import { GridSkeleton } from '@/components/common/LoadingSkeleton'
 import { StatusBadge } from '@/components/common/StatusBadge'
 import { usePendingSuppliers, useApproveSupplier, useRejectSupplier } from '@/hooks/use-admin'
+import { SupplierApprovalDetailDialog } from '@/pages/admin/SupplierApprovalDetailDialog'
 import { SUPPLIER_STATUS_LABELS } from '@keve/shared'
 import { translateSupabaseError } from '@/lib/errors'
+import type { PendingSupplier } from '@/services/admin'
 
 export function ApprovalsPage() {
   const { data: suppliers = [], isLoading } = usePendingSuppliers()
@@ -19,6 +21,7 @@ export function ApprovalsPage() {
   const reject = useRejectSupplier()
   const [rejectingId, setRejectingId] = useState<string | null>(null)
   const [rejectReason, setRejectReason] = useState('')
+  const [detailSupplier, setDetailSupplier] = useState<PendingSupplier | null>(null)
 
   async function handleApprove(userId: string) {
     try {
@@ -113,6 +116,10 @@ export function ApprovalsPage() {
                 </div>
               ) : (
                 <div className="flex flex-wrap gap-2">
+                  <Button size="sm" variant="outline" onClick={() => setDetailSupplier(s)}>
+                    <Eye className="mr-1 h-4 w-4" />
+                    Ver detalhes
+                  </Button>
                   <Button
                     size="sm"
                     disabled={approve.isPending || s.status !== 'em_revisao'}
@@ -136,6 +143,8 @@ export function ApprovalsPage() {
           </Card>
         ))}
       </div>
+
+      <SupplierApprovalDetailDialog supplier={detailSupplier} onClose={() => setDetailSupplier(null)} />
     </div>
   )
 }

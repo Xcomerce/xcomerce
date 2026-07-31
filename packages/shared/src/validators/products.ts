@@ -15,7 +15,15 @@ export const productSchema = z
     sku: z.string().optional().transform((value) => value?.trim() || undefined),
     descricao: z.string().optional(),
     marca: z.string().optional(),
-    preco_referencia: z.coerce.number().min(0).optional(),
+    preco_referencia: z.preprocess(
+      (value) => {
+        if (value === '' || value === null || value === undefined) return undefined
+        return Number(value)
+      },
+      z
+        .number({ required_error: 'Valor obrigatório', invalid_type_error: 'Valor obrigatório' })
+        .min(0, 'Informe um valor válido'),
+    ),
     cidade: z.string().min(2),
     uf: z.string().length(2),
     is_active: z.boolean().default(true),

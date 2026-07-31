@@ -7,6 +7,7 @@ export type EmailTemplate =
   | 'sla_expired'
   | 'supplier_approved'
   | 'supplier_rejected'
+  | 'admin_supplier_pending'
   | 'subscription_activated'
   | 'subscription_past_due'
 
@@ -19,6 +20,7 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
   'sla_expired',
   'supplier_approved',
   'supplier_rejected',
+  'admin_supplier_pending',
   'subscription_activated',
   'subscription_past_due',
 ]
@@ -32,6 +34,7 @@ const TEMPLATE_TO_NOTIFICATION_TYPE: Partial<Record<EmailTemplate, string>> = {
   sla_expired: 'sla.expired',
   supplier_approved: 'supplier.approved',
   supplier_rejected: 'supplier.rejected',
+  admin_supplier_pending: 'admin.supplier_pending',
   subscription_activated: 'subscription.activated',
   subscription_past_due: 'subscription.past_due',
 }
@@ -139,6 +142,16 @@ export function renderEmail(
           `<p>Olá ${esc(data.supplier_name)}, infelizmente seu cadastro não foi aprovado.</p>
            <p><strong>Motivo:</strong> ${esc(data.reason)}</p>`,
           actionUrl,
+        ),
+      }
+    case 'admin_supplier_pending':
+      return {
+        subject: 'Novo fornecedor aguardando aprovação',
+        html: layout(
+          'Fornecedor em revisão',
+          `<p><strong>${esc(data.supplier_name)}</strong> (${esc(data.company_name)}) enviou cadastro para aprovação.</p>`,
+          actionUrl,
+          'Ver fila de aprovações',
         ),
       }
     case 'subscription_activated':

@@ -23,7 +23,9 @@ import { useOfferDetail, useRevealContact, useAcceptOffer, useRejectOffer, useOf
 import { useChatMessages, useSendMessage, useChatSubscription } from '@/hooks/use-chat'
 import { useAuth } from '@/contexts/auth-context'
 import { formatSupabaseError } from '@/lib/errors'
+import { demandHasVariantSpecs } from '@keve/shared'
 import { DemandVariantSummary } from '@/components/buyer/DemandVariantSummary'
+import { formatDemandDateTime } from '@/lib/datetime'
 import { cn } from '@/lib/utils'
 import { ScrollPageShell, SCROLL_PAGE_SECTION_CLASS } from '@/components/layout/ScrollPageShell'
 
@@ -492,9 +494,7 @@ export function BuyerOfferDetailPage() {
                   <tr>
                     <td className="py-2.5 font-medium text-muted-foreground">Prazo Limite</td>
                     <td className="py-2.5 text-foreground">
-                      {demand.prazo_desejado 
-                        ? new Date(demand.prazo_desejado).toLocaleDateString('pt-BR') 
-                        : 'Não informado'}
+                      {formatDemandDateTime(demand.prazo_desejado)}
                     </td>
                     <td className="py-2.5 font-semibold text-foreground">
                       Entrega em {offer.prazo_entrega_dias} {offer.prazo_entrega_dias === 1 ? 'dia útil' : 'dias úteis'}
@@ -511,7 +511,7 @@ export function BuyerOfferDetailPage() {
                       </td>
                     </tr>
                   )}
-                  {(demand.cor || demand.tamanho) && (
+                  {demandHasVariantSpecs(demand) && (
                     <tr>
                       <td className="py-2.5 font-medium text-muted-foreground">Variações</td>
                       <td className="py-2.5 text-foreground" colSpan={2}>

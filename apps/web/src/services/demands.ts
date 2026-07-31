@@ -1,5 +1,10 @@
 import { supabase } from '@/lib/supabase'
 import { requestDemandMatch } from '@/services/matches'
+import {
+  demandSpecificationsToLegacyFields,
+  prepareDemandPayload,
+  syncDemandQuantidadeFromSpecifications,
+} from '@/lib/demand-specifications'
 import type { DemandInput } from '@keve/shared'
 import type { Tables } from '@keve/shared'
 
@@ -34,23 +39,26 @@ export async function fetchDemand(id: string): Promise<Demand | null> {
 }
 
 export async function createDemand(buyerId: string, input: DemandInput): Promise<Demand> {
+  const payload = prepareDemandPayload(input)
+
   const { data, error } = await supabase
     .from('demands')
     .insert({
       buyer_id: buyerId,
-      category_id: input.category_id,
-      titulo: input.titulo,
-      descricao: input.descricao,
-      quantidade: input.quantidade,
-      unidade: input.unidade,
-      cidade: input.cidade,
-      uf: input.uf.toUpperCase(),
-      raio_km: input.raio_km,
-      prazo_desejado: input.prazo_desejado || null,
-      observacoes: input.observacoes || null,
-      preco_referencia_mercado: input.preco_referencia_mercado ?? null,
-      cor: input.cor?.trim() || null,
-      tamanho: input.tamanho?.trim() || null,
+      category_id: payload.category_id,
+      titulo: payload.titulo,
+      descricao: payload.descricao,
+      quantidade: payload.quantidade,
+      unidade: payload.unidade || 'un',
+      cidade: payload.cidade,
+      uf: payload.uf.toUpperCase(),
+      raio_km: payload.raio_km,
+      prazo_desejado: payload.prazo_desejado || null,
+      observacoes: payload.observacoes || null,
+      preco_referencia_mercado: payload.preco_referencia_mercado ?? null,
+      cor: payload.cor,
+      tamanho: payload.tamanho,
+      especificacoes: payload.especificacoes,
       status: 'RASCUNHO',
     })
     .select()
@@ -75,8 +83,18 @@ export async function updateDemand(id: string, input: Partial<DemandInput>): Pro
   if (input.preco_referencia_mercado !== undefined) {
     payload.preco_referencia_mercado = input.preco_referencia_mercado ?? null
   }
-  if (input.cor !== undefined) payload.cor = input.cor?.trim() || null
-  if (input.tamanho !== undefined) payload.tamanho = input.tamanho?.trim() || null
+  if (
+    input.especificacoes !== undefined ||
+    input.cor !== undefined ||
+    input.tamanho !== undefined
+  ) {
+    const synced = syncDemandQuantidadeFromSpecifications(input)
+    const variantFields = demandSpecificationsToLegacyFields(synced.especificacoes ?? [])
+    payload.quantidade = variantFields.quantidade
+    payload.cor = variantFields.cor
+    payload.tamanho = variantFields.tamanho
+    payload.especificacoes = variantFields.especificacoes
+  }
 
   const { data, error } = await supabase.from('demands').update(payload).eq('id', id).select().single()
   if (error) throw error

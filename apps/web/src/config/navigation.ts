@@ -19,7 +19,24 @@ import {
   Receipt,
   type LucideIcon,
 } from 'lucide-react'
-import type { UserRole } from '@keve/shared'
+import type { UserRole, SupplierStatus } from '@keve/shared'
+import { BILLING_PAGE_ENABLED } from '@/config/features'
+
+export const SUPPLIER_UNAPPROVED_ALLOWED_PATHS = ['/supplier/onboarding', '/support'] as const
+
+export function isSupplierPathAllowedWhenUnapproved(pathname: string): boolean {
+  return SUPPLIER_UNAPPROVED_ALLOWED_PATHS.some(
+    (path) => pathname === path || pathname.startsWith(`${path}/`),
+  )
+}
+
+export function isSupplierNavItemDisabled(
+  to: string,
+  supplierStatus: SupplierStatus | null | undefined,
+): boolean {
+  if (supplierStatus === 'aprovado') return false
+  return !(SUPPLIER_UNAPPROVED_ALLOWED_PATHS as readonly string[]).includes(to)
+}
 
 export type NavItem = {
   to: string
@@ -68,7 +85,9 @@ export const buyerNav: RoleNavConfig = {
       title: 'Conta',
       items: [
         { to: '/support', label: 'Suporte', icon: Headset },
-        { to: '/settings/billing', label: 'Plano', icon: CreditCard },
+        ...(BILLING_PAGE_ENABLED
+          ? [{ to: '/settings/billing', label: 'Plano', icon: CreditCard }]
+          : []),
         { to: '/settings/profile', label: 'Configurações', icon: Settings },
         { to: '/notifications', label: 'Notificações', icon: Bell },
       ],
@@ -103,7 +122,9 @@ export const supplierNav: RoleNavConfig = {
       items: [
         { to: '/supplier/auto-offers', label: 'Auto-proposta', icon: Zap },
         { to: '/support', label: 'Suporte', icon: Headset },
-        { to: '/settings/billing', label: 'Plano', icon: CreditCard },
+        ...(BILLING_PAGE_ENABLED
+          ? [{ to: '/settings/billing', label: 'Plano', icon: CreditCard }]
+          : []),
         { to: '/settings/profile', label: 'Configurações', icon: Settings },
         { to: '/notifications', label: 'Notificações', icon: Bell },
       ],

@@ -11,6 +11,15 @@ export type PendingSupplier = SupplierProfile & {
   companies: { cnpj: string; razao_social: string; nome_fantasia: string | null; cidade: string; uf: string } | null
 }
 
+export type SupplierApprovalDetails = {
+  profile: SupplierProfile & {
+    profiles: { full_name: string; email: string | null; phone: string | null } | null
+    companies: Tables<'companies'> | null
+  }
+  documents: Tables<'documents'>[]
+  categories: { id: string; name: string; slug: string }[]
+}
+
 export type AdminMetrics = {
   totalUsers: number
   totalBuyers: number
@@ -112,6 +121,45 @@ export async function fetchPendingSuppliers(): Promise<PendingSupplier[]> {
 
   if (error) throw error
   return (data ?? []) as PendingSupplier[]
+}
+
+export async function fetchSupplierApprovalDetails(userId: string): Promise<SupplierApprovalDetails> {
+  const [profileRes, documentsRes, categoriesRes] = await Promise.all([
+    supabase
+      .from('supplier_profiles')
+      .select(
+        `
+        *,
+        profiles (full_name, email, phone),
+        companies (*)
+      `,
+      )
+      .eq('user_id', userId)
+      .single(),
+    supabase.from('documents').select('*').eq('supplier_id', userId).order('created_at', { ascending: true }),
+    supabase
+      .from('supplier_categories')
+      .select('category_id, categories (id, name, slug)')
+      .eq('supplier_id', userId),
+  ])
+
+  if (profileRes.error) throw profileRes.error
+  if (documentsRes.error) throw documentsRes.error
+  if (categoriesRes.error) throw categoriesRes.error
+
+  const categories = (categoriesRes.data ?? [])
+    .map((row) => {
+      const category = row.categories as { id: string; name: string; slug: string } | null
+      return category
+    })
+    .filter((category): category is { id: string; name: string; slug: string } => category != null)
+    .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+
+  return {
+    profile: profileRes.data as SupplierApprovalDetails['profile'],
+    documents: (documentsRes.data ?? []) as Tables<'documents'>[],
+    categories,
+  }
 }
 
 export async function approveSupplier(userId: string): Promise<SupplierProfile> {

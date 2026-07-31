@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { Lock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { BILLING_PAGE_ENABLED } from '@/config/features'
 
 type Props = {
   open: boolean
@@ -31,10 +32,12 @@ export function PaywallModal({ open, onClose, title, description, quotaType = 'd
           <CardDescription>{description ?? MESSAGES[quotaType]}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-2">
-          <Button asChild>
-            <Link to="/settings/billing">Ver planos e fazer upgrade</Link>
-          </Button>
-          <Button variant="outline" onClick={onClose}>
+          {BILLING_PAGE_ENABLED && (
+            <Button asChild>
+              <Link to="/settings/billing">Ver planos e fazer upgrade</Link>
+            </Button>
+          )}
+          <Button variant={BILLING_PAGE_ENABLED ? 'outline' : 'default'} onClick={onClose}>
             Fechar
           </Button>
         </CardContent>

@@ -1,8 +1,7 @@
-import { useEffect, useState, type DragEvent } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { FileText, Upload, X } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   demandSchema,
@@ -31,15 +30,16 @@ import {
 } from '@/hooks/use-demands'
 import { translateSupabaseError, formatSupabaseError, isQuotaExceededError } from '@/lib/errors'
 import { cn } from '@/lib/utils'
+import { AutocompleteSelect } from '@/components/ui/searchable-select'
 import { ScrollPageShell, SCROLL_PAGE_SECTION_CLASS } from '@/components/layout/ScrollPageShell'
 import {
-  ATTACHMENT_ACCEPT,
-  MAX_ATTACHMENTS,
   NATIVE_FIELD_CLASS,
 } from '@/pages/buyer/new-demand/constants'
 import { DemandFormActions } from '@/pages/buyer/new-demand/DemandFormActions'
 import { EligibleSuppliersPanel } from '@/pages/buyer/new-demand/EligibleSuppliersPanel'
 import { getEligibleSuppliers } from '@/pages/buyer/new-demand/utils'
+import { demandSpecificationsFromRecord, syncDemandQuantidadeFromSpecifications } from '@/lib/demand-specifications'
+import { formatDateTimeLocalInput, parseDateTimeLocalInput } from '@/lib/datetime'
 
 export function NewDemandPage() {
   usePageTitle()
@@ -84,8 +84,6 @@ export function NewDemandPage() {
   const [formError, setFormError] = useState<string | null>(null)
   const [displayAddress, setDisplayAddress] = useState<Partial<BuyerAddress> | null>(null)
   const [isSearchingSuppliers, setIsSearchingSuppliers] = useState(false)
-  const [attachments, setAttachments] = useState<File[]>([])
-  const [isDragOver, setIsDragOver] = useState(false)
 
   const form = useForm<DemandInput>({
     resolver: zodResolver(demandSchema),
@@ -93,21 +91,23 @@ export function NewDemandPage() {
       titulo: '',
       descricao: '',
       category_id: '',
-      quantidade: 1,
       unidade: 'un',
       cidade: '',
       uf: '',
       raio_km: 50,
       prazo_desejado: '',
       observacoes: '',
-      cor: '',
-      tamanho: '',
+      especificacoes: [],
     },
   })
 
   const selectedCategoryId = form.watch('category_id')
   const watchedCity = form.watch('cidade')
   const watchedUf = form.watch('uf')
+  const categoryOptions = useMemo(
+    () => (categories ?? []).map((category) => ({ value: category.id, label: category.name })),
+    [categories],
+  )
   const selectedCategory = categories?.find((c) => c.id === selectedCategoryId)
   const eligible = getEligibleSuppliers(selectedCategory?.slug)
   const savedAddress = displayAddress ?? buyerAddress
@@ -153,7 +153,6 @@ export function NewDemandPage() {
       titulo: existingDemand.titulo,
       descricao: existingDemand.descricao,
       category_id: existingDemand.category_id,
-      quantidade: existingDemand.quantidade,
       unidade: existingDemand.unidade,
       cidade: existingDemand.cidade,
       uf: existingDemand.uf,
@@ -161,8 +160,7 @@ export function NewDemandPage() {
       prazo_desejado: existingDemand.prazo_desejado ?? '',
       observacoes: existingDemand.observacoes ?? '',
       preco_referencia_mercado: existingDemand.preco_referencia_mercado ?? undefined,
-      cor: existingDemand.cor ?? '',
-      tamanho: existingDemand.tamanho ?? '',
+      especificacoes: demandSpecificationsFromRecord(existingDemand),
     })
   }, [existingDemand, form])
 
@@ -178,13 +176,14 @@ export function NewDemandPage() {
 
   async function saveDraft(values: DemandInput) {
     setFormError(null)
+    const payload = syncDemandQuantidadeFromSpecifications(values)
     try {
       if (isEditing && editId) {
-        await updateDemand.mutateAsync({ id: editId, input: values })
+        await updateDemand.mutateAsync({ id: editId, input: payload })
         toast.success('Demanda atualizada')
         return editId
       }
-      const created = await createDemand.mutateAsync(values)
+      const created = await createDemand.mutateAsync(payload)
       toast.success('Rascunho salvo')
       return created.id
     } catch (err) {
@@ -213,25 +212,6 @@ export function NewDemandPage() {
       toast.error(translateSupabaseError(err instanceof Error ? err.message : 'Erro ao salvar endereço'))
       throw err
     }
-  }
-
-  function addAttachmentFiles(files: FileList | File[]) {
-    const incoming = Array.from(files)
-    if (incoming.length === 0) return
-    setAttachments((prev) => {
-      const merged = [...prev, ...incoming]
-      if (merged.length > MAX_ATTACHMENTS) {
-        toast.error(`Máximo de ${MAX_ATTACHMENTS} anexos`)
-        return merged.slice(0, MAX_ATTACHMENTS)
-      }
-      return merged
-    })
-  }
-
-  function handleAttachmentDrop(e: DragEvent<HTMLDivElement>) {
-    e.preventDefault()
-    setIsDragOver(false)
-    addAttachmentFiles(e.dataTransfer.files)
   }
 
   async function handlePublish() {
@@ -314,15 +294,15 @@ export function NewDemandPage() {
                   <Alert className="border-destructive/50 text-destructive">{formError}</Alert>
                 )}
 
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   <FormField
                     control={form.control}
                     name="titulo"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Título da demanda</FormLabel>
+                        <FormLabel>Título</FormLabel>
                         <FormControl>
-                          <Input placeholder="Ex.: Parafusos inox M8" {...field} />
+                          <Input placeholder="Ex.: Camisa adulto" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -335,18 +315,34 @@ export function NewDemandPage() {
                       <FormItem>
                         <FormLabel>Categoria</FormLabel>
                         <FormControl>
-                          <select
-                            className={cn(NATIVE_FIELD_CLASS, 'h-10')}
+                          <AutocompleteSelect
+                            value={field.value}
+                            onValueChange={field.onChange}
+                            options={categoryOptions}
+                            placeholder="Digite para buscar categoria..."
+                            emptyMessage="Nenhuma categoria encontrada"
                             disabled={loadingCategories}
-                            {...field}
-                          >
-                            <option value="">Selecione uma categoria</option>
-                            {(categories ?? []).map((cat) => (
-                              <option key={cat.id} value={cat.id}>
-                                {cat.name}
-                              </option>
-                            ))}
-                          </select>
+                            loading={loadingCategories}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="prazo_desejado"
+                    render={({ field }) => (
+                      <FormItem className="sm:col-span-2 lg:col-span-1">
+                        <FormLabel>Prazo desejado</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="datetime-local"
+                            value={formatDateTimeLocalInput(field.value)}
+                            onChange={(event) =>
+                              field.onChange(parseDateTimeLocalInput(event.target.value))
+                            }
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -354,171 +350,30 @@ export function NewDemandPage() {
                   />
                 </div>
 
-                <div className="flex flex-col gap-6">
-                  <div className="contents lg:grid lg:grid-cols-2 lg:items-stretch lg:gap-4">
-                    <FormField
-                      control={form.control}
-                      name="descricao"
-                      render={({ field }) => (
-                        <FormItem className="order-1 flex h-full flex-col">
-                          <FormLabel>Descrição da demanda</FormLabel>
-                          <FormControl>
-                            <textarea
-                              className={cn(NATIVE_FIELD_CLASS, 'min-h-[100px] flex-1 py-2 lg:min-h-[120px]')}
-                              placeholder="Descreva o produto, quantidade, certificações e demais requisitos..."
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <div className="order-4 flex h-full flex-col gap-3 lg:order-none">
-                      <FormLabel>Anexos</FormLabel>
-                      <div
-                        role="button"
-                        tabIndex={0}
-                        className={cn(
-                          'flex min-h-[100px] flex-1 cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-border bg-muted/20 px-3 py-2 text-center transition-colors lg:min-h-[120px]',
-                          isDragOver && 'border-primary bg-primary/5',
-                        )}
-                        onDragEnter={(e) => {
-                          e.preventDefault()
-                          setIsDragOver(true)
-                        }}
-                        onDragOver={(e) => {
-                          e.preventDefault()
-                          setIsDragOver(true)
-                        }}
-                        onDragLeave={(e) => {
-                          e.preventDefault()
-                          if (e.currentTarget === e.target) setIsDragOver(false)
-                        }}
-                        onDrop={handleAttachmentDrop}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault()
-                            document.getElementById('demand-attachments-input')?.click()
-                          }
-                        }}
-                        onClick={() => document.getElementById('demand-attachments-input')?.click()}
-                      >
-                        <Upload className="h-6 w-6 text-muted-foreground" />
-                        <p className="text-sm font-medium leading-tight text-foreground">
-                          Arraste documentos aqui ou clique para selecionar
-                        </p>
-                        <p className="text-xs leading-tight text-muted-foreground">
-                          PDF, imagens ou planilhas — até {MAX_ATTACHMENTS} arquivos
-                        </p>
-                        <input
-                          id="demand-attachments-input"
-                          type="file"
-                          multiple
-                          accept={ATTACHMENT_ACCEPT}
-                          className="sr-only"
-                          onChange={(e) => {
-                            if (e.target.files) addAttachmentFiles(e.target.files)
-                            e.target.value = ''
-                          }}
+                <FormField
+                  control={form.control}
+                  name="descricao"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Descrição</FormLabel>
+                      <FormControl>
+                        <textarea
+                          className={cn(NATIVE_FIELD_CLASS, 'min-h-[100px] py-2')}
+                          placeholder="Descreva o produto, quantidade, certificações e demais requisitos..."
+                          {...field}
                         />
-                      </div>
-                      {attachments.length > 0 && (
-                        <ul className="flex flex-wrap gap-3">
-                          {attachments.map((file, index) => (
-                            <li
-                              key={`${file.name}-${file.size}-${index}`}
-                              className="inline-flex items-center gap-2 rounded-xl border border-border bg-muted/40 px-3.5 py-2 text-sm"
-                            >
-                              <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-                              <span className="max-w-[200px] truncate">{file.name}</span>
-                              <button
-                                type="button"
-                                className="rounded-md p-0.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
-                                aria-label={`Remover ${file.name}`}
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  setAttachments((prev) => prev.filter((_, i) => i !== index))
-                                }}
-                              >
-                                <X className="h-4 w-4" />
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                  </div>
-
-                <div className="order-2 grid gap-4 sm:grid-cols-3 lg:order-none">
-                  <div className="space-y-2">
-                    <FormLabel>Quantidade</FormLabel>
-                    <div className="flex gap-2">
-                      <FormField
-                        control={form.control}
-                        name="quantidade"
-                        render={({ field }) => (
-                          <FormItem className="w-2/3">
-                            <FormControl>
-                              <Input type="number" min={1} {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="unidade"
-                        render={({ field }) => (
-                          <FormItem className="w-1/3">
-                            <FormControl>
-                              <Input placeholder="UN" {...field} className="uppercase" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4 sm:contents">
-                    <FormField
-                      control={form.control}
-                      name="prazo_desejado"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Prazo desejado</FormLabel>
-                          <FormControl>
-                            <Input type="date" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="raio_km"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Raio de busca (km)</FormLabel>
-                          <FormControl>
-                            <Input type="number" min={1} max={500} {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
                 <DemandVariantFields
-                  control={form.control}
-                  corName="cor"
-                  tamanhoName="tamanho"
                   optionSource={productVariantSource}
                   nativeFieldClass={NATIVE_FIELD_CLASS}
                 />
 
-                <div className="order-3 lg:order-none">
+                <div>
                 {loadingBuyerAddress ? (
                   <LoadingSkeleton className="h-40 w-full rounded-xl" />
                 ) : (
@@ -543,8 +398,6 @@ export function NewDemandPage() {
                     }}
                   />
                 )}
-                </div>
-
                 </div>
               </div>
             </section>

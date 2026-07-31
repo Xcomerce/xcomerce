@@ -15,6 +15,7 @@ const EMAIL_TEMPLATE_BY_TYPE: Record<string, EmailTemplate> = {
   'sla.expired': 'sla_expired',
   'supplier.approved': 'supplier_approved',
   'supplier.rejected': 'supplier_rejected',
+  'admin.supplier_pending': 'admin_supplier_pending',
   'subscription.activated': 'subscription_activated',
   'subscription.past_due': 'subscription_past_due',
 }

@@ -190,6 +190,7 @@ export type Database = {
           preco_referencia_mercado: number | null
           cor: string | null
           tamanho: string | null
+          especificacoes: Array<{ cor?: string | null; tamanho?: string | null; quantidade?: number | null }>
           published_at: string | null
           expires_at: string | null
           created_at: string
