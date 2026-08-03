@@ -12,7 +12,7 @@ max_rows = 1000
 [db]
 port = 54322
 shadow_port = 54320
-major_version = 15
+major_version = 17
 
 [db.migrations]
 enabled = true
@@ -49,4 +49,13 @@ enable_confirmations = false
 enabled = true
 
 [functions.lookup-cnpj]
+verify_jwt = false
+
+[functions.crm-email-automations]
+verify_jwt = false
+
+[functions.asaas-webhook]
+verify_jwt = false
+
+[functions.check-sla-deadlines]
 verify_jwt = false

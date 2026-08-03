@@ -9,14 +9,41 @@ import {
   renderEmail,
   type EmailTemplate,
 } from './templates.ts'
+import {
+  createBrevoStub,
+  createHostingerAdapter,
+  createResendAdapter,
+  renderTemplateString,
+  sanitizeHtml,
+  type EmailProviderAdapter,
+} from './providers.ts'
 
 interface SendEmailBody {
   to: string
-  template: EmailTemplate
+  template: string
   locale?: string
   data: Record<string, unknown>
   idempotency_key?: string
   user_id?: string
+  lead_id?: string
+  provider_slug?: string
+}
+
+function pickAdapter(
+  slug: string,
+  config: Record<string, unknown>,
+): EmailProviderAdapter {
+  if (slug === 'hostinger_smtp') {
+    return createHostingerAdapter({
+      host: String(config.host ?? 'smtp.hostinger.com'),
+      port: Number(config.port ?? 465),
+      from_email: config.from_email ? String(config.from_email) : undefined,
+      from_name: config.from_name ? String(config.from_name) : undefined,
+    })
+  }
+  if (slug === 'resend') return createResendAdapter()
+  if (slug === 'brevo') return createBrevoStub()
+  throw new Error(`Provider desconhecido: ${slug}`)
 }
 
 Deno.serve(async (req) => {
@@ -38,13 +65,10 @@ Deno.serve(async (req) => {
     return error('INVALID_PAYLOAD', 'JSON inválido.', 400)
   }
 
-  const { to, template, data, locale = 'pt-BR', idempotency_key, user_id } = body
+  const { to, template, data, locale = 'pt-BR', idempotency_key, user_id, lead_id, provider_slug } =
+    body
   if (!to || !template || !data) {
     return error('INVALID_PAYLOAD', 'Campos to, template e data são obrigatórios.', 400)
-  }
-
-  if (!EMAIL_TEMPLATES.includes(template)) {
-    return error('INVALID_TEMPLATE', `Template "${template}" não suportado.`, 400)
   }
 
   const supabase = createServiceClient()
@@ -59,7 +83,7 @@ Deno.serve(async (req) => {
     }
   }
 
-  const notifType = notificationTypeForTemplate(template)
+  const notifType = notificationTypeForTemplate(template as EmailTemplate)
   if (notifType) {
     let targetUserId = user_id
     if (!targetUserId) {
@@ -87,39 +111,85 @@ Deno.serve(async (req) => {
     }
   }
 
-  const resendKey = Deno.env.get('RESEND_API_KEY')
-  const from = Deno.env.get('EMAIL_FROM') ?? 'noreply@keve.com.br'
-  if (!resendKey) {
-    return error('CONFIG_ERROR', 'RESEND_API_KEY não configurada.', 500)
+  let subject: string
+  let html: string
+
+  const { data: dbTpl } = await supabase
+    .from('email_templates')
+    .select('subject, html_body, is_active')
+    .eq('key', template)
+    .maybeSingle()
+
+  if (dbTpl?.is_active) {
+    subject = renderTemplateString(dbTpl.subject, data)
+    html = sanitizeHtml(renderTemplateString(dbTpl.html_body, data))
+  } else if (EMAIL_TEMPLATES.includes(template as EmailTemplate)) {
+    const rendered = renderEmail(template as EmailTemplate, data, locale)
+    subject = rendered.subject
+    html = sanitizeHtml(rendered.html)
+  } else {
+    return error('INVALID_TEMPLATE', `Template "${template}" não suportado.`, 400)
   }
 
-  const { subject, html } = renderEmail(template, data, locale)
+  const { data: providers } = await supabase
+    .from('email_providers')
+    .select('slug, config, is_default, is_enabled, status')
+    .order('is_default', { ascending: false })
 
-  const resendRes = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${resendKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ from, to: [to], subject, html }),
-  })
+  const chosen =
+    (provider_slug && providers?.find((p) => p.slug === provider_slug)) ||
+    providers?.find((p) => p.is_default && p.is_enabled && p.status === 'active') ||
+    providers?.find((p) => p.is_enabled && p.status === 'active')
 
-  if (!resendRes.ok) {
-    const errText = await resendRes.text()
-    console.error('Resend error:', errText)
-    return error('EMAIL_SEND_FAILED', 'Falha ao enviar e-mail.', 500, { status: resendRes.status })
+  if (!chosen) {
+    return error('CONFIG_ERROR', 'Nenhum provider de e-mail ativo.', 500)
   }
 
-  const resendData = await resendRes.json()
-  const result = {
-    sent: true,
-    message_id: resendData.id as string,
-    template,
-  }
+  const fromFallback = Deno.env.get('EMAIL_FROM') ?? 'noreply@xcomerce.com.br'
+  const config = (chosen.config ?? {}) as Record<string, unknown>
+  const adapter = pickAdapter(chosen.slug, config)
 
-  if (idempotency_key) {
-    await markIdempotency(supabase, idempotency_key, 'send-email', result, 168)
-  }
+  try {
+    const resultSend = await adapter.send({
+      from: String(config.from_email ?? fromFallback),
+      fromName: config.from_name ? String(config.from_name) : 'XCOMERCE',
+      to,
+      subject,
+      html,
+    })
 
-  return json(result)
+    await supabase.from('email_sends').insert({
+      template_key: template,
+      to_email: to,
+      lead_id: lead_id ?? null,
+      user_id: user_id ?? null,
+      provider_slug: chosen.slug,
+      status: 'sent',
+      provider_message_id: resultSend.messageId,
+    })
+
+    const result = {
+      sent: true,
+      message_id: resultSend.messageId,
+      template,
+      provider: chosen.slug,
+    }
+    if (idempotency_key) {
+      await markIdempotency(supabase, idempotency_key, 'send-email', result, 168)
+    }
+    return json(result)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.error('send-email error:', message)
+    await supabase.from('email_sends').insert({
+      template_key: template,
+      to_email: to,
+      lead_id: lead_id ?? null,
+      user_id: user_id ?? null,
+      provider_slug: chosen.slug,
+      status: 'failed',
+      error: message.slice(0, 2000),
+    })
+    return error('EMAIL_SEND_FAILED', 'Falha ao enviar e-mail.', 500, { detail: message })
+  }
 })

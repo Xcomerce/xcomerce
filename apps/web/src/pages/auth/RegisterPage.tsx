@@ -1,4 +1,5 @@
-import { Link, useNavigate } from 'react-router-dom'
+import { useEffect } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { registerSchema, type RegisterInput } from '@keve/shared'
@@ -9,6 +10,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { useAuth } from '@/contexts/auth-context'
 import { translateAuthError } from '@/lib/utils'
+import { consumeLeadInvite, getInviteLead } from '@/services/crm'
+import { supabase } from '@/lib/supabase'
 
 type RegisterPageProps = {
   role: 'buyer' | 'supplier'
@@ -16,6 +19,8 @@ type RegisterPageProps = {
 
 export function RegisterPage({ role }: RegisterPageProps) {
   const navigate = useNavigate()
+  const [params] = useSearchParams()
+  const inviteToken = params.get('invite')
   const { signUp } = useAuth()
   const form = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema),
@@ -29,9 +34,41 @@ export function RegisterPage({ role }: RegisterPageProps) {
     },
   })
 
+  useEffect(() => {
+    if (!inviteToken) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const lead = await getInviteLead(inviteToken)
+        if (cancelled || !lead) return
+        form.setValue('fullName', lead.name)
+        form.setValue('email', lead.email)
+        if (lead.phone) form.setValue('phone', lead.phone)
+        toast.message('Convite válido — complete o cadastro')
+      } catch (err) {
+        if (!cancelled) {
+          toast.error(err instanceof Error ? err.message : 'Convite inválido')
+        }
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [inviteToken, form])
+
   async function onSubmit(values: RegisterInput) {
     try {
       await signUp(values, role)
+      if (inviteToken) {
+        const { data: auth } = await supabase.auth.getUser()
+        if (auth.user) {
+          try {
+            await consumeLeadInvite(inviteToken, auth.user.id)
+          } catch {
+            /* cadastro ok mesmo se conversão falhar */
+          }
+        }
+      }
       toast.success('Conta criada com sucesso')
       navigate(role === 'buyer' ? '/buyer/dashboard' : '/supplier/onboarding')
     } catch (err) {
