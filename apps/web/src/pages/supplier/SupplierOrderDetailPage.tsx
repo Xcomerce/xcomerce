@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
+import { Printer } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -17,7 +20,8 @@ import { useOfferDetail } from '@/hooks/use-offers'
 import { useCategories } from '@/hooks/use-categories'
 import type { OrderStatus } from '@/services/orders'
 import { translateSupabaseError } from '@/lib/errors'
-import { ORDER_STATUS_LABELS } from '@keve/shared'
+import { ORDER_STATUS_LABELS, canSupplierConfirmPayment } from '@keve/shared'
+import { printOrderDocument } from '@/lib/order-print'
 import { cn } from '@/lib/utils'
 
 function formatCurrency(value: number): string {
@@ -32,10 +36,9 @@ function formatOrderDate(value: string | null | undefined): string {
 const SUPPLIER_ACTIONS: Partial<
   Record<OrderStatus, { next: OrderStatus; label: string }[]>
 > = {
-  PROPOSTA_ACEITA: [
-    { next: 'AGUARDANDO_CONFIRMACAO_EXTERNA', label: 'Aguardar confirmação externa' },
-  ],
-  PAGAMENTO_INFORMADO: [{ next: 'ENVIO_INFORMADO', label: 'Informar envio' }],
+  COMPROVANTE_ENVIADO: [{ next: 'PAGAMENTO_CONFIRMADO', label: 'Confirmar pagamento' }],
+  PAGAMENTO_INFORMADO: [{ next: 'PAGAMENTO_CONFIRMADO', label: 'Confirmar pagamento' }],
+  PAGAMENTO_CONFIRMADO: [{ next: 'ENVIO_INFORMADO', label: 'Informar envio' }],
   ENTREGUE: [{ next: 'CONCLUIDO', label: 'Confirmar conclusão' }],
 }
 
@@ -50,6 +53,19 @@ export function SupplierOrderDetailPage() {
   const { data: offer } = useOfferDetail(order?.offer_id)
   const { data: categories = [] } = useCategories()
   const updateStatus = useUpdateOrderStatus()
+  const { data: buyerProfile } = useQuery({
+    queryKey: ['order-buyer-profile', order?.buyer_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('full_name, phone, email')
+        .eq('id', order!.buyer_id)
+        .maybeSingle()
+      if (error) throw error
+      return data
+    },
+    enabled: !!order?.buyer_id,
+  })
 
   async function handleStatus(next: OrderStatus) {
     if (!id) return
@@ -103,7 +119,7 @@ export function SupplierOrderDetailPage() {
 
   const actions = SUPPLIER_ACTIONS[order.status] ?? []
   const canCancel = order.status !== 'CANCELADO' && order.status !== 'CONCLUIDO'
-  const showFooter = actions.length > 0 || canCancel
+  const showFooter = true
   const categoryName = categories.find((c) => c.id === demand?.category_id)?.name
   const orderCreatedAt = (order as { created_at?: string }).created_at
 
@@ -233,6 +249,21 @@ export function SupplierOrderDetailPage() {
           )}
 
           <div className="flex flex-col gap-2 px-4 py-3 pb-safe-bottom lg:flex-row lg:items-center lg:justify-end lg:gap-3 lg:px-6">
+            <Button
+              variant="outline"
+              className="w-full rounded-xl font-semibold lg:w-auto"
+              onClick={() =>
+                printOrderDocument({
+                  order,
+                  demand,
+                  offer,
+                  buyer: buyerProfile,
+                })
+              }
+            >
+              <Printer className="mr-2 h-4 w-4" />
+              Imprimir pedido
+            </Button>
             {actions.map((action) => (
               <Button
                 key={action.next}

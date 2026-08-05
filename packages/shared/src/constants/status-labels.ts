@@ -18,8 +18,10 @@ export const OFFER_STATUS_LABELS: Record<string, string> = {
 
 export const ORDER_STATUS_LABELS: Record<string, string> = {
   PROPOSTA_ACEITA: 'Proposta aceita',
-  AGUARDANDO_CONFIRMACAO_EXTERNA: 'Aguardando confirmação',
-  PAGAMENTO_INFORMADO: 'Pagamento informado',
+  AGUARDANDO_CONFIRMACAO_EXTERNA: 'Aguardando pagamento',
+  COMPROVANTE_ENVIADO: 'Comprovante enviado',
+  PAGAMENTO_CONFIRMADO: 'Pagamento confirmado',
+  PAGAMENTO_INFORMADO: 'Comprovante enviado',
   ENVIO_INFORMADO: 'Envio informado',
   ENTREGUE: 'Entregue',
   CONCLUIDO: 'Concluído',

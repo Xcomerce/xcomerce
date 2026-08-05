@@ -92,7 +92,17 @@ Deno.serve(async (req) => {
   let grouped = false
   let groupCount = 1
 
-  if (channels.includes('in_app')) {
+  const { data: channelPrefs } = await supabase
+    .from('notification_preferences')
+    .select('email_enabled, in_app_enabled')
+    .eq('user_id', user_id)
+    .eq('notification_type', type)
+    .maybeSingle()
+
+  const inAppEnabled = channelPrefs?.in_app_enabled !== false
+  const emailEnabled = channelPrefs?.email_enabled !== false
+
+  if (channels.includes('in_app') && inAppEnabled) {
     if (group_key) {
       const { data: existingGroup } = await supabase
         .from('notifications')
@@ -146,48 +156,37 @@ Deno.serve(async (req) => {
     }
   }
 
-  if (channels.includes('email') && !grouped) {
-    const { data: pref } = await supabase
-      .from('notification_preferences')
-      .select('email_enabled')
-      .eq('user_id', user_id)
-      .eq('notification_type', type)
-      .maybeSingle()
+  if (channels.includes('email') && !grouped && emailEnabled) {
+    const template = EMAIL_TEMPLATE_BY_TYPE[type]
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('email, full_name')
+      .eq('id', user_id)
+      .single()
 
-    const emailEnabled = pref?.email_enabled !== false
+    if (template && profile?.email) {
+      const appUrl = Deno.env.get('APP_URL') ?? 'https://app.keve.com.br'
+      const emailPayload = {
+        to: profile.email,
+        template,
+        locale: 'pt-BR',
+        user_id,
+        data: {
+          action_url: (data.route as string) ? `${appUrl}${data.route}` : appUrl,
+          ...email_data,
+        },
+        idempotency_key: idempotency_key ? `email-${idempotency_key}` : undefined,
+      }
 
-    if (emailEnabled) {
-      const template = EMAIL_TEMPLATE_BY_TYPE[type]
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('email, full_name')
-        .eq('id', user_id)
-        .single()
-
-      if (template && profile?.email) {
-        const appUrl = Deno.env.get('APP_URL') ?? 'https://app.keve.com.br'
-        const emailPayload = {
-          to: profile.email,
-          template,
-          locale: 'pt-BR',
-          user_id,
-          data: {
-            action_url: (data.route as string) ? `${appUrl}${data.route}` : appUrl,
-            ...email_data,
-          },
-          idempotency_key: idempotency_key ? `email-${idempotency_key}` : undefined,
-        }
-
-        const emailRes = await invokeSendEmail(emailPayload)
-        if (emailRes.ok) {
-          const emailResult = await emailRes.json()
-          channelsSent.email = emailResult.sent === true
-        }
+      const emailRes = await invokeSendEmail(emailPayload)
+      if (emailRes.ok) {
+        const emailResult = await emailRes.json()
+        channelsSent.email = emailResult.sent === true
       }
     }
   }
 
-  if (!notificationId) {
+  if (!notificationId && !channelsSent.email) {
     return error('NO_CHANNEL_DELIVERED', 'Nenhum canal in-app processado.', 422)
   }
 

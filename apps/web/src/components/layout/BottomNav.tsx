@@ -1,6 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import type { RoleNavConfig } from '@/config/navigation'
-import { isSupplierNavItemDisabled } from '@/config/navigation'
+import { isSupplierNavItemDisabled, supplierNeedsRegistrationAttention } from '@/config/navigation'
 import { useAuth } from '@/contexts/auth-context'
 import { cn } from '@/lib/utils'
 
@@ -16,6 +16,9 @@ export function BottomNav({
   const { left, right, fab } = config.bottomNav
   const isSupplierPending = activeRole === 'supplier' && supplierStatus !== 'aprovado'
   const fabDisabled = isSupplierPending && isSupplierNavItemDisabled(fab.to, supplierStatus)
+
+  const showRegistrationBadge =
+    isSupplierPending && supplierNeedsRegistrationAttention(supplierStatus)
 
   if (hiddenOnMobile) return null
 
@@ -61,6 +64,9 @@ export function BottomNav({
             key={item.to}
             {...item}
             disabled={isSupplierPending && isSupplierNavItemDisabled(item.to, supplierStatus)}
+            hasNotification={
+              item.to === '/settings/profile' ? showRegistrationBadge : item.hasNotification
+            }
           />
         ))}
       </div>

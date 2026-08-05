@@ -12,7 +12,7 @@ import {
   SessionsSettings,
   TermsSettings,
 } from '@/components/settings/SettingsSections'
-import { buyerNotificationItems } from '@/config/settings'
+import { supplierNotificationItems } from '@/config/settings'
 import { useAuth } from '@/contexts/auth-context'
 import { getSectionMeta, type SettingsSection } from '@/config/settings'
 import type { UserProfile } from '@/services/profile'
@@ -58,7 +58,7 @@ export default function SettingsSectionScreen() {
       case 'sessions':
         return <SessionsSettings />
       case 'notifications':
-        return <NotificationPreferencesSettings items={buyerNotificationItems} />
+        return <NotificationPreferencesSettings items={supplierNotificationItems} />
       case 'appearance':
         return <AppearanceSettings />
       case 'integrations':

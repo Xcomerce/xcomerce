@@ -301,7 +301,7 @@ export type Database = {
           offer_id: string
           buyer_id: string
           supplier_id: string
-          status: 'PROPOSTA_ACEITA' | 'AGUARDANDO_CONFIRMACAO_EXTERNA' | 'PAGAMENTO_INFORMADO' | 'ENVIO_INFORMADO' | 'ENTREGUE' | 'CONCLUIDO' | 'CANCELADO' | 'EXPIRADO'
+          status: 'PROPOSTA_ACEITA' | 'AGUARDANDO_CONFIRMACAO_EXTERNA' | 'COMPROVANTE_ENVIADO' | 'PAGAMENTO_CONFIRMADO' | 'PAGAMENTO_INFORMADO' | 'ENVIO_INFORMADO' | 'ENTREGUE' | 'CONCLUIDO' | 'CANCELADO' | 'EXPIRADO'
           cancel_reason: string | null
           completed_at: string | null
         }

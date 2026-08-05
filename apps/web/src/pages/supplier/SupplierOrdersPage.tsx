@@ -1,46 +1,70 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ChevronRight, Package } from 'lucide-react'
+import { ChevronRight, Package, Phone, Printer, User } from 'lucide-react'
+import { toast } from 'sonner'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/common/EmptyState'
 import { GridSkeleton } from '@/components/common/LoadingSkeleton'
 import { StatusBadge } from '@/components/common/StatusBadge'
-import { useOrders } from '@/hooks/use-orders'
-import { cn } from '@/lib/utils'
+import { useOrders, useUpdateOrderStatus } from '@/hooks/use-orders'
+import {
+  ORDER_ACCEPTED_STATUSES,
+  ORDER_COMPLETED_STATUSES,
+  ORDER_PRODUCTION_STATUSES,
+  ORDER_STATUS_LABELS,
+  canSupplierConfirmPayment,
+} from '@keve/shared'
+import type { SupplierOrderListItem } from '@/services/orders'
+import { printOrderDocument } from '@/lib/order-print'
+import { translateSupabaseError } from '@/lib/errors'
+import { cn, formatPhone } from '@/lib/utils'
+
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
+}
 
 export function SupplierOrdersPage() {
   const { data: orders = [], isLoading, isError } = useOrders('supplier')
+  const updateStatus = useUpdateOrderStatus()
   const [activeTab, setActiveTab] = useState<'all' | 'accepted' | 'production' | 'completed'>('all')
 
-  const acceptedStatuses = ['PROPOSTA_ACEITA', 'AGUARDANDO_CONFIRMACAO_EXTERNA']
-  const productionStatuses = ['PAGAMENTO_INFORMADO', 'ENVIO_INFORMADO', 'ENTREGUE']
-  const completedStatuses = ['CONCLUIDO', 'CANCELADO', 'EXPIRADO']
+  const supplierOrders = orders as SupplierOrderListItem[]
 
-  const filteredOrders = orders.filter((order) => {
-    if (activeTab === 'accepted') {
-      return acceptedStatuses.includes(order.status)
-    }
-    if (activeTab === 'production') {
-      return productionStatuses.includes(order.status)
-    }
-    if (activeTab === 'completed') {
-      return completedStatuses.includes(order.status)
-    }
+  const filteredOrders = supplierOrders.filter((order) => {
+    if (activeTab === 'accepted') return ORDER_ACCEPTED_STATUSES.includes(order.status)
+    if (activeTab === 'production') return ORDER_PRODUCTION_STATUSES.includes(order.status)
+    if (activeTab === 'completed') return ORDER_COMPLETED_STATUSES.includes(order.status)
     return true
   })
 
+  async function handleConfirmPayment(order: SupplierOrderListItem) {
+    try {
+      await updateStatus.mutateAsync({ id: order.id, status: 'PAGAMENTO_CONFIRMADO' })
+      toast.success('Pagamento confirmado')
+    } catch (err) {
+      toast.error(translateSupabaseError(err instanceof Error ? err.message : 'Erro ao confirmar'))
+    }
+  }
+
+  function handlePrint(order: SupplierOrderListItem) {
+    printOrderDocument({
+      order,
+      demand: order.demand,
+      offer: order.offer,
+      buyer: order.buyer,
+    })
+  }
+
   return (
     <div className="space-y-6">
-
-
       {isLoading && <GridSkeleton count={3} />}
 
       {isError && (
         <p className="text-sm text-destructive">Não foi possível carregar os pedidos.</p>
       )}
 
-      {!isLoading && !isError && orders.length === 0 ? (
+      {!isLoading && !isError && supplierOrders.length === 0 ? (
         <EmptyState
           icon={Package}
           title="Nenhum pedido"
@@ -48,141 +72,86 @@ export function SupplierOrdersPage() {
         />
       ) : !isLoading && !isError && (
         <div className="space-y-5">
-          <div className="sticky top-14 z-20 -mx-4 bg-background/95 pt-3 backdrop-blur-sm md:static md:mx-0 md:bg-transparent md:pt-0 md:backdrop-blur-none">
-            <div className="flex min-w-0 w-full gap-2 overflow-x-auto scroll-smooth border-b border-border/60 px-4 pt-1.5 pb-3 scroll-px-4 no-scrollbar md:flex-wrap md:overflow-visible md:border-b-0 md:px-0 md:pt-0 md:pb-0 md:scroll-px-0">
-            <button
-              onClick={() => setActiveTab('all')}
-              className={cn(
-                "shrink-0 px-4 h-9 flex items-center justify-center text-sm font-semibold rounded-full transition-all whitespace-nowrap border",
-                activeTab === 'all'
-                  ? "bg-primary text-primary-foreground border-transparent shadow-sm"
-                  : "bg-background text-foreground border-border hover:bg-muted/40"
-              )}
-            >
-              Todos
-              <span className={cn(
-                "ml-1.5 text-xs px-1.5 py-0.5 rounded-full font-bold",
-                activeTab === 'all'
-                  ? "bg-primary-foreground/20 text-primary-foreground"
-                  : "bg-muted text-muted-foreground"
-              )}>
-                {orders.length}
-              </span>
-            </button>
-            <button
-              onClick={() => setActiveTab('accepted')}
-              className={cn(
-                "shrink-0 px-4 h-9 flex items-center justify-center text-sm font-semibold rounded-full transition-all whitespace-nowrap border",
-                activeTab === 'accepted'
-                  ? "bg-primary text-primary-foreground border-transparent shadow-sm"
-                  : "bg-background text-foreground border-border hover:bg-muted/40"
-              )}
-            >
-              Aceito
-              <span className={cn(
-                "ml-1.5 text-xs px-1.5 py-0.5 rounded-full font-bold",
-                activeTab === 'accepted'
-                  ? "bg-primary-foreground/20 text-primary-foreground"
-                  : "bg-muted text-muted-foreground"
-              )}>
-                {orders.filter(o => acceptedStatuses.includes(o.status)).length}
-              </span>
-            </button>
-            <button
-              onClick={() => setActiveTab('production')}
-              className={cn(
-                "shrink-0 px-4 h-9 flex items-center justify-center text-sm font-semibold rounded-full transition-all whitespace-nowrap border",
-                activeTab === 'production'
-                  ? "bg-primary text-primary-foreground border-transparent shadow-sm"
-                  : "bg-background text-foreground border-border hover:bg-muted/40"
-              )}
-            >
-              Em produção
-              <span className={cn(
-                "ml-1.5 text-xs px-1.5 py-0.5 rounded-full font-bold",
-                activeTab === 'production'
-                  ? "bg-primary-foreground/20 text-primary-foreground"
-                  : "bg-muted text-muted-foreground"
-              )}>
-                {orders.filter(o => productionStatuses.includes(o.status)).length}
-              </span>
-            </button>
-            <button
-              onClick={() => setActiveTab('completed')}
-              className={cn(
-                "shrink-0 px-4 h-9 flex items-center justify-center text-sm font-semibold rounded-full transition-all whitespace-nowrap border",
-                activeTab === 'completed'
-                  ? "bg-primary text-primary-foreground border-transparent shadow-sm"
-                  : "bg-background text-foreground border-border hover:bg-muted/40"
-              )}
-            >
-              Concluído
-              <span className={cn(
-                "ml-1.5 text-xs px-1.5 py-0.5 rounded-full font-bold",
-                activeTab === 'completed'
-                  ? "bg-primary-foreground/20 text-primary-foreground"
-                  : "bg-muted text-muted-foreground"
-              )}>
-                {orders.filter(o => completedStatuses.includes(o.status)).length}
-              </span>
-            </button>
-            </div>
-          </div>
+          <OrderTabs
+            activeTab={activeTab}
+            onChange={setActiveTab}
+            counts={{
+              all: supplierOrders.length,
+              accepted: supplierOrders.filter((o) => ORDER_ACCEPTED_STATUSES.includes(o.status)).length,
+              production: supplierOrders.filter((o) => ORDER_PRODUCTION_STATUSES.includes(o.status)).length,
+              completed: supplierOrders.filter((o) => ORDER_COMPLETED_STATUSES.includes(o.status)).length,
+            }}
+          />
 
           {filteredOrders.length === 0 ? (
-            <div className="py-12 text-center border border-dashed border-border rounded-2xl bg-background/50">
-              <Package className="mx-auto h-8 w-8 text-muted-foreground/30 mb-2" />
-              <p className="text-sm font-semibold text-muted-foreground">Nenhum pedido encontrado</p>
-              <p className="text-xs text-muted-foreground/60 mt-0.5">
-                Não há pedidos neste status no momento.
-              </p>
-            </div>
+            <EmptyTabState />
           ) : (
             <div className="space-y-4">
               {filteredOrders.map((order) => (
                 <Card key={order.id} className="px-4 py-4 lg:px-5">
-                  <div className="flex items-center justify-between gap-3 lg:hidden">
-                    <div className="min-w-0 flex-1 space-y-2">
-                      <div className="flex flex-nowrap items-center gap-2">
-                        <div className="inline-flex h-6 shrink-0 items-center rounded-full border border-border bg-transparent px-2 font-mono text-[10px] font-semibold leading-none tracking-wider text-foreground sm:px-2.5 sm:text-xs">
-                          ID#{order.id.slice(0, 8).toUpperCase()}
-                        </div>
-                        <StatusBadge
-                          status={order.status}
-                          kind="order"
-                          className="h-6 shrink-0 whitespace-nowrap py-0 text-[10px] leading-none sm:text-xs"
-                        />
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="inline-flex h-6 shrink-0 items-center rounded-full border border-border bg-transparent px-2.5 font-mono text-xs font-semibold leading-none tracking-wider text-foreground">
+                        ID#{order.id.slice(0, 8).toUpperCase()}
                       </div>
-                      <p className="truncate text-sm text-muted-foreground">
-                        Demanda {order.demand_id.slice(0, 8)}…
-                      </p>
+                      <StatusBadge status={order.status} kind="order" className="h-6 shrink-0 py-0 text-xs" />
                     </div>
-                    <Button size="icon" variant="secondary" className="h-9 w-9 shrink-0" asChild>
-                      <Link to={`/supplier/orders/${order.id}`} aria-label="Ver detalhes">
-                        <ChevronRight className="h-4 w-4" />
-                      </Link>
-                    </Button>
-                  </div>
 
-                  <div className="hidden items-center justify-between gap-4 lg:flex">
-                    <div className="min-w-0 flex-1 space-y-2">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <div className="inline-flex h-6 shrink-0 items-center rounded-full border border-border bg-transparent px-2.5 font-mono text-xs font-semibold leading-none tracking-wider text-foreground">
-                          ID#{order.id.slice(0, 8).toUpperCase()}
-                        </div>
-                        <StatusBadge
-                          status={order.status}
-                          kind="order"
-                          className="h-6 shrink-0 items-center py-0 leading-none"
-                        />
-                      </div>
-                      <p className="truncate text-sm text-muted-foreground">
-                        Demanda {order.demand_id.slice(0, 8)}…
+                    <div className="min-w-0">
+                      <p className="text-base font-semibold text-foreground line-clamp-2">
+                        {order.demand?.titulo ?? `Demanda ${order.demand_id.slice(0, 8)}…`}
                       </p>
+                      {order.demand ? (
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          {order.demand.cidade}/{order.demand.uf}
+                          {order.offer ? ` · ${formatCurrency(order.offer.valor)}` : ''}
+                        </p>
+                      ) : null}
                     </div>
-                    <Button size="sm" variant="secondary" className="shrink-0" asChild>
-                      <Link to={`/supplier/orders/${order.id}`}>Ver detalhes</Link>
-                    </Button>
+
+                    {order.buyer ? (
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                        <span className="inline-flex items-center gap-1.5">
+                          <User className="h-3.5 w-3.5" />
+                          {order.buyer.full_name}
+                        </span>
+                        {order.buyer.phone ? (
+                          <span className="inline-flex items-center gap-1.5">
+                            <Phone className="h-3.5 w-3.5" />
+                            {formatPhone(order.buyer.phone)}
+                          </span>
+                        ) : null}
+                      </div>
+                    ) : null}
+
+                    <p className="text-xs text-muted-foreground">
+                      {ORDER_STATUS_LABELS[order.status] ?? order.status}
+                    </p>
+
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {canSupplierConfirmPayment(order.status) ? (
+                        <Button
+                          size="sm"
+                          className="rounded-xl"
+                          disabled={updateStatus.isPending}
+                          onClick={() => void handleConfirmPayment(order)}
+                        >
+                          Confirmar pagamento
+                        </Button>
+                      ) : null}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="rounded-xl"
+                        onClick={() => handlePrint(order)}
+                      >
+                        <Printer className="mr-1.5 h-4 w-4" />
+                        Imprimir pedido
+                      </Button>
+                      <Button size="sm" variant="secondary" className="rounded-xl" asChild>
+                        <Link to={`/supplier/orders/${order.id}`}>Ver detalhes</Link>
+                      </Button>
+                    </div>
                   </div>
                 </Card>
               ))}
@@ -190,6 +159,66 @@ export function SupplierOrdersPage() {
           )}
         </div>
       )}
+    </div>
+  )
+}
+
+function OrderTabs({
+  activeTab,
+  onChange,
+  counts,
+}: {
+  activeTab: 'all' | 'accepted' | 'production' | 'completed'
+  onChange: (tab: 'all' | 'accepted' | 'production' | 'completed') => void
+  counts: Record<'all' | 'accepted' | 'production' | 'completed', number>
+}) {
+  const tabs = [
+    { id: 'all' as const, label: 'Todos' },
+    { id: 'accepted' as const, label: 'Aceito' },
+    { id: 'production' as const, label: 'Em produção' },
+    { id: 'completed' as const, label: 'Concluído' },
+  ]
+
+  return (
+    <div className="sticky top-14 z-20 -mx-4 bg-background/95 pt-3 backdrop-blur-sm md:static md:mx-0 md:bg-transparent md:pt-0 md:backdrop-blur-none">
+      <div className="flex min-w-0 w-full gap-2 overflow-x-auto scroll-smooth border-b border-border/60 px-4 pt-1.5 pb-3 scroll-px-4 no-scrollbar md:flex-wrap md:overflow-visible md:border-b-0 md:px-0 md:pt-0 md:pb-0 md:scroll-px-0">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => onChange(tab.id)}
+            className={cn(
+              'shrink-0 px-4 h-9 flex items-center justify-center text-sm font-semibold rounded-full transition-all whitespace-nowrap border',
+              activeTab === tab.id
+                ? 'bg-primary text-primary-foreground border-transparent shadow-sm'
+                : 'bg-background text-foreground border-border hover:bg-muted/40',
+            )}
+          >
+            {tab.label}
+            <span
+              className={cn(
+                'ml-1.5 text-xs px-1.5 py-0.5 rounded-full font-bold',
+                activeTab === tab.id
+                  ? 'bg-primary-foreground/20 text-primary-foreground'
+                  : 'bg-muted text-muted-foreground',
+              )}
+            >
+              {counts[tab.id]}
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function EmptyTabState() {
+  return (
+    <div className="py-12 text-center border border-dashed border-border rounded-2xl bg-background/50">
+      <Package className="mx-auto h-8 w-8 text-muted-foreground/30 mb-2" />
+      <p className="text-sm font-semibold text-muted-foreground">Nenhum pedido encontrado</p>
+      <p className="text-xs text-muted-foreground/60 mt-0.5">
+        Não há pedidos neste status no momento.
+      </p>
     </div>
   )
 }

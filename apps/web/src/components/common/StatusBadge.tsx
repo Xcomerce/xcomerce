@@ -33,8 +33,13 @@ const VARIANTS: Record<string, string> = {
   em_revisao: 'bg-blue-100 text-blue-800',
   aprovado: 'bg-green-100 text-green-800',
   recusado: 'bg-red-100 text-red-800',
-  CONCLUIDO: 'bg-green-100 text-green-800',
-  ENTREGUE: 'bg-teal-100 text-teal-800',
+  PAGAMENTO_CONFIRMADO: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
+  COMPROVANTE_ENVIADO: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
+  PAGAMENTO_INFORMADO: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
+  AGUARDANDO_CONFIRMACAO_EXTERNA: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+  ENVIO_INFORMADO: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300',
+  CONCLUIDO: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+  ENTREGUE: 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300',
 }
 
 type Props = {

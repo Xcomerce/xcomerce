@@ -9,7 +9,12 @@ import { StatusBadge } from '@/components/common/StatusBadge'
 import { GridSkeleton } from '@/components/common/LoadingSkeleton'
 import { usePageTitle } from '@/hooks/use-page-title'
 import { useOrders } from '@/hooks/use-orders'
-import { ORDER_STATUS_LABELS } from '@keve/shared'
+import {
+  ORDER_ACCEPTED_STATUSES,
+  ORDER_COMPLETED_STATUSES,
+  ORDER_PRODUCTION_STATUSES,
+  ORDER_STATUS_LABELS,
+} from '@keve/shared'
 import { cn } from '@/lib/utils'
 
 export function BuyerOrdersPage() {
@@ -17,9 +22,9 @@ export function BuyerOrdersPage() {
   const { data: orders, isLoading, error } = useOrders('buyer')
   const [activeTab, setActiveTab] = useState<'all' | 'accepted' | 'production' | 'completed'>('all')
 
-  const acceptedStatuses = ['PROPOSTA_ACEITA', 'AGUARDANDO_CONFIRMACAO_EXTERNA']
-  const productionStatuses = ['PAGAMENTO_INFORMADO', 'ENVIO_INFORMADO', 'ENTREGUE']
-  const completedStatuses = ['CONCLUIDO', 'CANCELADO', 'EXPIRADO']
+  const acceptedStatuses = ORDER_ACCEPTED_STATUSES
+  const productionStatuses = ORDER_PRODUCTION_STATUSES
+  const completedStatuses = ORDER_COMPLETED_STATUSES
 
   const filteredOrders = (orders ?? []).filter((order) => {
     if (activeTab === 'accepted') {

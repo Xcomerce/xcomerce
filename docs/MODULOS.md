@@ -1,7 +1,7 @@
 # Módulos Funcionais — Keve Marketplace B2B
 
-**Versão:** 2.0  
-**Data:** jun/2026  
+**Versão:** 2.1  
+**Data:** ago/2026  
 **Referência:** [PRD.md](./PRD.md) · [ARQUITETURA.md](./ARQUITETURA.md)
 
 Este documento detalha cada módulo funcional: objetivo, telas, regras de negócio, entidades, integrações e critérios de aceite.
@@ -112,7 +112,8 @@ Um usuário pode ter **múltiplos papéis** (ex.: comprador + fornecedor). Tabel
 
 - Sessão expira conforme config Supabase (padrão: refresh token)
 - Rotas protegidas: guard verifica JWT + papel
-- Fornecedor com status ≠ `aprovado` acessa `/supplier/*` limitado (só onboarding e catálogo, sem board)
+- Fornecedor com status ≠ `aprovado` acessa `/supplier/*` limitado (cadastro em Configurações, catálogo; sem board)
+- Badge vermelho no header quando cadastro pendente; redirect automático para seção Cadastro
 - Assinatura `past_due` ou `canceled` → paywall em ações pagas (M13)
 
 ### Entidades
@@ -135,7 +136,7 @@ Um usuário pode ter **múltiplos papéis** (ex.: comprador + fornecedor). Tabel
 
 ## M3 — Cadastro e Onboarding (Fornecedor)
 
-**MVP:** ✅ · **Rotas:** `/auth/register/supplier`, `/supplier/onboarding`
+**MVP:** ✅ · **Rotas:** `/auth/register/supplier`, `/settings/profile?section=registration` (redirect legado: `/supplier/onboarding`)
 
 ### Objetivo
 
@@ -383,7 +384,9 @@ Ver oportunidade no board
 - Proposta expira após `validade_dias`
 - Comprador vê **todas propostas da demanda X** em painel único
 - Ordenação: preço asc · prazo asc · reputação desc
-- Contato do fornecedor **oculto** até reveal (view `v_offers_public`)
+- Contato do fornecedor **sempre visível** (CNPJ, telefone, e-mail no header da proposta)
+- **Sem** regra de valor mínimo (20% abaixo do preço de referência removida — ago/2026)
+- Preço de referência unitário exibido como referência do catálogo do fornecedor
 - Aceitar proposta → cria pedido (M9), rejeita demais propostas da demanda
 
 ### Entidades
@@ -413,19 +416,18 @@ Negociação em tempo real entre comprador e fornecedor, vinculada à demanda/pr
 - Envio texto + imagem (Storage)
 - Realtime via Supabase (INSERT em `offer_messages`)
 - Indicador de mensagens não lidas
-- Filtro anti-contato (regex) enquanto `contact_revealed = false`
+- Filtro anti-contato (regex) — mantido no backend; contato já liberado por padrão (`contact_revealed = true`)
+- Mensagens rápidas (quick messages) preenchem o campo de texto
 
 ### Regras de negócio
 
-**Bloqueio de contato (MVP):**
-- Regex bloqueia: telefone BR, e-mail, URLs, @ handles
-- Mensagem bloqueada → não persiste; exibe toast de aviso ao usuário
-- `contact_revealed = true` após: comprador aceita proposta OU clica "Revelar contato"
+**Bloqueio de contato (legado):**
+- Regex ainda bloqueia telefone/e-mail/URLs em mensagens quando `contact_revealed = false`
+- Desde ago/2026: contato revelado por padrão ao enviar proposta; botão "Revelar contato" removido da UX
 
-**Reveal Contact:**
-- Ação explícita do comprador
-- Exibe telefone/e-mail do fornecedor (da view desmascarada)
-- Registra evento em `audit_logs`
+**Reveal Contact (legado):**
+- Backfill `contact_revealed = true` para propostas existentes
+- Evento de audit mantido para compatibilidade
 
 ### Entidades
 
@@ -439,8 +441,7 @@ Negociação em tempo real entre comprador e fornecedor, vinculada à demanda/pr
 ### Critérios de aceite
 
 - [ ] Chat em tempo real funcional
-- [ ] Regex bloqueia contatos antes do reveal
-- [ ] Reveal libera contato e registra auditoria
+- [ ] Contato do fornecedor visível sem ação de reveal
 - [ ] Upload de imagem no chat
 
 ---
@@ -457,30 +458,36 @@ Guiar pós-aceite da proposta: acompanhamento externo (pagamento, envio) com SLA
 
 ```
 PROPOSTA_ACEITA
-  → AGUARDANDO_CONFIRMACAO_EXTERNA
-  → PAGAMENTO_INFORMADO      [comprador anexa comprovante]
-  → ENVIO_INFORMADO          [fornecedor informa rastreio]
-  → ENTREGUE                 [confirmação mútua]
-  → CONCLUIDO                [habilita reputação M10]
+  → AGUARDANDO_CONFIRMACAO_EXTERNA    [label: Aguardando pagamento]
+  → COMPROVANTE_ENVIADO               [comprador anexa comprovante]
+  → PAGAMENTO_CONFIRMADO              [fornecedor confirma pagamento]
+  → ENVIO_INFORMADO                   [fornecedor informa rastreio]
+  → ENTREGUE                          [comprador confirma recebimento]
+  → CONCLUIDO                         [habilita reputação M10]
 
 Ramificações:
   → CANCELADO (qualquer parte, com motivo)
   → EXPIRADO (SLA estourado sem ação)
 ```
 
+> `PAGAMENTO_INFORMADO` é status legado migrado para `COMPROVANTE_ENVIADO`.
+
 ### Ações por etapa
 
 | Status atual | Ação | Responsável | Prazo SLA |
 |--------------|------|-------------|-----------|
-| AGUARDANDO_CONFIRMACAO_EXTERNA | Informar pagamento + comprovante | Comprador | 24h |
-| PAGAMENTO_INFORMADO | Informar envio + rastreio | Fornecedor | 24h |
+| AGUARDANDO_CONFIRMACAO_EXTERNA | Anexar comprovante de pagamento | Comprador | 24h |
+| COMPROVANTE_ENVIADO | Confirmar pagamento (conferência na conta) | Fornecedor | 24h |
+| PAGAMENTO_CONFIRMADO | Informar envio + rastreio | Fornecedor | 24h |
 | ENVIO_INFORMADO | Confirmar recebimento | Comprador | 24h |
-| ENTREGUE | Confirmar conclusão | Ambos | 24h |
+| ENTREGUE | Confirmar conclusão | Comprador | 24h |
 
 ### Regras de negócio
 
 - Pagamento e envio são **informados**, não processados pela plataforma
-- Comprovante = evidência para reputação, sem validação financeira
+- Comprovante = evidência opcional; **confirmação real é do fornecedor** na conta bancária
+- Cards enriquecidos na lista fornecedor: nome cliente, telefone, título demanda, status, botões Confirmar pagamento + Imprimir
+- SLA `confirm_payment` após comprovante enviado
 - SLA default 24h por ação (V2: configurável no admin)
 - Lembrete e-mail 4h antes do vencimento (Edge Function `check-sla-deadlines`)
 - SLA estourado → `reputation_events` (tipo `sla_missed`) + notificação
@@ -499,7 +506,9 @@ Ramificações:
 ### Critérios de aceite
 
 - [ ] Pedido criado ao aceitar proposta
-- [ ] Transições de status seguem máquina definida
+- [ ] Transições seguem máquina definida (incl. `COMPROVANTE_ENVIADO` e `PAGAMENTO_CONFIRMADO`)
+- [ ] Fornecedor confirma pagamento no card ou detalhe
+- [ ] Impressão/compartilhamento do pedido com dados do cliente
 - [ ] SLAs criados automaticamente por etapa
 - [ ] Lembretes e penalidades de SLA funcionais
 - [ ] Histórico de status visível (timeline)
@@ -585,7 +594,10 @@ Informar usuários sobre eventos relevantes sem bombardeio; lembrar ações pend
 
 ### Regras de negócio
 
-- Comprador **nunca** recebe 1 notificação por fornecedor; recebe "Nova proposta na demanda X" (count)
+- Pipeline unificado via `deliver_notification()` (in-app agrupado + e-mail + preferências)
+- Comprador recebe propostas **agrupadas por demanda** (não 1 notificação por fornecedor)
+- Realtime sync do badge (`useNotificationRealtimeSync`)
+- Preferências distintas comprador vs fornecedor (`SUPPLIER_NOTIFICATION_PREFERENCES`)
 - Preferências por canal em `notification_preferences` (opt-out e-mail por tipo)
 - Badge count no header = notificações não lidas
 - E-mail via Edge Function `send-email` (Resend)
@@ -722,4 +734,4 @@ Usuário escolhe plano em /pricing
 
 ---
 
-*Alinhado ao PRD v2.0 e kickoff discovery (trans.md).*
+*Alinhado ao PRD v2.0, kickoff discovery (trans.md) e reunião Xcomerce 03/08/2026.*

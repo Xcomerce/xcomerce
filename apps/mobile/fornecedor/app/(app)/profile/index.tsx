@@ -14,7 +14,7 @@ import { getSettingsMenuItems, type SettingsSection } from '@/config/settings'
 
 const SUPPLIER_SHORTCUTS = [
   { label: 'Auto-proposta', description: 'Configure propostas automáticas', href: '/(app)/auto-offers', icon: Zap },
-  { label: 'Onboarding', description: 'Dados da empresa e documentos', href: '/(app)/onboarding', icon: ClipboardList },
+  { label: 'Cadastro', description: 'Dados da empresa e documentos', href: '/(app)/onboarding', icon: ClipboardList },
   { label: 'Plano', description: 'Assinatura e limites do catálogo', href: '/(app)/billing', icon: CreditCard },
   { label: 'Notificações', description: 'Central de alertas', href: '/(app)/notifications', icon: Bell },
   { label: 'Suporte', description: 'Fale com a equipe Keve', href: '/(app)/support', icon: HeadphonesIcon },

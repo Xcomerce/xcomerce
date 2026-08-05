@@ -1,6 +1,7 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { getDashboardForRole, type UserRole } from '@keve/shared'
 import { useAuth } from '@/contexts/auth-context'
+import { SUPPLIER_REGISTRATION_SETTINGS_URL } from '@/config/navigation'
 
 function AuthLoading() {
   return (
@@ -50,7 +51,7 @@ export function RoleRoute({ role, alsoAllow = [] }: { role: UserRole; alsoAllow?
 export function SupplierApprovedRoute() {
   const { supplierStatus } = useAuth()
   if (supplierStatus && supplierStatus !== 'aprovado') {
-    return <Navigate to="/supplier/onboarding" replace />
+    return <Navigate to={SUPPLIER_REGISTRATION_SETTINGS_URL} replace />
   }
   return <Outlet />
 }

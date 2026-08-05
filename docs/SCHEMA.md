@@ -100,12 +100,12 @@ erDiagram
 | `supplier_status` | pendente, em_revisao, aprovado, recusado | Onboarding fornecedor |
 | `demand_status` | RASCUNHO → … → EXPIRADO | Ciclo da demanda |
 | `offer_status` | enviada, aceita, rejeitada, expirada, cancelada | Propostas |
-| `order_status` | PROPOSTA_ACEITA → … → EXPIRADO | Workflow pós-aceite |
+| `order_status` | PROPOSTA_ACEITA, AGUARDANDO_CONFIRMACAO_EXTERNA, COMPROVANTE_ENVIADO, PAGAMENTO_CONFIRMADO, ENVIO_INFORMADO, ENTREGUE, CONCLUIDO, CANCELADO, EXPIRADO (+ legado `PAGAMENTO_INFORMADO`) | Workflow pós-aceite |
 | `subscription_status` | trialing, active, past_due, canceled | Asaas |
 | `document_type` | cnpj_card, address_proof, other | Upload onboarding |
 | `document_review_status` | pendente, aprovado, recusado | Revisão admin |
 | `order_attachment_type` | payment_proof, tracking_info, other | Comprovantes externos |
-| `sla_action` | inform_payment, inform_shipping, confirm_delivery, confirm_completion | Prazos 24h |
+| `sla_action` | inform_payment, confirm_payment, inform_shipping, confirm_delivery, confirm_completion | Prazos 24h |
 | `sla_status` | pending, completed, expired | SLA |
 | `match_status` | notified, viewed, offer_sent, dismissed | Motor de match |
 | `usage_counter_type` | demands_published, offers_sent | Cotas mensais |

@@ -1,5 +1,4 @@
 import { z } from 'zod'
-import { OFFER_MARKET_DOWNWARD_MARGIN_PERCENT } from '../pricing/offer-bounds'
 
 export const autoOfferSettingsSchema = z
   .object({
@@ -7,10 +6,7 @@ export const autoOfferSettingsSchema = z
     discount_percent: z.coerce
       .number()
       .min(0, 'Desconto mínimo é 0%')
-      .max(
-        OFFER_MARKET_DOWNWARD_MARGIN_PERCENT,
-        `Desconto máximo é ${OFFER_MARKET_DOWNWARD_MARGIN_PERCENT}%`,
-      ),
+      .max(100, 'Desconto máximo é 100%'),
     min_demand_quantity: z.coerce.number().int().min(1, 'Quantidade mínima é 1'),
     max_demand_quantity: z.coerce.number().int().min(1).optional().nullable(),
     delivery_days: z.coerce.number().int().min(1, 'Prazo mínimo é 1 dia'),

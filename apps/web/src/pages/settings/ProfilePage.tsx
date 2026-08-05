@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { useOutletContext } from 'react-router-dom'
+import { useOutletContext, useSearchParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -23,7 +23,7 @@ import { getInitials, translateAuthError } from '@/lib/utils'
 import { translateSupabaseError } from '@/lib/errors'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
-import { ROLE_LABELS } from '@/config/navigation'
+import { ROLE_LABELS, supplierNeedsRegistrationAttention } from '@/config/navigation'
 import type { UserRole } from '@keve/shared'
 import type { UserProfile } from '@/services/profile'
 import type { LucideIcon } from 'lucide-react'
@@ -35,6 +35,7 @@ import {
 } from '@/pages/settings/SettingsSections'
 import type { AppShellOutletContext } from '@/components/layout/AppShell'
 import { BuyerDeliveryAddressSettings } from '@/pages/settings/BuyerDeliveryAddressSettings'
+import { SupplierRegistrationSettings } from '@/pages/settings/SupplierRegistrationSettings'
 
 const ROLE_COLORS: Record<UserRole, string> = {
   buyer:
@@ -68,6 +69,7 @@ type PasswordFormValues = z.infer<typeof passwordSchema>
 
 type SettingsSection =
   | 'account'
+  | 'registration'
   | 'security'
   | 'sessions'
   | 'notifications'
@@ -87,6 +89,12 @@ const SETTINGS_MENU_ITEMS: {
     label: 'Minha conta',
     description: 'Perfil, contato, e-mail e data de cadastro.',
     icon: User,
+  },
+  {
+    id: 'registration',
+    label: 'Cadastro',
+    description: 'Dados da empresa, documentos e área de atuação.',
+    icon: FileText,
   },
   {
     id: 'security',
@@ -132,67 +140,12 @@ const SETTINGS_MENU_ITEMS: {
   },
 ]
 
-const ADMIN_OPERATIONAL_NOTIFICATIONS = [
-  {
-    type: 'admin.supplier_pending',
-    label: 'Fornecedor aguardando aprovação',
-    description: 'Quando um novo fornecedor entra em revisão.',
-  },
-  {
-    type: 'subscription.past_due',
-    label: 'Assinatura inadimplente',
-    description: 'Quando uma assinatura entra em atraso de pagamento.',
-  },
-  {
-    type: 'subscription.activated',
-    label: 'Nova assinatura ativada',
-    description: 'Quando um usuário ativa ou renova um plano pago.',
-  },
-] as const
-
-const BUYER_NOTIFICATIONS = [
-  {
-    type: 'offer.received',
-    label: 'Nova proposta recebida',
-    description: 'Quando um fornecedor envia proposta em uma demanda sua.',
-  },
-  {
-    type: 'chat.message',
-    label: 'Mensagens de negociação',
-    description: 'Novas mensagens no chat com fornecedores.',
-  },
-  {
-    type: 'order.status_changed',
-    label: 'Atualização de pedido',
-    description: 'Mudanças de status nos seus pedidos.',
-  },
-  {
-    type: 'sla.reminder',
-    label: 'Lembrete de prazo',
-    description: 'Quando uma ação sua está próxima do prazo limite.',
-  },
-  {
-    type: 'sla.expired',
-    label: 'Prazo expirado',
-    description: 'Quando um prazo importante foi ultrapassado.',
-  },
-  {
-    type: 'subscription.past_due',
-    label: 'Pagamento em atraso',
-    description: 'Quando há pendência no pagamento do seu plano.',
-  },
-  {
-    type: 'subscription.activated',
-    label: 'Plano ativado',
-    description: 'Confirmação de ativação ou renovação do seu plano.',
-  },
-] as const
-
-type NotificationPreferenceItem = {
-  type: string
-  label: string
-  description: string
-}
+import {
+  ADMIN_NOTIFICATION_PREFERENCES,
+  BUYER_NOTIFICATION_PREFERENCES,
+  SUPPLIER_NOTIFICATION_PREFERENCES,
+  type NotificationPreferenceDefinition,
+} from '@keve/shared'
 
 function resolveSettingsRole(
   activeRole: UserRole | null,
@@ -209,22 +162,27 @@ function isStaffContext(role: UserRole | null) {
   return role === 'admin' || role === 'commercial'
 }
 
-function getNotificationPreferences(role: UserRole | null): NotificationPreferenceItem[] | null {
+function getNotificationPreferences(role: UserRole | null): NotificationPreferenceDefinition[] | null {
   if (role === 'admin' || role === 'commercial') {
-    return ADMIN_OPERATIONAL_NOTIFICATIONS.map((item) => ({ ...item }))
+    return ADMIN_NOTIFICATION_PREFERENCES
   }
   if (role === 'buyer') {
-    return BUYER_NOTIFICATIONS.map((item) => ({ ...item }))
+    return BUYER_NOTIFICATION_PREFERENCES
+  }
+  if (role === 'supplier') {
+    return SUPPLIER_NOTIFICATION_PREFERENCES
   }
   return null
 }
 
 export function ProfilePage() {
   usePageTitle()
-  const { user, profile, refreshProfile, activeRole, roles } = useAuth()
+  const { user, profile, refreshProfile, activeRole, roles, supplierStatus } = useAuth()
   const { shellRole } = useOutletContext<AppShellOutletContext>()
+  const [searchParams] = useSearchParams()
   const settingsRole = resolveSettingsRole(activeRole, shellRole)
   const isStaff = isStaffContext(settingsRole)
+  const isSupplierSettings = settingsRole === 'supplier'
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
@@ -380,6 +338,7 @@ export function ProfilePage() {
   const notificationPreferences = getNotificationPreferences(settingsRole)
   const showNotifications = notificationPreferences != null
   const menuItems = SETTINGS_MENU_ITEMS.filter((item) => {
+    if (item.id === 'registration') return isSupplierSettings
     if (item.id === 'notifications') return showNotifications
     if (item.id === 'privacy') return !isStaff
     return true
@@ -396,7 +355,16 @@ export function ProfilePage() {
   })
 
   useEffect(() => {
+    if (searchParams.get('section') !== 'registration' || !isSupplierSettings) return
+    setDesktopSection('registration')
+    setMobileSection('registration')
+  }, [searchParams, isSupplierSettings])
+
+  useEffect(() => {
     if (desktopSection === 'notifications' && !showNotifications) {
+      setDesktopSection('account')
+    }
+    if (desktopSection === 'registration' && !isSupplierSettings) {
       setDesktopSection('account')
     }
     if (desktopSection === 'privacy' && isStaff) {
@@ -405,7 +373,7 @@ export function ProfilePage() {
     if (desktopSection !== 'terms') {
       setTermsEditing(false)
     }
-  }, [desktopSection, showNotifications, isStaff])
+  }, [desktopSection, showNotifications, isStaff, isSupplierSettings])
 
   useEffect(() => {
     if (mobileSection !== 'terms') {
@@ -462,10 +430,16 @@ export function ProfilePage() {
     />
   )
 
+  const registrationSettings = isSupplierSettings ? (
+    <SupplierRegistrationSettings supplierStatus={supplierStatus} joinDate={joinDate} className="flex-1" />
+  ) : null
+
   function renderSectionContent(section: SettingsSection) {
     switch (section) {
       case 'account':
         return myAccountContent
+      case 'registration':
+        return registrationSettings
       case 'security':
         return securityForm
       case 'sessions':
@@ -538,7 +512,11 @@ export function ProfilePage() {
           <div className="space-y-6 px-4 py-6">
             {avatarSection}
             <nav className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-              {menuItems.map((item, index) => (
+              {menuItems.map((item, index) => {
+                const showAttentionBadge =
+                  item.id === 'registration' && supplierNeedsRegistrationAttention(supplierStatus)
+
+                return (
                 <button
                   key={item.id}
                   type="button"
@@ -553,9 +531,14 @@ export function ProfilePage() {
                     <p className="text-sm font-medium leading-snug">{item.label}</p>
                     <p className="mt-0.5 text-xs text-muted-foreground">{item.description}</p>
                   </div>
-                  <ChevronRight className="h-5 w-5 shrink-0 self-center text-muted-foreground" />
+                  {showAttentionBadge ? (
+                    <span className="h-2 w-2 shrink-0 rounded-full bg-destructive" />
+                  ) : (
+                    <ChevronRight className="h-5 w-5 shrink-0 self-center text-muted-foreground" />
+                  )}
                 </button>
-              ))}
+                )
+              })}
             </nav>
           </div>
         )}
@@ -568,6 +551,9 @@ export function ProfilePage() {
           <nav className="space-y-1">
             {menuItems.map((item) => {
               const active = desktopSection === item.id
+              const showAttentionBadge =
+                item.id === 'registration' && supplierNeedsRegistrationAttention(supplierStatus)
+
               return (
                 <button
                   key={item.id}
@@ -597,6 +583,9 @@ export function ProfilePage() {
                       {item.description}
                     </p>
                   </div>
+                  {showAttentionBadge ? (
+                    <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-destructive" />
+                  ) : null}
                 </button>
               )
             })}
@@ -1069,7 +1058,7 @@ const THEME_OPTIONS = [
 function NotificationPreferencesSettings({
   items,
 }: {
-  items: NotificationPreferenceItem[]
+  items: NotificationPreferenceDefinition[]
 }) {
   const { data: preferences = [], isLoading } = useNotificationPreferences()
   const updatePreferences = useUpdateNotificationPreferences()

@@ -278,7 +278,7 @@ export default function OnboardingScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
-      <AppHeader title="Onboarding fornecedor" />
+      <AppHeader title="Cadastro" />
       <BackButton className="mx-4 mb-2" fallbackHref="/(app)/profile" />
 
       <ScrollView contentContainerClassName="gap-4 px-4 pb-32">

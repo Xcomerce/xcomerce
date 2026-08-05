@@ -14,12 +14,14 @@ import { useOfferDetail } from '@/hooks/use-offers'
 import { useCategories, type Category } from '@/hooks/use-categories'
 import type { OrderStatus } from '@/services/orders'
 import { ORDER_STATUS_LABELS } from '@keve/shared'
+import { shareOrderSummary } from '@/lib/order-share'
 import { cn, formatCurrency, formatDateTime, formatShortId } from '@/lib/utils'
 import { formatSupabaseError } from '@/lib/errors'
 
 const SUPPLIER_ACTIONS: Partial<Record<OrderStatus, { next: OrderStatus; label: string }[]>> = {
-  PROPOSTA_ACEITA: [{ next: 'AGUARDANDO_CONFIRMACAO_EXTERNA', label: 'Aguardar confirmação externa' }],
-  PAGAMENTO_INFORMADO: [{ next: 'ENVIO_INFORMADO', label: 'Informar envio' }],
+  COMPROVANTE_ENVIADO: [{ next: 'PAGAMENTO_CONFIRMADO', label: 'Confirmar pagamento' }],
+  PAGAMENTO_INFORMADO: [{ next: 'PAGAMENTO_CONFIRMADO', label: 'Confirmar pagamento' }],
+  PAGAMENTO_CONFIRMADO: [{ next: 'ENVIO_INFORMADO', label: 'Informar envio' }],
   ENTREGUE: [{ next: 'CONCLUIDO', label: 'Confirmar conclusão' }],
 }
 
@@ -176,7 +178,7 @@ export default function SupplierOrderDetailScreen() {
         </SectionCard>
       </ScrollView>
 
-      {(actions.length > 0 || canCancel) && (
+      {(actions.length > 0 || canCancel || order) && (
         <View className="absolute bottom-0 left-0 right-0 border-t border-slate-200 bg-white p-4">
           {showCancel ? (
             <View className="mb-3 gap-2">
@@ -199,6 +201,32 @@ export default function SupplierOrderDetailScreen() {
               </View>
             </View>
           ) : null}
+          <Button
+            label="Compartilhar pedido"
+            variant="outline"
+            className="mb-2"
+            onPress={() =>
+              void shareOrderSummary({
+                ...order,
+                demand: demand
+                  ? {
+                      titulo: demand.titulo,
+                      cidade: demand.cidade,
+                      uf: demand.uf,
+                      unidade: demand.unidade,
+                    }
+                  : null,
+                offer: offer
+                  ? {
+                      valor: offer.valor,
+                      prazo_entrega_dias: offer.prazo_entrega_dias,
+                      quantidade: offer.quantidade,
+                    }
+                  : null,
+                buyer: null,
+              })
+            }
+          />
           {actions.map((action) => (
             <Button
               key={action.next}

@@ -10,7 +10,7 @@ import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import { StatusBadge } from '@/components/common/StatusBadge'
 import { ChatThread } from '@/components/chat/ChatThread'
 import { useDemand } from '@/hooks/use-demands'
-import { useOffersForDemand, useAcceptOffer, useRejectOffer, useRevealContact } from '@/hooks/use-offers'
+import { useOffersForDemand, useAcceptOffer, useRejectOffer } from '@/hooks/use-offers'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { formatSupabaseError } from '@/lib/errors'
 import type { PublicOffer } from '@/services/offers'
@@ -22,7 +22,6 @@ export default function DemandDetailScreen() {
   const { data: offers = [] } = useOffersForDemand(id)
   const acceptOffer = useAcceptOffer()
   const rejectOffer = useRejectOffer()
-  const revealContact = useRevealContact()
   const [chatSupplierId, setChatSupplierId] = useState<string | null>(null)
 
   if (isLoading || !demand) {
@@ -50,15 +49,6 @@ export default function DemandDetailScreen() {
     ])
   }
 
-  const handleReveal = async (offerId: string) => {
-    try {
-      await revealContact.mutateAsync(offerId)
-      Alert.alert('Contato revelado', 'Telefone e e-mail do fornecedor estão visíveis.')
-    } catch (err) {
-      Alert.alert('Erro', formatSupabaseError(err))
-    }
-  }
-
   const renderOffer = (offer: PublicOffer) => (
     <Card key={offer.id} className="mb-3">
       <View className="flex-row items-center justify-between">
@@ -69,16 +59,20 @@ export default function DemandDetailScreen() {
         Prazo: {offer.prazo_entrega_dias} dias · Qtd: {offer.quantidade}
       </Text>
       {offer.mensagem ? <Text className="mt-2 text-sm text-slate-600">{offer.mensagem}</Text> : null}
-      {offer.contact_revealed ? (
+      {(offer.supplier_phone || offer.supplier_email) ? (
         <View className="mt-2 rounded-lg bg-slate-50 p-2">
-          <View className="flex-row items-center gap-2">
-            <Phone size={14} color="#334155" />
-            <Text className="text-sm text-slate-700">{offer.supplier_phone ?? '—'}</Text>
-          </View>
-          <View className="mt-1 flex-row items-center gap-2">
-            <Mail size={14} color="#334155" />
-            <Text className="text-sm text-slate-700">{offer.supplier_email ?? '—'}</Text>
-          </View>
+          {offer.supplier_phone ? (
+            <View className="flex-row items-center gap-2">
+              <Phone size={14} color="#334155" />
+              <Text className="text-sm text-slate-700">{offer.supplier_phone}</Text>
+            </View>
+          ) : null}
+          {offer.supplier_email ? (
+            <View className={`flex-row items-center gap-2${offer.supplier_phone ? ' mt-1' : ''}`}>
+              <Mail size={14} color="#334155" />
+              <Text className="text-sm text-slate-700">{offer.supplier_email}</Text>
+            </View>
+          ) : null}
         </View>
       ) : null}
       <View className="mt-3 flex-row flex-wrap gap-2">
@@ -87,9 +81,6 @@ export default function DemandDetailScreen() {
             <Button label="Aceitar" onPress={() => handleAccept(offer.id)} className="flex-1" />
             <Button label="Rejeitar" variant="outline" onPress={() => rejectOffer.mutate(offer.id)} className="flex-1" />
           </>
-        ) : null}
-        {!offer.contact_revealed ? (
-          <Button label="Revelar contato" variant="secondary" onPress={() => handleReveal(offer.id)} />
         ) : null}
         <Button label="Chat" variant="outline" onPress={() => setChatSupplierId(offer.supplier_id)} />
       </View>

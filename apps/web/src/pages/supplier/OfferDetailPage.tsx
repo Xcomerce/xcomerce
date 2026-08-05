@@ -6,9 +6,6 @@ import { toast } from 'sonner'
 import { ArrowLeft, ChevronRight, MessageSquare, Send, X } from 'lucide-react'
 import {
   createOfferSchema,
-  getMinTotalPrice,
-  getMinUnitPrice,
-  OFFER_MARKET_DOWNWARD_MARGIN_PERCENT,
   type OfferInput,
 } from '@keve/shared'
 import { Button } from '@/components/ui/button'
@@ -135,10 +132,7 @@ export function OfferDetailPage() {
   const myOffer = offers.find((o) => o.supplier_id === user?.id)
   const showOfferFooter = !myOffer
 
-  const offerSchemaResolved = useMemo(
-    () => createOfferSchema(marketUnitPrice),
-    [marketUnitPrice],
-  )
+  const offerSchemaResolved = useMemo(() => createOfferSchema(), [])
 
   const form = useForm<OfferInput>({
     resolver: zodResolver(offerSchemaResolved),
@@ -152,12 +146,6 @@ export function OfferDetailPage() {
     },
   })
 
-  const watchedQuantity = form.watch('quantidade')
-  const minUnitPrice = marketUnitPrice != null && marketUnitPrice > 0 ? getMinUnitPrice(marketUnitPrice) : null
-  const minTotalPrice =
-    minUnitPrice != null && watchedQuantity > 0
-      ? getMinTotalPrice(marketUnitPrice!, watchedQuantity)
-      : null
 
   const categoryName = useMemo(
     () => categories.find((c) => c.id === demand?.category_id)?.name,
@@ -351,15 +339,9 @@ export function OfferDetailPage() {
               {marketUnitPrice != null && marketUnitPrice > 0 && (
                 <div className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2.5 text-sm">
                   <p className="text-muted-foreground">
-                    Preço de mercado (referência unitária):{' '}
+                    Preço de referência (seu catálogo / mercado):{' '}
                     <span className="font-semibold text-foreground">{formatCurrency(marketUnitPrice)}</span>
-                  </p>
-                  <p className="mt-1 text-muted-foreground">
-                    Valor mínimo viável:{' '}
-                    <span className="font-semibold text-foreground">
-                      {formatCurrency(minUnitPrice!)} / unidade
-                    </span>{' '}
-                    (máx. {OFFER_MARKET_DOWNWARD_MARGIN_PERCENT}% abaixo do mercado)
+                    {' '}/ unidade
                   </p>
                 </div>
               )}
@@ -395,15 +377,10 @@ export function OfferDetailPage() {
                             <Input
                               type="number"
                               step="0.01"
-                              min={minTotalPrice ?? 0}
+                              min={0}
                               {...field}
                             />
                           </FormControl>
-                          {minTotalPrice != null && (
-                            <p className="text-xs text-muted-foreground">
-                              Mínimo para {watchedQuantity} {demand.unidade}: {formatCurrency(minTotalPrice)}
-                            </p>
-                          )}
                           <FormMessage />
                         </FormItem>
                       )}

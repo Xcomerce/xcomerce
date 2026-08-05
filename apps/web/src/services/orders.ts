@@ -8,16 +8,87 @@ export type OrderSlaDeadline = Tables<'order_sla_deadlines'>
 
 export type OrderRole = 'buyer' | 'supplier'
 
-export async function fetchOrders(userId: string, role: OrderRole): Promise<Order[]> {
-  const column = role === 'buyer' ? 'buyer_id' : 'supplier_id'
+export type SupplierOrderListItem = Order & {
+  demand: {
+    titulo: string
+    descricao: string | null
+    cidade: string
+    uf: string
+    unidade: string
+    quantidade: number
+  } | null
+  offer: {
+    valor: number
+    prazo_entrega_dias: number
+    quantidade: number
+    mensagem: string | null
+  } | null
+  buyer: {
+    full_name: string
+    phone: string | null
+    email: string | null
+  } | null
+}
+
+export type BuyerOrderListItem = Order & {
+  demand: {
+    titulo: string
+    cidade: string
+    uf: string
+  } | null
+  offer: {
+    valor: number
+    prazo_entrega_dias: number
+  } | null
+  supplier: {
+    full_name: string
+  } | null
+}
+
+export async function fetchOrders(
+  userId: string,
+  role: OrderRole,
+): Promise<Order[] | SupplierOrderListItem[] | BuyerOrderListItem[]> {
+  if (role === 'supplier') {
+    return fetchSupplierOrdersWithDetails(userId)
+  }
+  return fetchBuyerOrdersWithDetails(userId)
+}
+
+export async function fetchSupplierOrdersWithDetails(userId: string): Promise<SupplierOrderListItem[]> {
   const { data, error } = await supabase
     .from('orders')
-    .select('*')
-    .eq(column, userId)
+    .select(
+      `
+      *,
+      demand:demands(titulo, descricao, cidade, uf, unidade, quantidade),
+      offer:offers(valor, prazo_entrega_dias, quantidade, mensagem),
+      buyer:profiles!orders_buyer_id_fkey(full_name, phone, email)
+    `,
+    )
+    .eq('supplier_id', userId)
     .order('created_at', { ascending: false })
 
   if (error) throw error
-  return (data ?? []) as Order[]
+  return (data ?? []) as SupplierOrderListItem[]
+}
+
+export async function fetchBuyerOrdersWithDetails(userId: string): Promise<BuyerOrderListItem[]> {
+  const { data, error } = await supabase
+    .from('orders')
+    .select(
+      `
+      *,
+      demand:demands(titulo, cidade, uf),
+      offer:offers(valor, prazo_entrega_dias),
+      supplier:profiles!orders_supplier_id_fkey(full_name)
+    `,
+    )
+    .eq('buyer_id', userId)
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+  return (data ?? []) as BuyerOrderListItem[]
 }
 
 export async function fetchOrder(id: string): Promise<Order | null> {

@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom'
 import { ChevronDown } from 'lucide-react'
 import { useState } from 'react'
 import type { NavItem, NavSection } from '@/config/navigation'
-import { isSupplierNavItemDisabled } from '@/config/navigation'
+import { isSupplierNavItemDisabled, supplierNeedsRegistrationAttention } from '@/config/navigation'
 import { useAuth } from '@/contexts/auth-context'
 import { cn } from '@/lib/utils'
 
@@ -23,20 +23,37 @@ export function NavSectionBlock({ section }: { section: NavSection }) {
       </button>
       {open && (
         <div className="space-y-0.5">
-          {section.items.map((item) => (
-            <SidebarNavItem
-              key={item.to}
-              item={item}
-              disabled={isSupplierPending && isSupplierNavItemDisabled(item.to, supplierStatus)}
-            />
-          ))}
+          {section.items.map((item) => {
+            const showRegistrationBadge =
+              item.to === '/settings/profile' &&
+              isSupplierPending &&
+              supplierNeedsRegistrationAttention(supplierStatus)
+
+            return (
+              <SidebarNavItem
+                key={item.to}
+                item={item}
+                disabled={isSupplierPending && isSupplierNavItemDisabled(item.to, supplierStatus)}
+                badge={showRegistrationBadge ? 1 : item.badge}
+              />
+            )
+          })}
         </div>
       )}
     </div>
   )
 }
 
-export function SidebarNavItem({ item, disabled = false }: { item: NavItem; disabled?: boolean }) {
+export function SidebarNavItem({
+  item,
+  disabled = false,
+  badge,
+}: {
+  item: NavItem
+  disabled?: boolean
+  badge?: number
+}) {
+  const notificationBadge = badge ?? item.badge
   if (disabled) {
     return (
       <span
@@ -64,8 +81,10 @@ export function SidebarNavItem({ item, disabled = false }: { item: NavItem; disa
     >
       <item.icon size={18} />
       <span className="flex-1">{item.label}</span>
-      {item.badge != null && item.badge > 0 && (
-        <span className="rounded bg-foreground/10 px-1.5 py-0.5 text-xs font-medium">{item.badge}</span>
+      {notificationBadge != null && notificationBadge > 0 && (
+        <span className="rounded bg-destructive px-1.5 py-0.5 text-xs font-medium text-destructive-foreground">
+          !
+        </span>
       )}
     </NavLink>
   )

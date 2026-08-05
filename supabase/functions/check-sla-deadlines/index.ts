@@ -6,8 +6,9 @@ import { invokeSendNotification } from '../_shared/internal.ts'
 
 const SLA_ACTION_LABELS: Record<string, string> = {
   inform_payment: 'Informar pagamento',
+  confirm_payment: 'Confirmar pagamento',
   inform_shipping: 'Informar envio',
-  confirm_delivery: 'Confirmar entrega',
+  confirm_delivery: 'Confirmar recebimento',
   confirm_completion: 'Confirmar conclusão',
 }
 

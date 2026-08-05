@@ -9,6 +9,10 @@ import {
   Shield,
   User,
 } from 'lucide-react-native'
+import {
+  SUPPLIER_NOTIFICATION_PREFERENCES,
+  type NotificationPreferenceDefinition,
+} from '@keve/shared'
 import type { UserRole } from '@keve/shared'
 
 export type SettingsSection =
@@ -55,7 +59,7 @@ export const SETTINGS_MENU_ITEMS: {
   {
     id: 'notifications',
     label: 'Notificações',
-    description: 'Propostas, pedidos, mensagens e plano da sua conta.',
+    description: 'Demandas, pedidos, mensagens e plano da sua conta.',
     icon: Bell,
   },
   {
@@ -84,56 +88,13 @@ export const SETTINGS_MENU_ITEMS: {
   },
 ]
 
-export const BUYER_NOTIFICATIONS = [
-  {
-    type: 'offer.received',
-    label: 'Nova proposta recebida',
-    description: 'Quando um fornecedor envia proposta em uma demanda sua.',
-  },
-  {
-    type: 'chat.message',
-    label: 'Mensagens de negociação',
-    description: 'Novas mensagens no chat com fornecedores.',
-  },
-  {
-    type: 'order.status_changed',
-    label: 'Atualização de pedido',
-    description: 'Mudanças de status nos seus pedidos.',
-  },
-  {
-    type: 'sla.reminder',
-    label: 'Lembrete de prazo',
-    description: 'Quando uma ação sua está próxima do prazo limite.',
-  },
-  {
-    type: 'sla.expired',
-    label: 'Prazo expirado',
-    description: 'Quando um prazo importante foi ultrapassado.',
-  },
-  {
-    type: 'subscription.past_due',
-    label: 'Pagamento em atraso',
-    description: 'Quando há pendência no pagamento do seu plano.',
-  },
-  {
-    type: 'subscription.activated',
-    label: 'Plano ativado',
-    description: 'Confirmação de ativação ou renovação do seu plano.',
-  },
-] as const
+export type NotificationPreferenceItem = NotificationPreferenceDefinition
 
-export type NotificationPreferenceItem = {
-  type: string
-  label: string
-  description: string
-}
-
-export const buyerNotificationItems: NotificationPreferenceItem[] = BUYER_NOTIFICATIONS.map(
-  (item) => ({ ...item }),
-)
+export const supplierNotificationItems: NotificationPreferenceItem[] =
+  SUPPLIER_NOTIFICATION_PREFERENCES.map((item) => ({ ...item }))
 
 export function getSettingsMenuItems(): typeof SETTINGS_MENU_ITEMS {
-  return SETTINGS_MENU_ITEMS.filter((item) => item.id !== 'notifications')
+  return SETTINGS_MENU_ITEMS
 }
 
 export function getSectionMeta(section: SettingsSection) {

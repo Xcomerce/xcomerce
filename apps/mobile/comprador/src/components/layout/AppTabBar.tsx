@@ -12,7 +12,7 @@ const TAB_META: Record<
   Exclude<TabRouteName, 'fab-placeholder'>,
   { label: string; Icon: typeof LayoutGrid }
 > = {
-  index: { label: 'Feed', Icon: LayoutGrid },
+  index: { label: 'Início', Icon: LayoutGrid },
   demands: { label: 'Ofertas', Icon: LayoutList },
   orders: { label: 'Pedidos', Icon: Package },
   profile: { label: 'Perfil', Icon: User },

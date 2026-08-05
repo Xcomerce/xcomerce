@@ -25,7 +25,19 @@ import {
 import type { UserRole, SupplierStatus } from '@keve/shared'
 import { BILLING_PAGE_ENABLED } from '@/config/features'
 
-export const SUPPLIER_UNAPPROVED_ALLOWED_PATHS = ['/supplier/onboarding', '/support'] as const
+export const SUPPLIER_REGISTRATION_SETTINGS_URL = '/settings/profile?section=registration'
+
+export const SUPPLIER_UNAPPROVED_ALLOWED_PATHS = [
+  '/supplier/onboarding',
+  '/settings/profile',
+  '/support',
+] as const
+
+export function supplierNeedsRegistrationAttention(
+  supplierStatus: SupplierStatus | null | undefined,
+): boolean {
+  return supplierStatus != null && supplierStatus !== 'aprovado'
+}
 
 export function isSupplierPathAllowedWhenUnapproved(pathname: string): boolean {
   return SUPPLIER_UNAPPROVED_ALLOWED_PATHS.some(
@@ -78,7 +90,7 @@ export const buyerNav: RoleNavConfig = {
     {
       title: 'Principal',
       items: [
-        { to: '/buyer/feed', label: 'Feed', icon: LayoutGrid },
+        { to: '/buyer/feed', label: 'Início', icon: LayoutGrid },
         { to: '/buyer/dashboard', label: 'Ofertas', icon: LayoutList },
         { to: '/buyer/demands/new', label: 'Solicitar oferta', icon: PlusCircle },
         { to: '/buyer/orders', label: 'Pedidos', icon: Package },
@@ -98,7 +110,7 @@ export const buyerNav: RoleNavConfig = {
   ],
   bottomNav: {
     left: [
-      { to: '/buyer/feed', icon: LayoutGrid, label: 'Feed' },
+      { to: '/buyer/feed', icon: LayoutGrid, label: 'Início' },
       { to: '/buyer/dashboard', icon: LayoutList, label: 'Ofertas' },
     ],
     right: [
@@ -117,7 +129,6 @@ export const supplierNav: RoleNavConfig = {
         { to: '/supplier/board', label: 'Oportunidades', icon: LayoutGrid },
         { to: '/supplier/catalog', label: 'Catálogo', icon: Boxes },
         { to: '/supplier/orders', label: 'Pedidos', icon: Package },
-        { to: '/supplier/onboarding', label: 'Onboarding', icon: FileText },
       ],
     },
     {
@@ -135,7 +146,7 @@ export const supplierNav: RoleNavConfig = {
   ],
   bottomNav: {
     left: [
-      { to: '/supplier/board', icon: LayoutGrid, label: 'Oportunidades', hasNotification: true },
+      { to: '/supplier/board', icon: LayoutGrid, label: 'Oportunidades' },
       { to: '/supplier/catalog', icon: Boxes, label: 'Catálogo' },
     ],
     right: [

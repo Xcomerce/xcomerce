@@ -33,6 +33,7 @@ import { cn } from '@/lib/utils'
 
 const SLA_ACTION_LABELS: Record<string, string> = {
   inform_payment: 'Informar pagamento',
+  confirm_payment: 'Confirmar pagamento',
   inform_shipping: 'Informar envio',
   confirm_delivery: 'Confirmar recebimento',
   confirm_completion: 'Confirmar conclusão',
@@ -135,8 +136,8 @@ export function BuyerOrderDetailPage() {
         fileName: file.name,
         mimeType: file.type,
       })
-      await updateStatus.mutateAsync({ id: order.id, status: 'PAGAMENTO_INFORMADO' })
-      toast.success('Pagamento informado com comprovante')
+      await updateStatus.mutateAsync({ id: order.id, status: 'COMPROVANTE_ENVIADO' })
+      toast.success('Comprovante enviado. Aguardando confirmação do fornecedor.')
       const updated = await fetchOrderAttachments(order.id)
       setAttachments(updated)
     } catch (err) {
@@ -277,6 +278,18 @@ export function BuyerOrderDetailPage() {
             {order.status === 'PROPOSTA_ACEITA' && (
               <p className="text-sm text-muted-foreground">
                 Aguardando confirmação externa. Você será notificado quando puder informar o pagamento.
+              </p>
+            )}
+
+            {order.status === 'COMPROVANTE_ENVIADO' && (
+              <p className="text-sm text-muted-foreground">
+                Comprovante enviado. Aguardando o fornecedor confirmar o pagamento.
+              </p>
+            )}
+
+            {order.status === 'PAGAMENTO_CONFIRMADO' && (
+              <p className="text-sm text-muted-foreground">
+                Pagamento confirmado pelo fornecedor. Aguardando informações de envio.
               </p>
             )}
 

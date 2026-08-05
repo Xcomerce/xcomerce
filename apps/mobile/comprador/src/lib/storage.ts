@@ -22,6 +22,10 @@ export function avatarPath(userId: string, ext: string) {
   return `avatars/${userId}/avatar.${ext}`
 }
 
+export function orderAttachmentPath(userId: string, orderId: string, fileName: string) {
+  return `${userId}/${orderId}/${Date.now()}-${fileName}`
+}
+
 export async function getSignedUrl(bucket: string, path: string, expiresIn = 3600): Promise<string> {
   const { data, error } = await supabase.storage.from(bucket).createSignedUrl(path, expiresIn)
   if (error) throw error

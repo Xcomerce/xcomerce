@@ -9,8 +9,7 @@ import {
   AUTO_OFFER_SKIP_REASON_LABELS,
   AUTO_OFFER_STATUS_LABELS,
   calculateAutoOfferTotal,
-  getMinUnitPrice,
-  OFFER_MARKET_DOWNWARD_MARGIN_PERCENT,
+  AUTO_OFFER_MAX_DISCOUNT_PERCENT,
   type AutoOfferSettingsInput,
 } from '@keve/shared'
 import { BackButton } from '@/components/common/back-button'
@@ -82,7 +81,6 @@ export default function AutoOffersScreen() {
 
   const previewTotal = calculateAutoOfferTotal(PREVIEW_MARKET_PRICE, Number(watchedDiscount), PREVIEW_QUANTITY)
   const previewUnit = previewTotal / PREVIEW_QUANTITY
-  const previewMinUnit = getMinUnitPrice(PREVIEW_MARKET_PRICE)
 
   function toggleCategory(categoryId: string) {
     const current = watch('category_ids')
@@ -126,9 +124,8 @@ export default function AutoOffersScreen() {
       <ScrollView contentContainerClassName="gap-4 px-4 pb-32">
         <Card className="border-brand/20 bg-brand/5">
           <Text className="text-sm text-slate-700">
-            As propostas automáticas respeitam a margem máxima de{' '}
-            <Text className="font-semibold">{OFFER_MARKET_DOWNWARD_MARGIN_PERCENT}%</Text> abaixo do preço de
-            mercado e contam no limite mensal do seu plano.
+            As propostas automáticas usam o preço de mercado como referência e contam no limite mensal
+            do seu plano.
           </Text>
         </Card>
 
@@ -153,7 +150,7 @@ export default function AutoOffersScreen() {
             name="discount_percent"
             render={({ field: { onChange, onBlur, value } }) => (
               <Input
-                label={`Desconto sobre mercado (%) — máx. ${OFFER_MARKET_DOWNWARD_MARGIN_PERCENT}%`}
+                label={`Desconto sobre mercado (%) — máx. ${AUTO_OFFER_MAX_DISCOUNT_PERCENT}%`}
                 value={String(value ?? '')}
                 onChangeText={(v) => onChange(Number(v.replace(',', '.')) || 0)}
                 onBlur={onBlur}
@@ -290,9 +287,6 @@ export default function AutoOffersScreen() {
           </Text>
           <Text className="text-sm">
             Total: <Text className="font-semibold">{formatCurrency(previewTotal)}</Text>
-          </Text>
-          <Text className="mt-1 text-xs text-slate-500">
-            Piso: {formatCurrency(previewMinUnit)} / unidade
           </Text>
         </Card>
 

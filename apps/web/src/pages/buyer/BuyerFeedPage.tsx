@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo, type ReactNode } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Package, ChevronLeft, ChevronRight, Rocket } from 'lucide-react'
+import { Package, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useFeedProducts } from '@/hooks/use-products'
 import { useCategories } from '@/hooks/use-categories'
 import { cn } from '@/lib/utils'
@@ -323,65 +323,6 @@ export function BuyerFeedPage() {
 
   return (
     <div className="space-y-8 pb-12">
-      {/* Banner Superior Premium */}
-      <div className="relative overflow-hidden rounded-xl h-[240px] sm:h-60 select-none bg-[#222689] flex items-center">
-        {/* Lado Esquerdo (Conteúdo e Textos) */}
-        <div className="relative z-20 pl-6 pr-4 sm:pl-10 max-w-[65%] sm:max-w-[70%] flex flex-col justify-center space-y-4">
-          <h2 className="font-display font-bold text-white text-sm sm:text-lg md:text-xl lg:text-2xl leading-snug tracking-tight">
-            Suas vendas não podem parar.<br />
-            Seus novos fornecedores estão no <span className="text-[#a5f3fc]">XCOMERCE</span>.
-          </h2>
-          
-          <div className="flex items-center gap-4 sm:gap-8 text-white/95">
-            {/* Item 1 */}
-            <div className="flex flex-col items-center text-center space-y-1 sm:space-y-1.5">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.75"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="w-8 h-8 sm:w-10 sm:h-10 text-white"
-              >
-                <path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.75z" />
-                <path d="m9 12 2 2 4-4" />
-                <path d="M8.5 17.5 6 22.5 9.5 21 11.5 17.5" />
-                <path d="M15.5 17.5 18 22.5 14.5 21 12.5 17.5" />
-              </svg>
-              <div className="text-[8px] sm:text-[10px] md:text-xs font-medium leading-tight uppercase tracking-wider font-sans text-white/95">
-                Fornecedores<br />
-                Pré-Qualificados
-              </div>
-            </div>
-
-            {/* Separador */}
-            <div className="h-10 sm:h-12 w-px bg-white/20 self-center" />
-
-            {/* Item 2 */}
-            <div className="flex flex-col items-center text-center space-y-1 sm:space-y-1.5">
-              <Rocket className="w-8 h-8 sm:w-10 sm:h-10 text-white" strokeWidth={1.75} />
-              <div className="text-[8px] sm:text-[10px] md:text-xs font-medium leading-tight uppercase tracking-wider font-sans text-white/95">
-                Agilidade e<br />
-                Transparência
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Lado Direito (Foto do Homem com Efeito de Fade) */}
-        <div className="absolute right-0 top-0 h-full w-[42%] sm:w-[35%] md:w-[30%] overflow-hidden z-10">
-          {/* Gradiente de fade para misturar com o fundo azul */}
-          <div className="absolute inset-y-0 left-0 bg-gradient-to-r from-[#222689] via-[#222689]/40 to-transparent w-12 sm:w-20 z-20" />
-          <img
-            src="/feed-banner-man.png"
-            alt="Profissional XCommerce"
-            className="w-full h-full object-cover object-top"
-          />
-        </div>
-      </div>
-
       {/* Categorias (Chips) */}
       <div className="relative min-w-0">
         <button

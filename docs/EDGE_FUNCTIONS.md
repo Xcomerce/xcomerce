@@ -453,7 +453,9 @@ POST /functions/v1/check-sla-deadlines
 Authorization: Bearer {CRON_SECRET}
 ```
 
-Agendamento sugerido: **a cada 15 minutos** (Supabase Cron ou pg_cron).
+Agendamento sugerido: **a cada hora** (`0 * * * *`).
+
+**Labels de ação (e-mail/notificação):** `inform_payment`, `confirm_payment`, `inform_shipping`, `confirm_delivery`, `confirm_completion`.
 
 ### Request
 

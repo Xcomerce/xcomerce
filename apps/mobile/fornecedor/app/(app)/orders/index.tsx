@@ -1,23 +1,29 @@
 import { useState } from 'react'
-import { FlatList, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native'
+import { Alert, FlatList, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
-import { ChevronRight, MapPin, Package } from 'lucide-react-native'
+import { ChevronRight, MapPin, Package, Phone, User } from 'lucide-react-native'
 import { AppHeader } from '@/components/layout/AppHeader'
+import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { EmptyState } from '@/components/common/EmptyState'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import { StatusBadge } from '@/components/common/StatusBadge'
 import { useAuth } from '@/contexts/auth-context'
-import { useOrders } from '@/hooks/use-orders'
+import { useOrders, useUpdateOrderStatus } from '@/hooks/use-orders'
 import type { SupplierOrderListItem } from '@/services/orders'
+import { shareOrderSummary } from '@/lib/order-share'
+import { formatSupabaseError } from '@/lib/errors'
+import {
+  ORDER_ACCEPTED_STATUSES,
+  ORDER_COMPLETED_STATUSES,
+  ORDER_PRODUCTION_STATUSES,
+  ORDER_STATUS_LABELS,
+  canSupplierConfirmPayment,
+} from '@keve/shared'
 import { cn, formatCurrency, formatShortId } from '@/lib/utils'
 
 type OrderTab = 'all' | 'accepted' | 'production' | 'completed'
-
-const ACCEPTED_STATUSES = ['PROPOSTA_ACEITA', 'AGUARDANDO_CONFIRMACAO_EXTERNA']
-const PRODUCTION_STATUSES = ['PAGAMENTO_INFORMADO', 'ENVIO_INFORMADO', 'ENTREGUE']
-const COMPLETED_STATUSES = ['CONCLUIDO', 'CANCELADO', 'EXPIRADO']
 
 const TABS: { id: OrderTab; label: string }[] = [
   { id: 'all', label: 'Todos' },
@@ -26,10 +32,21 @@ const TABS: { id: OrderTab; label: string }[] = [
   { id: 'completed', label: 'Concluído' },
 ]
 
+function formatPhone(phone: string): string {
+  const digits = phone.replace(/\D/g, '')
+  if (digits.length === 11) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
+  }
+  if (digits.length === 10) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`
+  }
+  return phone
+}
+
 function filterOrders(orders: SupplierOrderListItem[], tab: OrderTab) {
-  if (tab === 'accepted') return orders.filter((o) => ACCEPTED_STATUSES.includes(o.status))
-  if (tab === 'production') return orders.filter((o) => PRODUCTION_STATUSES.includes(o.status))
-  if (tab === 'completed') return orders.filter((o) => COMPLETED_STATUSES.includes(o.status))
+  if (tab === 'accepted') return orders.filter((o) => ORDER_ACCEPTED_STATUSES.includes(o.status))
+  if (tab === 'production') return orders.filter((o) => ORDER_PRODUCTION_STATUSES.includes(o.status))
+  if (tab === 'completed') return orders.filter((o) => ORDER_COMPLETED_STATUSES.includes(o.status))
   return orders
 }
 
@@ -38,12 +55,30 @@ export default function SupplierOrdersScreen() {
   const { supplierStatus } = useAuth()
   const [activeTab, setActiveTab] = useState<OrderTab>('all')
   const { data: ordersData, isLoading, isError, refetch, isRefetching } = useOrders('supplier')
+  const updateStatus = useUpdateOrderStatus()
   const orders = (ordersData ?? []) as SupplierOrderListItem[]
 
   const filteredOrders = filterOrders(orders, activeTab)
 
   function countForTab(tab: OrderTab) {
     return filterOrders(orders, tab).length
+  }
+
+  async function handleConfirmPayment(order: SupplierOrderListItem) {
+    try {
+      await updateStatus.mutateAsync({ id: order.id, status: 'PAGAMENTO_CONFIRMADO' })
+      Alert.alert('Sucesso', 'Pagamento confirmado')
+    } catch (err) {
+      Alert.alert('Erro', formatSupabaseError(err))
+    }
+  }
+
+  async function handleShare(order: SupplierOrderListItem) {
+    try {
+      await shareOrderSummary(order)
+    } catch {
+      Alert.alert('Erro', 'Não foi possível compartilhar o pedido.')
+    }
   }
 
   return (
@@ -112,8 +147,8 @@ export default function SupplierOrdersScreen() {
           refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => refetch()} />}
           contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 100 }}
           renderItem={({ item }) => (
-            <Pressable onPress={() => router.push(`/(app)/orders/${item.id}`)}>
-              <Card>
+            <Card>
+              <Pressable onPress={() => router.push(`/(app)/orders/${item.id}`)}>
                 <View className="flex-row items-start justify-between gap-3">
                   <View className="min-w-0 flex-1 gap-2">
                     <View className="flex-row flex-wrap items-center gap-2">
@@ -125,41 +160,60 @@ export default function SupplierOrdersScreen() {
                       <StatusBadge status={item.status} type="order" />
                     </View>
 
-                    {item.demand ? (
-                      <>
-                        <Text className="text-base font-semibold text-slate-900" numberOfLines={2}>
-                          {item.demand.titulo}
-                        </Text>
-                        <View className="flex-row items-center gap-1">
-                          <MapPin size={12} color="#64748b" />
-                          <Text className="text-xs text-slate-500">
-                            {item.demand.cidade}/{item.demand.uf}
-                          </Text>
-                        </View>
-                      </>
-                    ) : (
-                      <Text className="text-sm text-slate-500">Demanda {item.demand_id.slice(0, 8)}…</Text>
-                    )}
+                    <Text className="text-base font-semibold text-slate-900" numberOfLines={2}>
+                      {item.demand?.titulo ?? `Demanda ${item.demand_id.slice(0, 8)}…`}
+                    </Text>
 
-                    <View className="flex-row flex-wrap gap-x-4 gap-y-1">
-                      {item.offer ? (
-                        <>
-                          <Text className="text-sm font-bold text-brand-dark">
-                            {formatCurrency(item.offer.valor)}
-                          </Text>
-                          <Text className="text-xs text-slate-500">
-                            {item.offer.quantidade} {item.demand?.unidade ?? 'un'} ·{' '}
-                            {item.offer.prazo_entrega_dias}{' '}
-                            {item.offer.prazo_entrega_dias === 1 ? 'dia' : 'dias'}
-                          </Text>
-                        </>
-                      ) : null}
-                    </View>
+                    {item.demand ? (
+                      <View className="flex-row items-center gap-1">
+                        <MapPin size={12} color="#64748b" />
+                        <Text className="text-xs text-slate-500">
+                          {item.demand.cidade}/{item.demand.uf}
+                          {item.offer ? ` · ${formatCurrency(item.offer.valor)}` : ''}
+                        </Text>
+                      </View>
+                    ) : null}
+
+                    {item.buyer ? (
+                      <View className="gap-1">
+                        <View className="flex-row items-center gap-1.5">
+                          <User size={12} color="#64748b" />
+                          <Text className="text-sm text-slate-600">{item.buyer.full_name}</Text>
+                        </View>
+                        {item.buyer.phone ? (
+                          <View className="flex-row items-center gap-1.5">
+                            <Phone size={12} color="#64748b" />
+                            <Text className="text-sm text-slate-500">{formatPhone(item.buyer.phone)}</Text>
+                          </View>
+                        ) : null}
+                      </View>
+                    ) : null}
+
+                    <Text className="text-xs text-slate-500">
+                      {ORDER_STATUS_LABELS[item.status] ?? item.status}
+                    </Text>
                   </View>
                   <ChevronRight size={20} color="#94a3b8" />
                 </View>
-              </Card>
-            </Pressable>
+              </Pressable>
+
+              <View className="mt-3 flex-row flex-wrap gap-2 border-t border-slate-100 pt-3">
+                {canSupplierConfirmPayment(item.status) ? (
+                  <Button
+                    label="Confirmar pagamento"
+                    loading={updateStatus.isPending}
+                    onPress={() => void handleConfirmPayment(item)}
+                    className="flex-1 min-w-[140px]"
+                  />
+                ) : null}
+                <Button
+                  label="Compartilhar pedido"
+                  variant="outline"
+                  onPress={() => void handleShare(item)}
+                  className="flex-1 min-w-[140px]"
+                />
+              </View>
+            </Card>
           )}
         />
       )}

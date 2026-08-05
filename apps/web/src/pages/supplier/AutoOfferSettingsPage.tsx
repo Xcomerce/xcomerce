@@ -9,8 +9,7 @@ import {
   AUTO_OFFER_SKIP_REASON_LABELS,
   AUTO_OFFER_STATUS_LABELS,
   calculateAutoOfferTotal,
-  getMinUnitPrice,
-  OFFER_MARKET_DOWNWARD_MARGIN_PERCENT,
+  AUTO_OFFER_MAX_DISCOUNT_PERCENT,
   type AutoOfferSettingsInput,
 } from '@keve/shared'
 import { Button } from '@/components/ui/button'
@@ -128,9 +127,8 @@ export function AutoOfferSettingsPage() {
         <div className="space-y-6">
           <Alert>
             <p className="text-sm">
-              As propostas automáticas respeitam a margem máxima de{' '}
-              <strong>{OFFER_MARKET_DOWNWARD_MARGIN_PERCENT}%</strong> abaixo do preço de mercado e
-              contam no limite mensal do seu plano.
+              As propostas automáticas usam o preço de mercado como referência e contam no limite
+              mensal do seu plano.
             </p>
           </Alert>
 
@@ -417,7 +415,7 @@ function DiscountSliderField({
       <FormControl>
         <Slider
           min={0}
-          max={OFFER_MARKET_DOWNWARD_MARGIN_PERCENT}
+          max={AUTO_OFFER_MAX_DISCOUNT_PERCENT}
           step={0.1}
           value={Number(field.value)}
           onValueChange={setLiveValue}
@@ -426,10 +424,10 @@ function DiscountSliderField({
       </FormControl>
       <div className="flex justify-between text-xs text-muted-foreground">
         <span>0%</span>
-        <span>{OFFER_MARKET_DOWNWARD_MARGIN_PERCENT}%</span>
+        <span>{AUTO_OFFER_MAX_DISCOUNT_PERCENT}%</span>
       </div>
       <p className="text-xs text-muted-foreground">
-        Máximo {OFFER_MARKET_DOWNWARD_MARGIN_PERCENT}% — alinhado à regra de leilão.
+        Percentual de desconto sobre o preço de mercado de referência.
       </p>
       <FormMessage />
     </FormItem>
@@ -445,7 +443,6 @@ function CalculationPreviewCard({ control }: { control: Control<AutoOfferSetting
     PREVIEW_QUANTITY,
   )
   const previewUnit = previewTotal / PREVIEW_QUANTITY
-  const previewMinUnit = getMinUnitPrice(PREVIEW_MARKET_PRICE)
 
   return (
     <Card>
@@ -467,9 +464,6 @@ function CalculationPreviewCard({ control }: { control: Control<AutoOfferSetting
         <p>
           Valor total da proposta:{' '}
           <span className="font-semibold">{formatCurrency(previewTotal)}</span>
-        </p>
-        <p className="text-muted-foreground">
-          Piso permitido: {formatCurrency(previewMinUnit)} / unidade (80% do mercado)
         </p>
       </CardContent>
     </Card>

@@ -6,9 +6,6 @@ import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
   createOfferSchema,
-  getMinTotalPrice,
-  getMinUnitPrice,
-  OFFER_MARKET_DOWNWARD_MARGIN_PERCENT,
   type OfferInput,
 } from '@keve/shared'
 import { BackButton } from '@/components/common/back-button'
@@ -24,7 +21,7 @@ import { useCategories, type Category } from '@/hooks/use-categories'
 import { useCreateOffer, useOffersForDemand } from '@/hooks/use-offers'
 import { fetchDemandMarketPrice } from '@/services/pricing'
 import type { PublicOffer } from '@/services/offers'
-import { cn, formatCurrency, formatDate, formatExpiresAt } from '@/lib/utils'
+import { cn, formatCurrency, formatDate, formatDateTime, formatExpiresAt } from '@/lib/utils'
 import { formatSupabaseError } from '@/lib/errors'
 
 export default function OfferScreen() {
@@ -43,7 +40,7 @@ export default function OfferScreen() {
   const myOffer = offers.find((o) => o.supplier_id === user?.id)
   const showOfferForm = !myOffer
 
-  const offerSchemaResolved = useMemo(() => createOfferSchema(marketUnitPrice), [marketUnitPrice])
+  const offerSchemaResolved = useMemo(() => createOfferSchema(), [])
 
   const {
     control,
@@ -62,13 +59,6 @@ export default function OfferScreen() {
       mensagem: '',
     },
   })
-
-  const watchedQuantity = watch('quantidade')
-  const minUnitPrice = marketUnitPrice != null && marketUnitPrice > 0 ? getMinUnitPrice(marketUnitPrice) : null
-  const minTotalPrice =
-    minUnitPrice != null && watchedQuantity > 0
-      ? getMinTotalPrice(marketUnitPrice!, watchedQuantity)
-      : null
 
   const categoryName = categories.find((c) => c.id === demand?.category_id)?.name
   const expiresInfo = demand ? formatExpiresAt(demand.expires_at) : null
@@ -140,7 +130,7 @@ export default function OfferScreen() {
             <DetailField label="Quantidade" value={`${demand.quantidade} ${demand.unidade}`} />
             <DetailField label="Localização" value={`${demand.cidade}/${demand.uf}`} />
             <DetailField label="Raio de entrega" value={`${demand.raio_km} km`} />
-            <DetailField label="Prazo desejado" value={formatDate(demand.prazo_desejado)} />
+            <DetailField label="Prazo desejado" value={formatDateTime(demand.prazo_desejado)} />
             {demand.published_at ? (
               <DetailField label="Publicada em" value={formatDate(demand.published_at)} />
             ) : null}
@@ -164,21 +154,11 @@ export default function OfferScreen() {
           ) : null}
           {marketUnitPrice != null && marketUnitPrice > 0 ? (
             <View className="mt-4 rounded-xl border border-brand/20 bg-brand/5 px-3 py-3">
-              <Text className="text-sm font-semibold text-slate-900">Referência de mercado</Text>
+              <Text className="text-sm font-semibold text-slate-900">Preço de referência</Text>
               <Text className="mt-1 text-sm text-slate-600">
-                Preço unitário:{' '}
+                Unitário:{' '}
                 <Text className="font-semibold text-slate-900">{formatCurrency(marketUnitPrice)}</Text>
               </Text>
-              <Text className="mt-1 text-sm text-slate-600">
-                Mínimo viável:{' '}
-                <Text className="font-semibold text-slate-900">{formatCurrency(minUnitPrice!)} / unidade</Text>
-                {' '}(máx. {OFFER_MARKET_DOWNWARD_MARGIN_PERCENT}% abaixo)
-              </Text>
-              {minTotalPrice != null ? (
-                <Text className="mt-2 text-xs text-slate-500">
-                  Para {watchedQuantity} {demand.unidade}: mínimo {formatCurrency(minTotalPrice)}
-                </Text>
-              ) : null}
             </View>
           ) : null}
         </SectionCard>
@@ -217,11 +197,6 @@ export default function OfferScreen() {
                 />
               )}
             />
-            {minTotalPrice != null ? (
-              <Text className="-mt-2 text-xs text-slate-500">
-                Mínimo para {watchedQuantity} {demand.unidade}: {formatCurrency(minTotalPrice)}
-              </Text>
-            ) : null}
             <View className="flex-row gap-3">
               <View className="flex-1">
                 <Controller

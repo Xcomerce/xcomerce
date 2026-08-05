@@ -166,6 +166,10 @@ Plataforma marketplace baseada em **busca reversa**: o comprador publica uma dem
 
 ### 6.3 Cadastro e onboarding
 
+- Wizard de cadastro fornecedor acessível em **Configurações → Cadastro** (não item dedicado no menu)
+- Badge de pendência redireciona fornecedor não aprovado ao cadastro
+- Data de cadastro na plataforma exibida na seção Cadastro
+
 **Comprador:** dados básicos + empresa (CNPJ opcional ou obrigatório — validar com comercial).
 
 **Fornecedor:**
@@ -236,7 +240,10 @@ Fornecedor envia por demanda:
 - Anexos de imagem (Storage)
 - Histórico persistente
 - **Proteção anti-desintermediação (MVP):** filtro regex bloqueando telefone, e-mail e links em mensagens enquanto contato não liberado
-- **Reveal Contact:** comprador pode revelar contato após aceitar proposta ou ação explícita; dados sensíveis expostos via view SQL com RLS
+- Contato do fornecedor **visível** na proposta (CNPJ, telefone, e-mail junto ao header)
+- Sem regra de piso de 20% abaixo do preço de referência — fornecedor define o valor livremente
+- Preço de referência unitário permanece como referência visual
+- **Reveal Contact (legado):** backfill `contact_revealed = true`; botão "Revelar" removido da UX
 
 ### 6.9 Workflow de pedido
 
@@ -251,12 +258,17 @@ RASCUNHO → PUBLICADA → OFERTAS_RECEBIDAS → EM_NEGOCIACAO
 **Estados estendidos (pós-aceite, monitoramento externo):**
 
 ```
-AGUARDANDO_CONFIRMACAO_EXTERNA
-  → PAGAMENTO_INFORMADO (comprovante anexado pelo comprador)
-  → ENVIO_INFORMADO (link/código de rastreio pelo fornecedor)
-  → ENTREGUE (confirmação mútua)
+AGUARDANDO_CONFIRMACAO_EXTERNA     [label: Aguardando pagamento]
+  → COMPROVANTE_ENVIADO             [comprador anexa comprovante]
+  → PAGAMENTO_CONFIRMADO            [fornecedor confirma na conta — não valida anexo]
+  → ENVIO_INFORMADO                 [fornecedor informa rastreio]
+  → ENTREGUE                        [comprador confirma recebimento]
   → CONCLUIDO
 ```
+
+**Labels de abas (fornecedor):** Aceito (aguardando pagamento/comprovante) · Em produção (pós-confirmação) · Concluído.
+
+> Status legado `PAGAMENTO_INFORMADO` foi migrado para `COMPROVANTE_ENVIADO`. A confirmação financeira é **manual pelo fornecedor** (conferência na conta), não pela plataforma.
 
 **SLAs por etapa (decisão kickoff):**
 - Prazo padrão: **24 horas** por ação pendente (configurável no admin — V2)
@@ -285,13 +297,15 @@ AGUARDANDO_CONFIRMACAO_EXTERNA
 | E-mail (lembretes, digest) | ✅ | ✅ |
 | Push nativo | — | ✅ |
 
-**Eventos notificáveis:**
+**Eventos notificáveis (ago/2026):**
 - Nova demanda compatível (fornecedor)
-- Nova proposta recebida (comprador) — agrupada por demanda
-- Mensagem de chat
-- Prazo de ação próximo ao vencimento
-- Mudança de status do pedido
+- Nova proposta recebida (comprador) — agrupada por demanda via `deliver_notification()`
+- Mensagem de chat — trigger `offer_messages_after_insert`
+- Mudança de status do pedido — trigger `orders_after_write`
+- Prazo de ação próximo ao vencimento / SLA expirado — `check-sla-deadlines`
 - Aprovação/recusa de cadastro fornecedor
+
+Preferências por canal (`in_app_enabled`, `email_enabled`) respeitadas no pipeline e na Edge Function `send-notification`.
 
 ### 6.12 Admin
 

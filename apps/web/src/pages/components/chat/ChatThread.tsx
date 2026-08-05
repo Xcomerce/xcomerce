@@ -16,7 +16,6 @@ type ChatThreadProps = {
   supplierId: string
   recipientId: string
   offerId?: string | null
-  contactRevealed?: boolean
   supplierName?: string | null
   className?: string
 }
@@ -26,7 +25,6 @@ export function ChatThread({
   supplierId,
   recipientId,
   offerId,
-  contactRevealed = false,
   supplierName,
   className,
 }: ChatThreadProps) {
@@ -63,7 +61,7 @@ export function ChatThread({
     } catch (err) {
       const raw = err instanceof Error ? err.message : 'Erro ao enviar mensagem'
       if (raw.includes('CONTACT_INFO_BLOCKED')) {
-        toast.error('Não é permitido compartilhar dados de contato antes da revelação.')
+        toast.error('Não é permitido compartilhar dados de contato diretos no chat.')
       } else {
         toast.error(translateSupabaseError(raw))
       }
@@ -95,11 +93,6 @@ export function ChatThread({
         <CardTitle className="text-base">
           Chat{supplierName ? ` · ${supplierName}` : ''}
         </CardTitle>
-        {!contactRevealed && (
-          <p className="text-xs text-muted-foreground">
-            Dados de contato bloqueados até revelar ou aceitar a proposta.
-          </p>
-        )}
       </CardHeader>
       <CardContent className="flex min-h-[280px] flex-1 flex-col gap-3">
         {error && (

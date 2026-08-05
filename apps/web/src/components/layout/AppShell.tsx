@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { UserRole } from '@keve/shared'
-import { NAV_BY_ROLE, isSupplierPathAllowedWhenUnapproved } from '@/config/navigation'
+import { NAV_BY_ROLE, isSupplierPathAllowedWhenUnapproved, SUPPLIER_REGISTRATION_SETTINGS_URL } from '@/config/navigation'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { MobileSidebar } from '@/components/layout/MobileSidebar'
 import { Header } from '@/components/layout/Header'
@@ -84,7 +84,7 @@ export function AppShell({ role }: { role: UserRole }) {
   useEffect(() => {
     if (!isSupplierPending) return
     if (isSupplierPathAllowedWhenUnapproved(pathname)) return
-    navigate('/supplier/onboarding', { replace: true })
+    navigate(SUPPLIER_REGISTRATION_SETTINGS_URL, { replace: true })
   }, [isSupplierPending, pathname, navigate])
 
   return (

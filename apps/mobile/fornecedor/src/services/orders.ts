@@ -20,6 +20,11 @@ export type SupplierOrderListItem = Order & {
     prazo_entrega_dias: number
     quantidade: number
   } | null
+  buyer: {
+    full_name: string
+    phone: string | null
+    email: string | null
+  } | null
 }
 
 export async function fetchOrders(userId: string, role: OrderRole): Promise<Order[]> {
@@ -41,7 +46,8 @@ export async function fetchSupplierOrdersWithDetails(userId: string): Promise<Su
       `
       *,
       demand:demands(titulo, cidade, uf, unidade),
-      offer:offers(valor, prazo_entrega_dias, quantidade)
+      offer:offers(valor, prazo_entrega_dias, quantidade),
+      buyer:profiles!orders_buyer_id_fkey(full_name, phone, email)
     `,
     )
     .eq('supplier_id', userId)

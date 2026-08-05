@@ -7,26 +7,29 @@ import {
   ArrowLeft,
   Check,
   ChevronRight,
-  Eye,
+  Clock,
   Loader2,
   MessageSquare,
   Package,
   Send,
   Star,
+  Store,
   X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useDemand } from '@/hooks/use-demands'
-import { useOfferDetail, useRevealContact, useAcceptOffer, useRejectOffer, useOffersForDemand } from '@/hooks/use-offers'
+import { useOfferDetail, useAcceptOffer, useRejectOffer, useOffersForDemand } from '@/hooks/use-offers'
 import { useChatMessages, useSendMessage, useChatSubscription } from '@/hooks/use-chat'
 import { useAuth } from '@/contexts/auth-context'
 import { formatSupabaseError } from '@/lib/errors'
 import { demandHasVariantSpecs } from '@keve/shared'
 import { DemandVariantSummary } from '@/components/buyer/DemandVariantSummary'
 import { formatDemandDateTime } from '@/lib/datetime'
-import { cn } from '@/lib/utils'
+import { cn, getInitials } from '@/lib/utils'
+import { getSignedUrl } from '@/lib/storage'
 import { ScrollPageShell, SCROLL_PAGE_SECTION_CLASS } from '@/components/layout/ScrollPageShell'
 
 function formatCurrency(value: number) {
@@ -82,6 +85,8 @@ type BuyerOfferChatPanelProps = {
   onSendChat: (e: React.FormEvent) => void
   sending: boolean
   messagesEndRef: React.RefObject<HTMLDivElement | null>
+  chatInputRef?: React.RefObject<HTMLInputElement | null>
+  onQuickMessage?: (message: string) => void
   className?: string
 }
 
@@ -94,6 +99,8 @@ function BuyerOfferChatPanel({
   onSendChat,
   sending,
   messagesEndRef,
+  chatInputRef,
+  onQuickMessage,
   className,
 }: BuyerOfferChatPanelProps) {
   return (
@@ -140,7 +147,10 @@ function BuyerOfferChatPanel({
               <button
                 key={msg}
                 type="button"
-                onClick={() => onChatBodyChange(msg)}
+                onClick={() => {
+                  onChatBodyChange(msg)
+                  onQuickMessage?.(msg)
+                }}
                 className="inline-flex items-center rounded-lg border border-border/30 bg-secondary px-2 py-1 text-[10px] font-medium text-muted-foreground transition-all duration-200 hover:bg-secondary/70 active:scale-95"
               >
                 {msg}
@@ -151,6 +161,7 @@ function BuyerOfferChatPanel({
 
         <form onSubmit={onSendChat} className="flex gap-2">
           <Input
+            ref={chatInputRef}
             placeholder="Negocie prazos, valores..."
             value={chatBody}
             onChange={(e) => onChatBodyChange(e.target.value)}
@@ -174,6 +185,7 @@ export function BuyerOfferDetailPage() {
   const [showAcceptModal, setShowAcceptModal] = useState(false)
   const [showRejectModal, setShowRejectModal] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const chatInputRef = useRef<HTMLInputElement>(null)
 
   const { data: offer, isLoading: loadingOffer, error: offerError } = useOfferDetail(offerId)
   const { data: demand, isLoading: loadingDemand } = useDemand(offer?.demand_id)
@@ -190,23 +202,50 @@ export function BuyerOfferDetailPage() {
     }
   }
 
-  const { data: supplierProfile } = useQuery({
-    queryKey: ['supplier-profile', offer?.supplier_id],
+  const { data: supplierContext } = useQuery({
+    queryKey: ['supplier-offer-context', offer?.supplier_id],
     queryFn: async () => {
       if (!offer?.supplier_id) return null
-      const { data, error } = await supabase
-        .from('supplier_profiles')
-        .select('*, company:companies(*)')
-        .eq('user_id', offer.supplier_id)
-        .single()
-      
-      if (error) return null
-      return data
+      const supplierId = offer.supplier_id
+      const [profileRes, supplierRes, countRes] = await Promise.all([
+        supabase.from('profiles').select('avatar_url, full_name').eq('id', supplierId).maybeSingle(),
+        supabase
+          .from('supplier_profiles')
+          .select('response_rate, company:companies(cnpj, nome_fantasia, cidade, uf)')
+          .eq('user_id', supplierId)
+          .maybeSingle(),
+        supabase
+          .from('products')
+          .select('*', { count: 'exact', head: true })
+          .eq('supplier_id', supplierId)
+          .eq('is_active', true),
+      ])
+
+      let avatarUrl: string | null = null
+      if (profileRes.data?.avatar_url) {
+        try {
+          avatarUrl = await getSignedUrl('documents', profileRes.data.avatar_url)
+        } catch {
+          avatarUrl = null
+        }
+      }
+
+      return {
+        avatarUrl,
+        displayName: profileRes.data?.full_name ?? offer.supplier_name,
+        responseRate: supplierRes.data?.response_rate ?? 0,
+        catalogCount: countRes.count ?? 0,
+        company: supplierRes.data?.company as {
+          cnpj?: string
+          nome_fantasia?: string | null
+          cidade?: string
+          uf?: string
+        } | null,
+      }
     },
     enabled: !!offer?.supplier_id,
   })
 
-  const revealContact = useRevealContact()
   const acceptOffer = useAcceptOffer()
   const rejectOffer = useRejectOffer()
 
@@ -232,14 +271,10 @@ export function BuyerOfferDetailPage() {
     }
   }, [mobileChatOpen])
 
-  async function handleReveal() {
-    if (!offer) return
-    try {
-      await revealContact.mutateAsync(offer.id)
-      toast.success('Contato revelado com sucesso')
-    } catch (err) {
-      toast.error(formatSupabaseError(err))
-    }
+  function handleQuickMessage(message: string) {
+    setChatBody(message)
+    setMobileChatOpen(true)
+    window.setTimeout(() => chatInputRef.current?.focus(), 150)
   }
 
   async function handleAccept() {
@@ -316,10 +351,14 @@ export function BuyerOfferDetailPage() {
   }
 
   const imageUrl = getProductImage(demand.titulo)
-  const isRejected = offer.status === 'rejeitada' || offer.status === 'cancelada'
-  const isAccepted = offer.status === 'aceita'
   const canAccept = !['RASCUNHO', 'CANCELADO', 'EXPIRADO', 'PROPOSTA_ACEITA'].includes(demand.status)
   const showFooter = canAccept && offer.status === 'enviada'
+  const supplierDisplayName = supplierContext?.displayName ?? offer.supplier_name ?? 'Fornecedor'
+  const supplierLocation =
+    supplierContext?.company?.cidade && supplierContext?.company?.uf
+      ? `${supplierContext.company.cidade}/${supplierContext.company.uf}`
+      : `${demand.cidade}/${demand.uf}`
+  const supplierCnpj = supplierContext?.company?.cnpj
 
   return (
     <>
@@ -344,60 +383,75 @@ export function BuyerOfferDetailPage() {
 
         {/* Conteúdo fora do card */}
         <div className="space-y-6">
-          <div className="flex items-start justify-between gap-4">
-            <div className="space-y-1.5">
-              <h3 className="text-xl font-extrabold text-foreground tracking-tight">
-                {offer.supplier_name ?? 'Fornecedor Parceiro'}
-              </h3>
-              
+          <div className="flex items-start gap-4">
+            <Avatar className="h-14 w-14 shrink-0 border border-border/60">
+              {supplierContext?.avatarUrl ? (
+                <AvatarImage src={supplierContext.avatarUrl} alt={supplierDisplayName} />
+              ) : null}
+              <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
+                {getInitials(supplierDisplayName)}
+              </AvatarFallback>
+            </Avatar>
+
+            <div className="min-w-0 flex-1 space-y-2">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <h3 className="text-xl font-extrabold text-foreground tracking-tight">
+                  {supplierDisplayName}
+                </h3>
+                {offer.supplier_avg_rating != null && (
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+                    <span className="font-bold text-sm text-foreground">
+                      {offer.supplier_avg_rating.toFixed(1)}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">
+                      ({offer.supplier_total_ratings ?? 0})
+                    </span>
+                  </div>
+                )}
+              </div>
+
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
                 <p>
-                  Localização: <span className="font-semibold text-foreground">{demand.cidade}/{demand.uf}</span>
+                  Localização:{' '}
+                  <span className="font-semibold text-foreground">{supplierLocation}</span>
                 </p>
-              </div>
-            </div>
-
-            <div className="flex flex-col items-end text-right gap-0.5 shrink-0">
-              <div className="hidden lg:flex items-center gap-4 text-[11px] text-muted-foreground whitespace-nowrap">
-                {((supplierProfile as any)?.company?.cnpj) && (
+                {supplierCnpj ? (
                   <p>
-                    CNPJ: <span className="font-semibold text-foreground">{formatCNPJ((supplierProfile as any).company.cnpj)}</span>
+                    CNPJ:{' '}
+                    <span className="font-semibold text-foreground">{formatCNPJ(supplierCnpj)}</span>
                   </p>
-                )}
-                {offer.contact_revealed ? (
-                  <>
-                    {offer.supplier_phone && (
-                      <p>
-                        Tel: <span className="font-semibold text-foreground">{formatPhone(offer.supplier_phone)}</span>
-                      </p>
-                    )}
-                    {offer.supplier_email && (
-                      <p>
-                        E-mail: <span className="font-semibold text-foreground">{offer.supplier_email}</span>
-                      </p>
-                    )}
-                  </>
-                ) : (
-                  <p className="text-[10px] text-muted-foreground/85 italic">
-                    Contato oculto
+                ) : null}
+                {offer.supplier_phone ? (
+                  <p>
+                    Tel:{' '}
+                    <span className="font-semibold text-foreground">{formatPhone(offer.supplier_phone)}</span>
                   </p>
-                )}
+                ) : null}
+                {offer.supplier_email ? (
+                  <p>
+                    E-mail:{' '}
+                    <span className="font-semibold text-foreground">{offer.supplier_email}</span>
+                  </p>
+                ) : null}
               </div>
 
-              {offer.supplier_avg_rating != null && (
-                <div className="flex items-center gap-1.5 whitespace-nowrap">
-                  <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                  <span className="font-bold text-sm text-foreground">
-                    {offer.supplier_avg_rating.toFixed(1)}
+              <div className="flex flex-wrap gap-3 text-[11px] text-muted-foreground">
+                <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-secondary/40 px-2.5 py-1">
+                  <Clock className="h-3.5 w-3.5" />
+                  Resposta:{' '}
+                  <span className="font-semibold text-foreground">
+                    {supplierContext ? `${Number(supplierContext.responseRate).toFixed(0)}%` : '—'}
                   </span>
-                </div>
-              )}
-
-              {offer.supplier_avg_rating != null && (
-                <span className="text-[9px] text-muted-foreground font-medium whitespace-nowrap">
-                  {offer.supplier_total_ratings ?? 0} {offer.supplier_total_ratings === 1 ? 'avaliação' : 'avaliações'}
                 </span>
-              )}
+                <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-secondary/40 px-2.5 py-1">
+                  <Store className="h-3.5 w-3.5" />
+                  Catálogo:{' '}
+                  <span className="font-semibold text-foreground">
+                    {supplierContext?.catalogCount ?? 0} produtos
+                  </span>
+                </span>
+              </div>
             </div>
           </div>
 
@@ -536,54 +590,17 @@ export function BuyerOfferDetailPage() {
             </div>
           )}
 
-          {/* Detalhes de Contato */}
-          <div className="pt-6 border-t border-border/30 space-y-3">
-            <h4 className="text-xs font-bold text-muted-foreground/80">
-              Informações de contato
-            </h4>
-            
-            {/* CNPJ visible only on mobile (below lg) in this section */}
-            {((supplierProfile as any)?.company?.cnpj) && (
-              <p className="text-xs text-muted-foreground lg:hidden">
-                CNPJ: <span className="font-semibold text-foreground">{formatCNPJ((supplierProfile as any).company.cnpj)}</span>
-              </p>
-            )}
-
-            {offer.contact_revealed ? (
-              <div className="rounded-xl border border-green-200/80 bg-green-50/50 p-4 text-sm dark:border-green-950/40 dark:bg-green-950/20 space-y-2">
-                <p className="font-bold text-green-700 dark:text-green-400 uppercase tracking-wider text-[10px]">
-                  Contato Liberado
-                </p>
-                {offer.supplier_phone && (
-                  <p className="text-foreground">Telefone: <span className="font-semibold">{formatPhone(offer.supplier_phone)}</span></p>
-                )}
-                {offer.supplier_email && (
-                  <p className="text-foreground">E-mail: <span className="font-semibold">{offer.supplier_email}</span></p>
-                )}
-              </div>
-            ) : (
-              <div className="flex flex-col gap-3">
-                <p className="text-xs text-muted-foreground italic">
-                  Os dados de contato do fornecedor ficam ocultos até serem revelados ou a proposta ser aceita.
-                </p>
-                {!isRejected && !isAccepted && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleReveal}
-                    disabled={revealContact.isPending}
-                    className="rounded-xl flex items-center justify-center gap-2 h-[38px] text-xs font-bold border-border/60 hover:bg-muted bg-background shadow-sm"
-                  >
-                    {revealContact.isPending ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                    Revelar Dados de Contato
-                  </Button>
-                )}
-              </div>
-            )}
+          <div className="flex flex-wrap gap-1.5 lg:hidden">
+            {QUICK_MESSAGES.map((msg) => (
+              <button
+                key={msg}
+                type="button"
+                onClick={() => handleQuickMessage(msg)}
+                className="inline-flex items-center rounded-lg border border-border/30 bg-secondary px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground"
+              >
+                {msg}
+              </button>
+            ))}
           </div>
 
           <button
@@ -631,6 +648,8 @@ export function BuyerOfferDetailPage() {
           onSendChat={handleSendChat}
           sending={sendMessage.isPending}
           messagesEndRef={messagesEndRef}
+          chatInputRef={chatInputRef}
+          onQuickMessage={handleQuickMessage}
         />
       </aside>
       </ScrollPageShell>
@@ -675,6 +694,8 @@ export function BuyerOfferDetailPage() {
             onSendChat={handleSendChat}
             sending={sendMessage.isPending}
             messagesEndRef={messagesEndRef}
+            chatInputRef={chatInputRef}
+            onQuickMessage={handleQuickMessage}
           />
         </div>
       )}
