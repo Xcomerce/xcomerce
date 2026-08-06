@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useFormContext } from 'react-hook-form'
 import {
   PRODUCT_SIZE_TYPE_LABELS,
@@ -12,13 +12,16 @@ import { Button } from '@/components/ui/button'
 import { VariantOptionsInput } from '@/components/catalog/VariantOptionsInput'
 import { ShoeSizePicker } from '@/components/catalog/ShoeSizePicker'
 import { ClothingSizePicker } from '@/components/catalog/ClothingSizePicker'
+import { syncVariantStockRows, VariantStockTable } from '@/components/catalog/VariantStockTable'
 
 export function ProductVariantsSection() {
   const form = useFormContext<ProductInput>()
   const temCor = form.watch('tem_cor')
   const temTamanho = form.watch('tem_tamanho')
   const tipoTamanho = form.watch('tipo_tamanho')
+  const cores = form.watch('cores') ?? []
   const tamanhos = form.watch('tamanhos') ?? []
+  const estoqueVariacoes = form.watch('estoque_variacoes') ?? []
   const [includeHalfSizes, setIncludeHalfSizes] = useState(() =>
     tamanhos.some((t) => t.includes('.')),
   )
@@ -26,7 +29,10 @@ export function ProductVariantsSection() {
 
   function handleTemCorChange(checked: boolean) {
     form.setValue('tem_cor', checked, { shouldValidate: true })
-    if (!checked) form.setValue('cores', [], { shouldValidate: true })
+    if (!checked) {
+      form.setValue('cores', [], { shouldValidate: true })
+      if (!temTamanho) form.setValue('estoque_variacoes', [], { shouldValidate: true })
+    }
   }
 
   function handleTemTamanhoChange(checked: boolean) {
@@ -34,10 +40,20 @@ export function ProductVariantsSection() {
     if (!checked) {
       form.setValue('tipo_tamanho', null, { shouldValidate: true })
       form.setValue('tamanhos', [], { shouldValidate: true })
+      if (!temCor) form.setValue('estoque_variacoes', [], { shouldValidate: true })
     } else if (!form.getValues('tipo_tamanho')) {
       form.setValue('tipo_tamanho', 'livre', { shouldValidate: true })
     }
   }
+
+  useEffect(() => {
+    const next = syncVariantStockRows(temCor, temTamanho, cores, tamanhos, estoqueVariacoes)
+    const currentKeys = estoqueVariacoes.map((r) => `${r.cor ?? ''}|${r.tamanho ?? ''}`).join(',')
+    const nextKeys = next.map((r) => `${r.cor ?? ''}|${r.tamanho ?? ''}`).join(',')
+    if (currentKeys !== nextKeys) {
+      form.setValue('estoque_variacoes', next, { shouldValidate: true })
+    }
+  }, [temCor, temTamanho, cores, tamanhos, form])
 
   function addNumericSize() {
     const trimmed = numericDraft.trim()
@@ -201,6 +217,25 @@ export function ProductVariantsSection() {
           </FormItem>
         )}
       />
+
+      {(temCor || temTamanho) && estoqueVariacoes.length > 0 && (
+        <FormField
+          control={form.control}
+          name="estoque_variacoes"
+          render={({ field, fieldState }) => (
+            <FormItem className="border-t border-border/50 pt-4">
+              <FormControl>
+                <VariantStockTable
+                  rows={field.value ?? []}
+                  onChange={field.onChange}
+                  error={fieldState.error?.message}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      )}
     </div>
   )
 }

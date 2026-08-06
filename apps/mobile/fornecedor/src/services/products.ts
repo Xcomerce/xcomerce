@@ -47,6 +47,13 @@ export async function createProduct(supplierId: string, input: ProductInput): Pr
       cidade: input.cidade,
       uf: input.uf.toUpperCase(),
       is_active: input.is_active ?? true,
+      tem_cor: input.tem_cor ?? false,
+      tem_tamanho: input.tem_tamanho ?? false,
+      tipo_tamanho: input.tem_tamanho ? (input.tipo_tamanho ?? null) : null,
+      cores: input.tem_cor ? (input.cores ?? []) : [],
+      tamanhos: input.tem_tamanho ? (input.tamanhos ?? []) : [],
+      estoque_variacoes:
+        input.tem_cor || input.tem_tamanho ? (input.estoque_variacoes ?? []) : [],
     })
     .select()
     .single()
@@ -66,6 +73,25 @@ export async function updateProduct(id: string, input: Partial<ProductInput>): P
   if (input.cidade !== undefined) payload.cidade = input.cidade
   if (input.uf !== undefined) payload.uf = input.uf.toUpperCase()
   if (input.is_active !== undefined) payload.is_active = input.is_active
+  if (input.tem_cor !== undefined) {
+    payload.tem_cor = input.tem_cor
+    payload.cores = input.tem_cor ? (input.cores ?? []) : []
+  } else if (input.cores !== undefined) {
+    payload.cores = input.cores
+  }
+  if (input.tem_tamanho !== undefined) {
+    payload.tem_tamanho = input.tem_tamanho
+    payload.tipo_tamanho = input.tem_tamanho ? (input.tipo_tamanho ?? null) : null
+    payload.tamanhos = input.tem_tamanho ? (input.tamanhos ?? []) : []
+  } else {
+    if (input.tipo_tamanho !== undefined) payload.tipo_tamanho = input.tipo_tamanho
+    if (input.tamanhos !== undefined) payload.tamanhos = input.tamanhos
+  }
+  if (input.estoque_variacoes !== undefined) {
+    payload.estoque_variacoes = input.estoque_variacoes
+  } else if (input.tem_cor === false && input.tem_tamanho === false) {
+    payload.estoque_variacoes = []
+  }
 
   const { data, error } = await supabase.from('products').update(payload).eq('id', id).select().single()
   if (error) throw error

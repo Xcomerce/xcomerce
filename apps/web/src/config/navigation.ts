@@ -23,7 +23,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import type { UserRole, SupplierStatus } from '@keve/shared'
-import { BILLING_PAGE_ENABLED } from '@/config/features'
+import { BILLING_PAGE_ENABLED, AUTO_OFFER_ENABLED } from '@/config/features'
 
 export const SUPPLIER_REGISTRATION_SETTINGS_URL = '/settings/profile?section=registration'
 
@@ -90,10 +90,10 @@ export const buyerNav: RoleNavConfig = {
     {
       title: 'Principal',
       items: [
-        { to: '/buyer/feed', label: 'Início', icon: LayoutGrid },
-        { to: '/buyer/dashboard', label: 'Ofertas', icon: LayoutList },
-        { to: '/buyer/demands/new', label: 'Solicitar oferta', icon: PlusCircle },
-        { to: '/buyer/orders', label: 'Pedidos', icon: Package },
+        { to: '/buyer/feed', label: 'Explorar', icon: LayoutGrid },
+        { to: '/buyer/dashboard', label: 'Minhas solicitações', icon: LayoutList },
+        { to: '/buyer/demands/new', label: 'Nova solicitação', icon: PlusCircle },
+        { to: '/buyer/orders', label: 'Meus pedidos', icon: Package },
       ],
     },
     {
@@ -110,14 +110,14 @@ export const buyerNav: RoleNavConfig = {
   ],
   bottomNav: {
     left: [
-      { to: '/buyer/feed', icon: LayoutGrid, label: 'Início' },
-      { to: '/buyer/dashboard', icon: LayoutList, label: 'Ofertas' },
+      { to: '/buyer/feed', icon: LayoutGrid, label: 'Explorar' },
+      { to: '/buyer/dashboard', icon: LayoutList, label: 'Minhas solicitações' },
     ],
     right: [
-      { to: '/buyer/orders', icon: Package, label: 'Pedidos' },
+      { to: '/buyer/orders', icon: Package, label: 'Meus pedidos' },
       { to: '/settings/profile', icon: User, label: 'Perfil' },
     ],
-    fab: { to: '/buyer/demands/new', icon: PlusCircle, label: 'Solicitar' },
+    fab: { to: '/buyer/demands/new', icon: PlusCircle, label: 'Nova solicitação' },
   },
 }
 
@@ -126,15 +126,17 @@ export const supplierNav: RoleNavConfig = {
     {
       title: 'Principal',
       items: [
-        { to: '/supplier/board', label: 'Oportunidades', icon: LayoutGrid },
-        { to: '/supplier/catalog', label: 'Catálogo', icon: Boxes },
+        { to: '/supplier/board', label: 'Solicitações de compra', icon: LayoutGrid },
+        { to: '/supplier/catalog', label: 'Meus produtos', icon: Boxes },
         { to: '/supplier/orders', label: 'Pedidos', icon: Package },
       ],
     },
     {
       title: 'Conta',
       items: [
-        { to: '/supplier/auto-offers', label: 'Auto-proposta', icon: Zap },
+        ...(AUTO_OFFER_ENABLED
+          ? [{ to: '/supplier/auto-offers', label: 'Auto-proposta', icon: Zap }]
+          : []),
         { to: '/support', label: 'Suporte', icon: Headset },
         ...(BILLING_PAGE_ENABLED
           ? [{ to: '/settings/billing', label: 'Plano', icon: CreditCard }]
@@ -146,14 +148,14 @@ export const supplierNav: RoleNavConfig = {
   ],
   bottomNav: {
     left: [
-      { to: '/supplier/board', icon: LayoutGrid, label: 'Oportunidades' },
-      { to: '/supplier/catalog', icon: Boxes, label: 'Catálogo' },
+      { to: '/supplier/board', icon: LayoutGrid, label: 'Solicitações' },
+      { to: '/supplier/catalog', icon: Boxes, label: 'Meus produtos' },
     ],
     right: [
       { to: '/supplier/orders', icon: Package, label: 'Pedidos' },
       { to: '/settings/profile', icon: User, label: 'Perfil' },
     ],
-    fab: { to: '/supplier/board', icon: LayoutGrid, label: 'Oportunidades' },
+    fab: { to: '/supplier/board', icon: LayoutGrid, label: 'Solicitações' },
   },
 }
 

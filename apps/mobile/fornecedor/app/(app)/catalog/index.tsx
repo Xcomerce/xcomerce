@@ -125,7 +125,7 @@ export default function CatalogScreen() {
   return (
     <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
       <AppHeader
-        title="Catálogo"
+        title="Meus produtos"
         subtitle={
           activeProducts.length > 0
             ? `${activeProducts.length} produto${activeProducts.length === 1 ? '' : 's'} ativo${activeProducts.length === 1 ? '' : 's'}`

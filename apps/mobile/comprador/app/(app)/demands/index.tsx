@@ -15,7 +15,7 @@ export default function DemandsListScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
-      <AppHeader title="Ofertas" />
+      <AppHeader title="Minhas solicitações" />
       {isLoading ? (
         <LoadingSkeleton />
       ) : demands.length === 0 ? (

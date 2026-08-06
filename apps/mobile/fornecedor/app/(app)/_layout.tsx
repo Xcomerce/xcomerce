@@ -32,14 +32,14 @@ export default function AppLayout() {
       <Tabs.Screen
         name="board"
         options={{
-          title: 'Oportunidades',
+          title: 'Solicitações de compra',
           tabBarIcon: ({ color }) => <TabIcon Icon={LayoutGrid} color={color} />,
         }}
       />
       <Tabs.Screen
         name="catalog"
         options={{
-          title: 'Catálogo',
+          title: 'Meus produtos',
           tabBarIcon: ({ color }) => <TabIcon Icon={Boxes} color={color} />,
         }}
       />

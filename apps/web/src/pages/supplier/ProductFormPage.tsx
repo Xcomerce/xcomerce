@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
 import { ImagePlus, Trash2 } from 'lucide-react'
-import { productSchema, type ProductInput } from '@keve/shared'
+import { productSchema, parseVariantStockRows, type ProductInput } from '@keve/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -113,6 +113,7 @@ export function ProductFormPage() {
       tipo_tamanho: null,
       cores: [],
       tamanhos: [],
+      estoque_variacoes: [],
     },
   })
 
@@ -147,6 +148,7 @@ export function ProductFormPage() {
         tipo_tamanho: product.tipo_tamanho ?? null,
         cores: product.cores ?? [],
         tamanhos: product.tamanhos ?? [],
+        estoque_variacoes: parseVariantStockRows(product.estoque_variacoes),
       })
       if (product.image_url) {
         setImagePreview(product.image_url)

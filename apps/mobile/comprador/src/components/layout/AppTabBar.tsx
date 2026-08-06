@@ -12,9 +12,9 @@ const TAB_META: Record<
   Exclude<TabRouteName, 'fab-placeholder'>,
   { label: string; Icon: typeof LayoutGrid }
 > = {
-  index: { label: 'Início', Icon: LayoutGrid },
-  demands: { label: 'Ofertas', Icon: LayoutList },
-  orders: { label: 'Pedidos', Icon: Package },
+  index: { label: 'Explorar', Icon: LayoutGrid },
+  demands: { label: 'Minhas solicitações', Icon: LayoutList },
+  orders: { label: 'Meus pedidos', Icon: Package },
   profile: { label: 'Perfil', Icon: User },
 }
 
@@ -57,7 +57,7 @@ export function AppTabBar({ state, navigation }: BottomTabBarProps) {
             <Pressable
               key={routeName}
               accessibilityRole="button"
-              accessibilityLabel="Nova oferta"
+              accessibilityLabel="Nova solicitação"
               onPress={() => navigateTo(routeName)}
               style={{ flex: 1, alignItems: 'center', justifyContent: 'flex-end', minHeight: 48 }}
             >

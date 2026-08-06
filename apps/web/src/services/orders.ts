@@ -45,6 +45,31 @@ export type BuyerOrderListItem = Order & {
   } | null
 }
 
+type NestedOrderProfile = {
+  profile?: { full_name: string; phone?: string | null; email?: string | null } | null
+  profiles?: { full_name: string; phone?: string | null; email?: string | null } | null
+} | null
+
+function unwrapOrderProfile(row: NestedOrderProfile) {
+  if (!row) return null
+  return row.profile ?? row.profiles ?? null
+}
+
+function mapSupplierOrderRow(row: Record<string, unknown>): SupplierOrderListItem {
+  const { buyer: buyerRow, ...rest } = row
+  const profile = unwrapOrderProfile(buyerRow as NestedOrderProfile)
+  return {
+    ...(rest as SupplierOrderListItem),
+    buyer: profile
+      ? {
+          full_name: profile.full_name,
+          phone: profile.phone ?? null,
+          email: profile.email ?? null,
+        }
+      : null,
+  }
+}
+
 export async function fetchOrders(
   userId: string,
   role: OrderRole,
@@ -63,14 +88,16 @@ export async function fetchSupplierOrdersWithDetails(userId: string): Promise<Su
       *,
       demand:demands(titulo, descricao, cidade, uf, unidade, quantidade),
       offer:offers(valor, prazo_entrega_dias, quantidade, mensagem),
-      buyer:profiles!orders_buyer_id_fkey(full_name, phone, email)
+      buyer:buyer_profiles!orders_buyer_id_fkey(
+        profiles(full_name, phone, email)
+      )
     `,
     )
     .eq('supplier_id', userId)
     .order('created_at', { ascending: false })
 
   if (error) throw error
-  return (data ?? []) as SupplierOrderListItem[]
+  return (data ?? []).map((row) => mapSupplierOrderRow(row as Record<string, unknown>))
 }
 
 export async function fetchBuyerOrdersWithDetails(userId: string): Promise<BuyerOrderListItem[]> {
@@ -80,15 +107,17 @@ export async function fetchBuyerOrdersWithDetails(userId: string): Promise<Buyer
       `
       *,
       demand:demands(titulo, cidade, uf),
-      offer:offers(valor, prazo_entrega_dias),
-      supplier:profiles!orders_supplier_id_fkey(full_name)
+      offer:offers(valor, prazo_entrega_dias)
     `,
     )
     .eq('buyer_id', userId)
     .order('created_at', { ascending: false })
 
   if (error) throw error
-  return (data ?? []) as BuyerOrderListItem[]
+  return (data ?? []).map((row) => ({
+    ...(row as BuyerOrderListItem),
+    supplier: null,
+  }))
 }
 
 export async function fetchOrder(id: string): Promise<Order | null> {

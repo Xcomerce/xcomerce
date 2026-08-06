@@ -198,7 +198,7 @@ export default function BoardScreen() {
   return (
     <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
       <AppHeader
-        title="Oportunidades"
+        title="Solicitações de compra"
         subtitle="Demandas compatíveis com seu perfil e catálogo"
         supplierStatus={supplierStatus}
       />

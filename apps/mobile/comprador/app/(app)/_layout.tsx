@@ -80,7 +80,7 @@ export default function AppLayout() {
 
         options={{
 
-          title: 'Ofertas',
+          title: 'Minhas solicitações',
 
           tabBarIcon: ({ color }) => <TabIcon Icon={LayoutList} color={color} />,
 
@@ -108,7 +108,7 @@ export default function AppLayout() {
 
         options={{
 
-          title: 'Pedidos',
+          title: 'Meus pedidos',
 
           tabBarIcon: ({ color }) => <TabIcon Icon={Package} color={color} />,
 

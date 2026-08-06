@@ -9,8 +9,8 @@ type TabRouteName = 'board' | 'catalog' | 'fab-placeholder' | 'orders' | 'profil
 const TAB_ORDER: TabRouteName[] = ['board', 'catalog', 'fab-placeholder', 'orders', 'profile']
 
 const TAB_META: Record<Exclude<TabRouteName, 'fab-placeholder'>, { label: string; Icon: typeof LayoutGrid }> = {
-  board: { label: 'Oportunidades', Icon: LayoutGrid },
-  catalog: { label: 'Catálogo', Icon: Boxes },
+  board: { label: 'Solicitações', Icon: LayoutGrid },
+  catalog: { label: 'Meus produtos', Icon: Boxes },
   orders: { label: 'Pedidos', Icon: Package },
   profile: { label: 'Perfil', Icon: User },
 }
@@ -49,7 +49,7 @@ export function SupplierTabBar({ state, navigation }: BottomTabBarProps) {
             <Pressable
               key={routeName}
               accessibilityRole="button"
-              accessibilityLabel="Oportunidades"
+              accessibilityLabel="Solicitações de compra"
               onPress={() => navigateTo(routeName)}
               style={{ flex: 1, alignItems: 'center', justifyContent: 'flex-end', minHeight: 48 }}
             >

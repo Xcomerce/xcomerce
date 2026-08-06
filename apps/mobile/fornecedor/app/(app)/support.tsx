@@ -1,10 +1,19 @@
-import { ScrollView, Text, View } from 'react-native'
+import { ActivityIndicator, Linking, Pressable, ScrollView, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { BackButton } from '@/components/common/back-button'
 import { AppHeader } from '@/components/layout/AppHeader'
 import { Card } from '@/components/ui/Card'
+import { buildMailtoUrl, buildWhatsAppUrl, formatWhatsAppDisplay, formatSupportHours } from '@keve/shared'
+import { useSupportContactSettings } from '@/hooks/use-support-settings'
 
 export default function SupportScreen() {
+  const { data: settings, isLoading } = useSupportContactSettings()
+  const email = settings?.email ?? null
+  const whatsapp = settings?.whatsapp ?? null
+  const mailto = buildMailtoUrl(email)
+  const whatsappUrl = buildWhatsAppUrl(whatsapp)
+  const horario = formatSupportHours(settings?.horario)
+
   return (
     <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
       <AppHeader title="Suporte" />
@@ -13,18 +22,51 @@ export default function SupportScreen() {
         <Card>
           <Text className="text-lg font-bold text-brand-dark">Central de ajuda</Text>
           <Text className="mt-2 text-slate-600">
-            Precisa de ajuda com demandas, propostas ou pedidos? Entre em contato com nossa equipe.
+            Precisa de ajuda com catálogo, propostas ou pedidos? Entre em contato com nossa equipe.
           </Text>
-          <Text className="mt-4 font-semibold text-slate-800">E-mail</Text>
-          <Text className="text-brand">suporte@xcommerce.com.br</Text>
-          <Text className="mt-4 font-semibold text-slate-800">Horário</Text>
-          <Text className="text-slate-600">Seg–Sex, 9h às 18h (BRT)</Text>
+
+          {isLoading ? (
+            <ActivityIndicator className="mt-4" />
+          ) : (
+            <>
+              {email && mailto ? (
+                <View className="mt-4">
+                  <Text className="font-semibold text-slate-800">E-mail</Text>
+                  <Pressable onPress={() => void Linking.openURL(mailto)}>
+                    <Text className="text-brand">{email}</Text>
+                  </Pressable>
+                </View>
+              ) : null}
+
+              {whatsapp && whatsappUrl ? (
+                <View className="mt-4">
+                  <Text className="font-semibold text-slate-800">WhatsApp</Text>
+                  <Pressable onPress={() => void Linking.openURL(whatsappUrl)}>
+                    <Text className="text-brand">{formatWhatsAppDisplay(whatsapp)}</Text>
+                  </Pressable>
+                </View>
+              ) : null}
+
+              {!email && !whatsapp ? (
+                <Text className="mt-4 text-sm text-slate-500">
+                  Os contatos de suporte ainda não foram configurados.
+                </Text>
+              ) : null}
+
+              {horario ? (
+                <>
+                  <Text className="mt-4 font-semibold text-slate-800">Horário</Text>
+                  <Text className="text-slate-600">{horario}</Text>
+                </>
+              ) : null}
+            </>
+          )}
         </Card>
         <Card>
           <Text className="font-semibold text-slate-800">Perguntas frequentes</Text>
           <Text className="mt-2 text-sm text-slate-600">
-            • Como publicar uma demanda? Use o botão + na barra inferior.{'\n'}
-            • Como aceitar uma proposta? Abra a demanda e toque em Aceitar.{'\n'}
+            • Como cadastrar produtos? Acesse Meus produtos e toque em Novo produto.{'\n'}
+            • Como enviar proposta? Abra uma oportunidade no mural e envie sua oferta.{'\n'}
             • O pagamento é pela plataforma? Não — negociação externa após aceite.
           </Text>
         </Card>

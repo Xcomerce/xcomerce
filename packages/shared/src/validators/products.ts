@@ -5,8 +5,19 @@ import {
   sortSizeValues,
   type ProductSizeType,
 } from '../constants/product-sizes'
+import {
+  buildVariantStockMatrix,
+  normalizeVariantStockRows,
+} from '../constants/product-variant-stock'
 
 export const productSizeTypeSchema = z.enum(['roupa', 'calcado', 'numerico', 'livre'])
+
+export const productVariantStockRowSchema = z.object({
+  cor: z.string().nullable(),
+  tamanho: z.string().nullable(),
+  quantidade: z.number().int().min(0).nullable(),
+  ilimitado: z.boolean(),
+})
 
 export const productSchema = z
   .object({
@@ -32,6 +43,7 @@ export const productSchema = z
     tipo_tamanho: productSizeTypeSchema.nullable().optional(),
     cores: z.array(z.string().trim().min(1)).default([]),
     tamanhos: z.array(z.string().trim().min(1)).default([]),
+    estoque_variacoes: z.array(productVariantStockRowSchema).default([]),
   })
   .superRefine((data, ctx) => {
     const cores = dedupeVariantValues(data.cores)
@@ -74,15 +86,64 @@ export const productSchema = z
         }
       }
     }
+
+    if (data.tem_cor || data.tem_tamanho) {
+      const expected = buildVariantStockMatrix(
+        data.tem_cor,
+        data.tem_tamanho,
+        data.tem_cor ? cores : [],
+        data.tem_tamanho ? tamanhos : [],
+      )
+      const stock = normalizeVariantStockRows(data.estoque_variacoes ?? [])
+
+      if (stock.length !== expected.length) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Informe a quantidade de cada variação',
+          path: ['estoque_variacoes'],
+        })
+      }
+
+      for (const row of stock) {
+        if (row.ilimitado) continue
+        if (row.quantidade === null || row.quantidade < 0) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `Informe a quantidade ou marque Ilimitado para "${[row.cor, row.tamanho].filter(Boolean).join(' · ')}"`,
+            path: ['estoque_variacoes'],
+          })
+          break
+        }
+      }
+    }
   })
-  .transform((data) => ({
-    ...data,
-    cores: data.tem_cor ? dedupeVariantValues(data.cores) : [],
-    tamanhos: data.tem_tamanho
+  .transform((data) => {
+    const coresParsed = data.tem_cor ? dedupeVariantValues(data.cores) : []
+    const tamanhosParsed = data.tem_tamanho
       ? sortSizeValues(dedupeVariantValues(data.tamanhos), data.tipo_tamanho as ProductSizeType)
-      : [],
-    tipo_tamanho: data.tem_tamanho ? (data.tipo_tamanho ?? null) : null,
-  }))
+      : []
+
+    const estoque =
+      data.tem_cor || data.tem_tamanho
+        ? normalizeVariantStockRows(
+            buildVariantStockMatrix(
+              data.tem_cor,
+              data.tem_tamanho,
+              coresParsed,
+              tamanhosParsed,
+              data.estoque_variacoes ?? [],
+            ),
+          )
+        : []
+
+    return {
+      ...data,
+      cores: coresParsed,
+      tamanhos: tamanhosParsed,
+      tipo_tamanho: data.tem_tamanho ? (data.tipo_tamanho ?? null) : null,
+      estoque_variacoes: estoque,
+    }
+  })
 
 export type ProductInput = z.input<typeof productSchema>
 export type ProductInputParsed = z.output<typeof productSchema>

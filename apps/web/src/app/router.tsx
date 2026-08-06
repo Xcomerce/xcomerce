@@ -138,6 +138,7 @@ export const router = createBrowserRouter([
               { path: 'admin/leads/:id', element: adminPages.leadDetail },
               { path: 'admin/email-templates', element: adminPages.emailTemplates },
               { path: 'admin/email-providers', element: adminPages.emailProviders },
+              { path: 'admin/support-settings', element: adminPages.supportSettings },
               { path: 'admin/financial-reports', element: adminPages.financialReports },
               { path: 'admin/plans', element: adminPages.plans },
               { path: 'admin/subscriptions', element: adminPages.subscriptions },

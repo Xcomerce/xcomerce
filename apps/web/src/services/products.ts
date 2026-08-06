@@ -56,6 +56,8 @@ export async function createProduct(supplierId: string, input: ProductInput): Pr
       tipo_tamanho: input.tem_tamanho ? (input.tipo_tamanho ?? null) : null,
       cores: input.tem_cor ? (input.cores ?? []) : [],
       tamanhos: input.tem_tamanho ? (input.tamanhos ?? []) : [],
+      estoque_variacoes:
+        input.tem_cor || input.tem_tamanho ? (input.estoque_variacoes ?? []) : [],
     })
     .select()
     .single()
@@ -88,6 +90,11 @@ export async function updateProduct(id: string, input: Partial<ProductInput>): P
   } else {
     if (input.tipo_tamanho !== undefined) payload.tipo_tamanho = input.tipo_tamanho
     if (input.tamanhos !== undefined) payload.tamanhos = input.tamanhos
+  }
+  if (input.estoque_variacoes !== undefined) {
+    payload.estoque_variacoes = input.estoque_variacoes
+  } else if (input.tem_cor === false && input.tem_tamanho === false) {
+    payload.estoque_variacoes = []
   }
 
   const { data, error } = await supabase.from('products').update(payload).eq('id', id).select().single()

@@ -53,6 +53,23 @@ export type Database = {
           updated_at: string
         }
       }
+      support_contact_settings: {
+        Row: {
+          id: number
+          email: string | null
+          whatsapp: string | null
+          horario: string | null
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          email?: string | null
+          whatsapp?: string | null
+          horario?: string | null
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['support_contact_settings']['Row']>
+      }
       usage_counters: {
         Row: {
           id: string
@@ -168,6 +185,7 @@ export type Database = {
           tipo_tamanho: 'roupa' | 'calcado' | 'numerico' | 'livre' | null
           cores: string[]
           tamanhos: string[]
+          estoque_variacoes: import('../constants/product-variant-stock').ProductVariantStockRow[]
         }
         Insert: Omit<Database['public']['Tables']['products']['Row'], 'id'> & { id?: string }
         Update: Partial<Database['public']['Tables']['products']['Row']>

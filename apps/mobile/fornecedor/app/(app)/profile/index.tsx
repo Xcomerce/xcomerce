@@ -2,6 +2,7 @@ import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import { Bell, ChevronRight, ClipboardList, CreditCard, HeadphonesIcon, Zap } from 'lucide-react-native'
+import { AUTO_OFFER_ENABLED } from '@/config/features'
 import { AppHeader } from '@/components/layout/AppHeader'
 import { AvatarUploader } from '@/components/settings/AvatarUploader'
 import { Button } from '@/components/ui/Button'
@@ -13,7 +14,9 @@ import { SupplierStatusBadge } from '@/components/common/SupplierStatusBadge'
 import { getSettingsMenuItems, type SettingsSection } from '@/config/settings'
 
 const SUPPLIER_SHORTCUTS = [
-  { label: 'Auto-proposta', description: 'Configure propostas automáticas', href: '/(app)/auto-offers', icon: Zap },
+  ...(AUTO_OFFER_ENABLED
+    ? [{ label: 'Auto-proposta', description: 'Configure propostas automáticas', href: '/(app)/auto-offers', icon: Zap }]
+    : []),
   { label: 'Cadastro', description: 'Dados da empresa e documentos', href: '/(app)/onboarding', icon: ClipboardList },
   { label: 'Plano', description: 'Assinatura e limites do catálogo', href: '/(app)/billing', icon: CreditCard },
   { label: 'Notificações', description: 'Central de alertas', href: '/(app)/notifications', icon: Bell },

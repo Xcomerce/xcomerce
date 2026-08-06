@@ -15,7 +15,7 @@ export default function OrdersListScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
-      <AppHeader title="Pedidos" />
+      <AppHeader title="Meus pedidos" />
       {isLoading ? (
         <LoadingSkeleton />
       ) : orders.length === 0 ? (

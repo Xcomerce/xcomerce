@@ -205,7 +205,7 @@ export default function NewDemandScreen() {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1">
         <ScrollView contentContainerClassName="p-4 gap-4 pb-10" keyboardShouldPersistTaps="handled">
           <BackButton className="mb-1" fallbackHref={backFallback} preferFallback={!!returnTo} />
-          <Text className="text-2xl font-bold text-brand-dark">Solicitar oferta</Text>
+          <Text className="text-2xl font-bold text-brand-dark">Nova solicitação</Text>
 
           <Input label="Título da demanda" value={titulo} onChangeText={setTitulo} placeholder="Ex.: Arroz Integral Agulhinha Tipo 1 5kg" />
           <View>

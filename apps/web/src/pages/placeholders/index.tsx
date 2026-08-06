@@ -26,6 +26,7 @@ import { LeadsAdminPage } from '@/pages/admin/LeadsAdminPage'
 import { LeadDetailPage } from '@/pages/admin/LeadDetailPage'
 import { EmailTemplatesAdminPage } from '@/pages/admin/EmailTemplatesAdminPage'
 import { EmailProvidersAdminPage } from '@/pages/admin/EmailProvidersAdminPage'
+import { SupportSettingsAdminPage } from '@/pages/admin/SupportSettingsAdminPage'
 import { NotificationsPage } from '@/pages/shared/NotificationsPage'
 import { PublicProfilePage } from '@/pages/shared/PublicProfilePage'
 import { SupportPage } from '@/pages/shared/SupportPage'
@@ -65,6 +66,7 @@ export const adminPages = {
   leadDetail: <LeadDetailPage />,
   emailTemplates: <EmailTemplatesAdminPage />,
   emailProviders: <EmailProvidersAdminPage />,
+  supportSettings: <SupportSettingsAdminPage />,
 }
 
 export const sharedPages = {

@@ -69,7 +69,7 @@ export default function FeedScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
-      <AppHeader title="Início" />
+      <AppHeader title="Explorar" />
       <View className="bg-white px-4 pb-3 pt-4">
         <FeedSearchBar
           search={search}

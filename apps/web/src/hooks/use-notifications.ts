@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import type { RealtimeChannel } from '@supabase/supabase-js'
 import { useAuth } from '@/contexts/auth-context'
 import { supabase } from '@/lib/supabase'
 import * as notifications from '@/services/notifications'
@@ -12,15 +13,63 @@ export const notificationKeys = {
   preferences: (userId: string) => [...notificationKeys.all, 'preferences', userId] as const,
 }
 
-export function useNotifications() {
-  const { user } = useAuth()
-  useNotificationRealtimeSync()
+type NotificationRealtimeState = {
+  userId: string | null
+  channel: RealtimeChannel | null
+  subscribers: number
+  onChange: (() => void) | null
+}
 
-  return useQuery({
-    queryKey: notificationKeys.list(user?.id ?? ''),
-    queryFn: () => notifications.fetchNotifications(user!.id, { unreadOnly: true }),
-    enabled: !!user?.id,
-  })
+const notificationRealtime: NotificationRealtimeState = {
+  userId: null,
+  channel: null,
+  subscribers: 0,
+  onChange: null,
+}
+
+function subscribeNotificationRealtime(userId: string, onChange: () => void) {
+  notificationRealtime.subscribers += 1
+  notificationRealtime.onChange = onChange
+
+  if (notificationRealtime.channel && notificationRealtime.userId === userId) {
+    return
+  }
+
+  if (notificationRealtime.channel) {
+    void supabase.removeChannel(notificationRealtime.channel)
+    notificationRealtime.channel = null
+  }
+
+  notificationRealtime.userId = userId
+  notificationRealtime.channel = supabase
+    .channel(`notifications:${userId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'notifications',
+        filter: `user_id=eq.${userId}`,
+      },
+      () => {
+        notificationRealtime.onChange?.()
+      },
+    )
+    .subscribe()
+}
+
+function unsubscribeNotificationRealtime() {
+  notificationRealtime.subscribers = Math.max(0, notificationRealtime.subscribers - 1)
+
+  if (notificationRealtime.subscribers > 0) return
+
+  if (notificationRealtime.channel) {
+    void supabase.removeChannel(notificationRealtime.channel)
+  }
+
+  notificationRealtime.channel = null
+  notificationRealtime.userId = null
+  notificationRealtime.onChange = null
 }
 
 export function useNotificationRealtimeSync() {
@@ -30,27 +79,26 @@ export function useNotificationRealtimeSync() {
   useEffect(() => {
     if (!user?.id) return
 
-    const channel = supabase
-      .channel(`notifications:${user.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${user.id}`,
-        },
-        () => {
-          queryClient.invalidateQueries({ queryKey: notificationKeys.unread(user.id) })
-          queryClient.invalidateQueries({ queryKey: notificationKeys.list(user.id) })
-        },
-      )
-      .subscribe()
+    subscribeNotificationRealtime(user.id, () => {
+      queryClient.invalidateQueries({ queryKey: notificationKeys.unread(user.id) })
+      queryClient.invalidateQueries({ queryKey: notificationKeys.list(user.id) })
+    })
 
     return () => {
-      void supabase.removeChannel(channel)
+      unsubscribeNotificationRealtime()
     }
   }, [user?.id, queryClient])
+}
+
+export function useNotifications() {
+  const { user } = useAuth()
+  useNotificationRealtimeSync()
+
+  return useQuery({
+    queryKey: notificationKeys.list(user?.id ?? ''),
+    queryFn: () => notifications.fetchNotifications(user!.id, { unreadOnly: true }),
+    enabled: !!user?.id,
+  })
 }
 
 export function useUnreadNotificationCount() {
