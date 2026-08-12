@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Alert, Pressable, ScrollView, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import * as DocumentPicker from 'expo-document-picker'
 import * as ImagePicker from 'expo-image-picker'
 import { Building2, Check, FileUp, MapPin, Tags } from 'lucide-react-native'
-import { supplierAddressSchema, SUPPLIER_STATUS_LABELS } from '@keve/shared'
+import { supplierAddressSchema, SUPPLIER_STATUS_LABELS, getLeafCategories } from '@keve/shared'
 import type { SupplierAddressInput } from '@/services/onboarding'
 import { BackButton } from '@/components/common/back-button'
 import { AppHeader } from '@/components/layout/AppHeader'
@@ -24,7 +24,7 @@ import {
   useSubmitForReview,
   useUploadDocument,
 } from '@/hooks/use-onboarding'
-import { useCategories, type Category } from '@/hooks/use-categories'
+import { useCategories } from '@/hooks/use-categories'
 import { useAuth } from '@/contexts/auth-context'
 import {
   companyToInput,
@@ -78,7 +78,10 @@ export default function OnboardingScreen() {
   const saveCategories = useSaveSupplierCategories()
   const submitReview = useSubmitForReview()
   const { data: categoriesData, isLoading: categoriesLoading } = useCategories()
-  const categories: Category[] = categoriesData ?? []
+  const leafCategories = useMemo(
+    () => getLeafCategories(categoriesData ?? []),
+    [categoriesData],
+  )
 
   const addressForm = useForm<SupplierAddressInput>({
     resolver: zodResolver(supplierAddressSchema),
@@ -423,7 +426,7 @@ export default function OnboardingScreen() {
             {categoriesLoading ? (
               <Text className="text-sm text-slate-500">Carregando categorias...</Text>
             ) : (
-              categories.map((cat) => (
+              leafCategories.map((cat) => (
                 <Pressable
                   key={cat.id}
                   onPress={() => toggleCategory(cat.id)}
@@ -478,7 +481,7 @@ export default function OnboardingScreen() {
             <View>
               <Text className="text-xs font-semibold uppercase text-slate-500">Categorias</Text>
               <Text className="mt-1 text-sm">
-                {categories
+                {leafCategories
                   .filter((c) => selectedCategories.includes(c.id))
                   .map((c) => c.name)
                   .join(', ') || 'Nenhuma'}

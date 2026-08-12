@@ -483,7 +483,7 @@ export function BuyerOfferDetailPage() {
                       Esta é a <strong>melhor proposta</strong> recebida. Ela está <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{bestPricePercentage}% mais barata</span> que a segunda melhor oferta.
                     </>
                   ) : (
-                    "Esta é a única proposta recebida para esta demanda até o momento."
+                    "Esta é a única proposta recebida para este pedido até o momento."
                   )
                 ) : (
                   activeOffers.length > 0 ? (
@@ -524,10 +524,10 @@ export function BuyerOfferDetailPage() {
             </div>
           </div>
 
-          {/* Card 3: Comparativo com a Demanda original */}
+          {/* Card 3: Comparativo com o pedido original */}
           <div className="pt-6 border-t border-border/30 space-y-4">
             <h4 className="text-xs font-bold text-muted-foreground/80">
-              Comparativo com a demanda
+              Comparativo com o pedido
             </h4>
 
             <div className="overflow-x-auto">

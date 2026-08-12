@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { LogOut } from 'lucide-react'
 import type { RoleNavConfig } from '@/config/navigation'
 import { NavSectionBlock } from '@/components/layout/nav-items'
+import { QuickRoleSwitchButton } from '@/components/layout/QuickRoleSwitch'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { useAuth } from '@/contexts/auth-context'
@@ -36,6 +37,7 @@ export function Sidebar({ config }: { config: RoleNavConfig }) {
             <p className="truncate text-xs text-muted-foreground">{profile?.email}</p>
           </div>
         </div>
+        <QuickRoleSwitchButton />
         <Button variant="ghost" size="sm" className="mt-3 w-full justify-start" onClick={() => signOut()}>
           <LogOut size={16} />
           Sair

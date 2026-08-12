@@ -20,7 +20,7 @@ export default function DemandsListScreen() {
         <LoadingSkeleton />
       ) : demands.length === 0 ? (
         <EmptyState
-          title="Nenhuma demanda ainda"
+          title="Nenhum pedido ainda"
           description="Toque no + para solicitar uma nova oferta aos fornecedores."
         />
       ) : (

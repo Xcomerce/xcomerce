@@ -46,7 +46,7 @@ function planToForm(plan: Plan): FormValues {
 function PlanFeatures({ plan }: { plan: Plan }) {
   return (
     <ul className="mt-3 space-y-1.5 text-sm text-muted-foreground">
-      <li>Demandas/mês: {formatLimit(plan.max_demands_monthly)}</li>
+      <li>Pedidos/mês: {formatLimit(plan.max_demands_monthly)}</li>
       <li>Propostas/mês: {formatLimit(plan.max_offers_monthly)}</li>
       <li>Itens no catálogo: {plan.max_catalog_items}</li>
       <li>Prioridade em matches: {plan.match_priority ? 'Sim' : 'Não'}</li>
@@ -146,7 +146,7 @@ export function PlansAdminPage() {
 
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div className="space-y-2">
-                  <Label htmlFor="max_demands_monthly">Demandas/mês</Label>
+                  <Label htmlFor="max_demands_monthly">Pedidos/mês</Label>
                   <Input
                     id="max_demands_monthly"
                     type="number"

@@ -133,6 +133,7 @@ export type Database = {
           user_id: string
           company_id: string
           status: 'pendente' | 'em_revisao' | 'aprovado' | 'recusado'
+          store_name: string | null
           service_city: string | null
           service_uf: string | null
           service_radius_km: number
@@ -177,6 +178,7 @@ export type Database = {
           marca: string | null
           preco_referencia: number | null
           image_url: string | null
+          image_urls: string[]
           cidade: string
           uf: string
           is_active: boolean

@@ -238,7 +238,7 @@ export function OfferDetailPage() {
   if (!demand) {
     return (
       <div className="py-12 text-center">
-        <p className="text-muted-foreground">Demanda não encontrada.</p>
+        <p className="text-muted-foreground">Pedido não encontrado.</p>
         <Button className="mt-4" asChild>
           <Link to="/supplier/board">Voltar ao mural</Link>
         </Button>
@@ -260,7 +260,7 @@ export function OfferDetailPage() {
           <Card>
             <CardHeader className="pb-3">
               <div className="flex flex-wrap items-center gap-2">
-                <CardTitle className="text-base">Demanda</CardTitle>
+                <CardTitle className="text-base">Pedido</CardTitle>
                 <StatusBadge status={demand.status} kind="demand" />
               </div>
             </CardHeader>
@@ -312,7 +312,7 @@ export function OfferDetailPage() {
                 {expiresInfo && (
                   <div className="min-w-0 space-y-0.5 col-span-2">
                     <dt className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                      Validade da demanda
+                      Validade do pedido
                     </dt>
                     <dd
                       className={cn(

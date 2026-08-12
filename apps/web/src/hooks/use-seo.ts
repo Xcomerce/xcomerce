@@ -97,7 +97,7 @@ function applyLandingJsonLd() {
     name: SITE_NAME,
     url: siteUrl,
     description:
-      'Encontre fornecedores para seus pedidos em minutos. Publique demandas, compare propostas e feche pedidos com integridade.',
+      'Encontre fornecedores para seus pedidos em minutos. Publique pedidos, compare propostas e feche negociações com integridade.',
     inLanguage: 'pt-BR',
   })
 

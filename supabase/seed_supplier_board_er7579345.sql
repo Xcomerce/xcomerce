@@ -43,7 +43,7 @@ begin
   end if;
 
   if v_buyer_id is null then
-    raise exception 'Nenhum comprador encontrado para vincular às demandas de teste.';
+    raise exception 'Nenhum comprador encontrado para vincular aos pedidos de teste.';
   end if;
 
   select id into v_gold_plan_id from public.plans where code = 'gold' limit 1;
@@ -85,7 +85,7 @@ begin
   ) values (
     v_buyer_id, v_cat_alimentos,
     '[SEED-TEST] Água mineral 500ml — lote corporativo',
-    'Demanda de 1200 garrafas de água mineral 500ml para escritórios no Rio de Janeiro.',
+    'Pedido de 1200 garrafas de água mineral 500ml para escritórios no Rio de Janeiro.',
     1200, 'unidades', 'Rio de Janeiro', 'RJ', 50, 'PUBLICADA', now() - interval '2 hours'
   ) returning id into v_demand_id;
 
@@ -188,7 +188,7 @@ begin
   ) values (
     v_buyer_id, v_cat_embalagens,
     '[SEED-TEST] Caixas de papelão ondulado — mudança de layout',
-    'Demanda fora do perfil logístico: 2000 caixas grandes para envio interestadual.',
+    'Pedido fora do perfil logístico: 2000 caixas grandes para envio interestadual.',
     2000, 'caixas', 'Duque de Caxias', 'RJ', 80, 'PUBLICADA', now() - interval '4 days'
   ) returning id into v_demand_id;
 

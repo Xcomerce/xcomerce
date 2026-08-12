@@ -108,9 +108,17 @@ export async function deleteProduct(id: string): Promise<void> {
 }
 
 export async function updateProductImage(id: string, imageUrl: string): Promise<Product> {
+  return updateProductImages(id, [imageUrl])
+}
+
+export async function updateProductImages(id: string, imageUrls: string[]): Promise<Product> {
+  const urls = imageUrls.map((url) => url.trim()).filter(Boolean)
   const { data, error } = await supabase
     .from('products')
-    .update({ image_url: imageUrl })
+    .update({
+      image_urls: urls,
+      image_url: urls[0] ?? null,
+    })
     .eq('id', id)
     .select()
     .single()
@@ -119,22 +127,45 @@ export async function updateProductImage(id: string, imageUrl: string): Promise<
   return data as Product
 }
 
-export type FeedProduct = Product & {
-  supplier: {
-    status: string
-    avg_rating: number | null
-    company: {
-      nome_fantasia: string | null
-      razao_social: string
-    } | null
+export type FeedProductSupplier = {
+  status: string
+  avg_rating: number | null
+  store_name: string | null
+  company: {
+    nome_fantasia: string | null
+    razao_social: string
   } | null
+}
+
+export type FeedProduct = Product & {
+  supplier: FeedProductSupplier | null
   category?: {
     name: string
   } | null
 }
 
+export type SupplierStoreProfile = {
+  supplierId: string
+  store_name: string | null
+  status: string
+  avg_rating: number
+  total_ratings: number
+  orders_completed: number
+  company: {
+    nome_fantasia: string | null
+    razao_social: string
+    cidade: string
+    uf: string
+  } | null
+  profile: {
+    full_name: string
+    avatar_url: string | null
+  } | null
+}
+
 export async function fetchFeedProducts(filters?: {
   categoryId?: string
+  categoryIds?: string[]
   search?: string
   uf?: string
 }): Promise<FeedProduct[]> {
@@ -144,6 +175,7 @@ export async function fetchFeedProducts(filters?: {
       *,
       supplier:supplier_profiles!inner(
         status,
+        store_name,
         avg_rating,
         company:companies(nome_fantasia, razao_social)
       ),
@@ -152,7 +184,9 @@ export async function fetchFeedProducts(filters?: {
     .eq('is_active', true)
     .eq('supplier_profiles.status', 'aprovado')
 
-  if (filters?.categoryId) {
+  if (filters?.categoryIds && filters.categoryIds.length > 0) {
+    query = query.in('category_id', filters.categoryIds)
+  } else if (filters?.categoryId) {
     query = query.eq('category_id', filters.categoryId)
   }
   if (filters?.uf) {
@@ -165,5 +199,81 @@ export async function fetchFeedProducts(filters?: {
   const { data, error } = await query.order('created_at', { ascending: false })
 
   if (error) throw error
-  return (data ?? []) as any
+  return (data ?? []) as FeedProduct[]
+}
+
+export async function fetchSupplierStore(supplierId: string): Promise<SupplierStoreProfile | null> {
+  const [supplierRes, profileRes] = await Promise.all([
+    supabase
+      .from('supplier_profiles')
+      .select(
+        `
+        user_id,
+        store_name,
+        status,
+        avg_rating,
+        total_ratings,
+        orders_completed,
+        company:companies(nome_fantasia, razao_social, cidade, uf)
+      `,
+      )
+      .eq('user_id', supplierId)
+      .eq('status', 'aprovado')
+      .maybeSingle(),
+    supabase.from('profiles').select('full_name, avatar_url').eq('id', supplierId).maybeSingle(),
+  ])
+
+  if (supplierRes.error) throw supplierRes.error
+  if (profileRes.error) throw profileRes.error
+  if (!supplierRes.data) return null
+
+  const row = supplierRes.data as {
+    user_id: string
+    store_name: string | null
+    status: string
+    avg_rating: number
+    total_ratings: number
+    orders_completed: number
+    company: SupplierStoreProfile['company']
+  }
+
+  return {
+    supplierId: row.user_id,
+    store_name: row.store_name,
+    status: row.status,
+    avg_rating: row.avg_rating ?? 0,
+    total_ratings: row.total_ratings ?? 0,
+    orders_completed: row.orders_completed ?? 0,
+    company: row.company,
+    profile: profileRes.data
+      ? {
+          full_name: profileRes.data.full_name,
+          avatar_url: profileRes.data.avatar_url,
+        }
+      : null,
+  }
+}
+
+export async function fetchSupplierCatalog(supplierId: string): Promise<FeedProduct[]> {
+  const { data, error } = await supabase
+    .from('products')
+    .select(
+      `
+      *,
+      supplier:supplier_profiles!inner(
+        status,
+        store_name,
+        avg_rating,
+        company:companies(nome_fantasia, razao_social)
+      ),
+      category:categories(name)
+    `,
+    )
+    .eq('supplier_id', supplierId)
+    .eq('is_active', true)
+    .eq('supplier_profiles.status', 'aprovado')
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+  return (data ?? []) as FeedProduct[]
 }

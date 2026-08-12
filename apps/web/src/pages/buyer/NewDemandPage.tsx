@@ -5,10 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
 import {
   demandSchema,
-  formatBuyerAddressSummary,
-  isBuyerAddressComplete,
-  type BuyerAddress,
-  type BuyerAddressInput,
+  getLeafCategories,
   type DemandInput,
 } from '@keve/shared'
 import { Button } from '@/components/ui/button'
@@ -18,10 +15,8 @@ import { Alert } from '@/components/ui/alert'
 import { PaywallModal } from '@/components/common/PaywallModal'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import { DemandVariantFields } from '@/components/buyer/DemandVariantFields'
-import { BuyerAddressForm, buyerAddressToDemandLocation } from '@/components/buyer/BuyerAddressForm'
 import { usePageTitle } from '@/hooks/use-page-title'
 import { useCategories } from '@/hooks/use-categories'
-import { useBuyerAddress, useUpdateBuyerAddress } from '@/hooks/use-buyer-address'
 import {
   useCreateDemand,
   useDemand,
@@ -38,6 +33,7 @@ import {
 import { DemandFormActions } from '@/pages/buyer/new-demand/DemandFormActions'
 import { EligibleSuppliersPanel } from '@/pages/buyer/new-demand/EligibleSuppliersPanel'
 import { getEligibleSuppliers } from '@/pages/buyer/new-demand/utils'
+import { useDemandLocationDefaults } from '@/hooks/use-demand-location-defaults'
 import { demandSpecificationsFromRecord, syncDemandQuantidadeFromSpecifications } from '@/lib/demand-specifications'
 import { formatDateTimeLocalInput, parseDateTimeLocalInput } from '@/lib/datetime'
 
@@ -60,6 +56,8 @@ export function NewDemandPage() {
     tipoTamanho?: 'roupa' | 'calcado' | 'numerico' | 'livre' | null
     cores?: string[]
     tamanhos?: string[]
+    selectedCor?: string
+    selectedTamanho?: string
   } | null
 
   const productVariantSource = !isEditing && stateData
@@ -77,12 +75,10 @@ export function NewDemandPage() {
   const createDemand = useCreateDemand()
   const updateDemand = useUpdateDemand()
   const publishDemand = usePublishDemand()
-  const { data: buyerAddress, isLoading: loadingBuyerAddress } = useBuyerAddress()
-  const updateBuyerAddress = useUpdateBuyerAddress()
+  const demandLocation = useDemandLocationDefaults()
 
   const [paywallOpen, setPaywallOpen] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
-  const [displayAddress, setDisplayAddress] = useState<Partial<BuyerAddress> | null>(null)
   const [isSearchingSuppliers, setIsSearchingSuppliers] = useState(false)
 
   const form = useForm<DemandInput>({
@@ -102,24 +98,19 @@ export function NewDemandPage() {
   })
 
   const selectedCategoryId = form.watch('category_id')
-  const watchedCity = form.watch('cidade')
-  const watchedUf = form.watch('uf')
+  const leafCategories = useMemo(() => getLeafCategories(categories ?? []), [categories])
   const categoryOptions = useMemo(
-    () => (categories ?? []).map((category) => ({ value: category.id, label: category.name })),
-    [categories],
+    () => leafCategories.map((category) => ({ value: category.id, label: category.name })),
+    [leafCategories],
   )
-  const selectedCategory = categories?.find((c) => c.id === selectedCategoryId)
+  const selectedCategory = leafCategories.find((c) => c.id === selectedCategoryId)
   const eligible = getEligibleSuppliers(selectedCategory?.slug)
-  const savedAddress = displayAddress ?? buyerAddress
-  const hasCompleteAddress = isBuyerAddressComplete(savedAddress)
-  const deliverySummary = savedAddress ? formatBuyerAddressSummary(savedAddress) : undefined
   const isSearchingSidebar = isSearchingSuppliers
 
   const isSaving =
     createDemand.isPending ||
     updateDemand.isPending ||
     publishDemand.isPending ||
-    updateBuyerAddress.isPending ||
     form.formState.isSubmitting
 
   useEffect(() => {
@@ -132,20 +123,23 @@ export function NewDemandPage() {
     if (stateData?.precoReferencia != null && stateData.precoReferencia > 0) {
       form.setValue('preco_referencia_mercado', stateData.precoReferencia)
     }
+    if (stateData?.selectedCor || stateData?.selectedTamanho) {
+      form.setValue('especificacoes', [
+        {
+          cor: stateData.selectedCor ?? '',
+          tamanho: stateData.selectedTamanho ?? '',
+          quantidade: 1,
+        },
+      ])
+    }
   }, [stateData, isEditing, form])
 
   useEffect(() => {
-    if (buyerAddress) {
-      setDisplayAddress(buyerAddress)
-    }
-  }, [buyerAddress])
-
-  useEffect(() => {
-    if (!savedAddress || !hasCompleteAddress || isEditing) return
-    const location = buyerAddressToDemandLocation(savedAddress as BuyerAddress)
-    if (!stateData?.city) form.setValue('cidade', location.cidade, { shouldValidate: true })
-    if (!stateData?.uf) form.setValue('uf', location.uf, { shouldValidate: true })
-  }, [savedAddress, hasCompleteAddress, isEditing, stateData, form])
+    if (isEditing || !demandLocation.ready) return
+    if (!form.getValues('cidade')) form.setValue('cidade', demandLocation.cidade)
+    if (!form.getValues('uf')) form.setValue('uf', demandLocation.uf)
+    if (!form.getValues('raio_km')) form.setValue('raio_km', demandLocation.raio_km)
+  }, [demandLocation, isEditing, form])
 
   useEffect(() => {
     if (!existingDemand) return
@@ -172,15 +166,20 @@ export function NewDemandPage() {
     setIsSearchingSuppliers(true)
     const timer = window.setTimeout(() => setIsSearchingSuppliers(false), 700)
     return () => window.clearTimeout(timer)
-  }, [selectedCategoryId, watchedCity, watchedUf])
+  }, [selectedCategoryId, demandLocation.cidade, demandLocation.uf])
 
   async function saveDraft(values: DemandInput) {
     setFormError(null)
-    const payload = syncDemandQuantidadeFromSpecifications(values)
+    const payload = syncDemandQuantidadeFromSpecifications({
+      ...values,
+      cidade: values.cidade || demandLocation.cidade,
+      uf: values.uf || demandLocation.uf,
+      raio_km: values.raio_km || demandLocation.raio_km,
+    })
     try {
       if (isEditing && editId) {
         await updateDemand.mutateAsync({ id: editId, input: payload })
-        toast.success('Demanda atualizada')
+        toast.success('Pedido atualizado')
         return editId
       }
       const created = await createDemand.mutateAsync(payload)
@@ -200,25 +199,7 @@ export function NewDemandPage() {
     navigate('/buyer/dashboard')
   }
 
-  async function handleSaveAddress(input: BuyerAddressInput) {
-    try {
-      const saved = await updateBuyerAddress.mutateAsync(input)
-      setDisplayAddress(saved)
-      const location = buyerAddressToDemandLocation(input)
-      form.setValue('cidade', location.cidade, { shouldValidate: true })
-      form.setValue('uf', location.uf, { shouldValidate: true })
-      toast.success('Endereço de entrega salvo')
-    } catch (err) {
-      toast.error(translateSupabaseError(err instanceof Error ? err.message : 'Erro ao salvar endereço'))
-      throw err
-    }
-  }
-
   async function handlePublish() {
-    if (!hasCompleteAddress) {
-      toast.error('Complete seu endereço de entrega para publicar a demanda')
-      return
-    }
     const valid = await form.trigger()
     if (!valid) return
     const values = form.getValues()
@@ -226,7 +207,7 @@ export function NewDemandPage() {
     if (!id) return
     try {
       await publishDemand.mutateAsync(id)
-      toast.success('Demanda publicada')
+      toast.success('Pedido publicado')
       navigate('/buyer/dashboard')
     } catch (err) {
       if (isQuotaExceededError(err)) {
@@ -250,7 +231,7 @@ export function NewDemandPage() {
     return (
       <div className="p-4 lg:p-6">
         <Alert className="border-destructive/50 text-destructive">
-          Não foi possível carregar a demanda para edição.
+          Não foi possível carregar o pedido para edição.
         </Alert>
       </div>
     )
@@ -259,9 +240,9 @@ export function NewDemandPage() {
   if (isEditing && existingDemand && existingDemand.status !== 'RASCUNHO') {
     return (
       <div className="space-y-4 p-4 lg:p-6">
-        <Alert>Esta demanda não pode mais ser editada.</Alert>
+        <Alert>Este pedido não pode mais ser editado.</Alert>
         <Button asChild variant="outline">
-          <Link to={`/buyer/demands/${existingDemand.id}`}>Ver demanda</Link>
+          <Link to={`/buyer/demands/${existingDemand.id}`}>Ver pedido</Link>
         </Button>
       </div>
     )
@@ -372,33 +353,6 @@ export function NewDemandPage() {
                   optionSource={productVariantSource}
                   nativeFieldClass={NATIVE_FIELD_CLASS}
                 />
-
-                <div>
-                {loadingBuyerAddress ? (
-                  <LoadingSkeleton className="h-40 w-full rounded-xl" />
-                ) : (
-                  <BuyerAddressForm
-                    idPrefix="demand-address"
-                    value={savedAddress ?? undefined}
-                    readOnly={hasCompleteAddress}
-                    requiredHint={
-                      !hasCompleteAddress
-                        ? 'Complete seu endereço de entrega para continuar. Ele será salvo como padrão para próximas solicitações.'
-                        : undefined
-                    }
-                    saving={updateBuyerAddress.isPending}
-                    onSave={handleSaveAddress}
-                    onAddressChange={(address) => {
-                      setDisplayAddress(address)
-                      if (isBuyerAddressComplete(address)) {
-                        const location = buyerAddressToDemandLocation(address)
-                        form.setValue('cidade', location.cidade, { shouldValidate: true })
-                        form.setValue('uf', location.uf, { shouldValidate: true })
-                      }
-                    }}
-                  />
-                )}
-                </div>
               </div>
             </section>
 
@@ -407,9 +361,8 @@ export function NewDemandPage() {
               <EligibleSuppliersPanel
                 eligible={eligible}
                 selectedCategory={selectedCategory}
-                watchedCity={watchedCity}
-                watchedUf={watchedUf}
-                deliverySummary={deliverySummary || undefined}
+                watchedCity={form.watch('cidade') || demandLocation.cidade}
+                watchedUf={form.watch('uf') || demandLocation.uf}
                 isSaving={isSaving}
                 selectedCategoryId={selectedCategoryId}
                 isSearching={isSearchingSidebar}

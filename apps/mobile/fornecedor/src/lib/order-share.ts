@@ -19,7 +19,7 @@ export async function shareOrderSummary(order: SupplierOrderListItem): Promise<v
     `Pedido #${formatShortId(order.id)}`,
     ORDER_STATUS_LABELS[order.status] ?? order.status,
     '',
-    order.demand?.titulo ? `Demanda: ${order.demand.titulo}` : null,
+    order.demand?.titulo ? `Pedido: ${order.demand.titulo}` : null,
     order.demand ? `Local: ${order.demand.cidade}/${order.demand.uf}` : null,
     order.offer ? `Valor: ${formatCurrency(order.offer.valor)}` : null,
     order.offer && order.demand

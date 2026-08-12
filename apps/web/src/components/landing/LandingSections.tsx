@@ -28,7 +28,7 @@ const FEATURES = [
   {
     icon: MessageSquare,
     title: 'Chat contextual',
-    text: 'Negocie dentro da demanda, com histórico e reveal de contato controlado.',
+    text: 'Negocie dentro do pedido, com histórico e reveal de contato controlado.',
   },
   {
     icon: ShieldCheck,
@@ -38,7 +38,7 @@ const FEATURES = [
   {
     icon: Package,
     title: 'Catálogo integrado',
-    text: 'Fornecedores cadastram produtos e respondem demandas com propostas estruturadas.',
+    text: 'Fornecedores cadastram produtos e respondem pedidos com propostas estruturadas.',
   },
   {
     icon: Clock,
@@ -58,7 +58,7 @@ const AUDIENCES = [
     badge: 'Compradores',
     title: 'Pare de caçar fornecedor',
     points: [
-      'Publique uma demanda em minutos com categoria e localização',
+      'Publique um pedido em minutos com categoria e localização',
       'Receba propostas agrupadas na mesma tela',
       'Compare preço, prazo e condições sem planilhas',
       'Feche pedidos com workflow e rastreabilidade',
@@ -73,7 +73,7 @@ const AUDIENCES = [
     badge: 'Fornecedores',
     title: 'Oportunidades na sua região',
     points: [
-      'Receba demandas compatíveis com seu catálogo',
+      'Receba pedidos compatíveis com seu catálogo',
       'Envie propostas estruturadas em poucos cliques',
       'Construa reputação com entregas e SLAs',
       'Plano Gold com prioridade no match',
@@ -86,7 +86,7 @@ const AUDIENCES = [
 ] as const
 
 const STATS = [
-  { value: 'Minutos', label: 'para publicar uma demanda' },
+  { value: 'Minutos', label: 'para publicar um pedido' },
   { value: '1 tela', label: 'para comparar propostas' },
   { value: '100%', label: 'rastreável do match ao pedido' },
   { value: '14 dias', label: 'de trial nos planos pagos' },
@@ -101,7 +101,7 @@ const FAQ_ITEMS = [
   {
     question: 'A plataforma é gratuita?',
     answer:
-      'Sim, existe plano Free para começar. Planos Pro e Gold ampliam limites de demandas, propostas e catálogo, com trial de 14 dias nos planos pagos.',
+      'Sim, existe plano Free para começar. Planos Pro e Gold ampliam limites de pedidos, propostas e catálogo, com trial de 14 dias nos planos pagos.',
   },
   {
     question: 'Como funciona a verificação de fornecedores?',
@@ -147,7 +147,7 @@ export function FeaturesSection() {
           Tudo para comprar e vender B2B com eficiência
         </h2>
         <p className="mt-3 text-muted-foreground">
-          Da publicação da demanda ao pedido fechado — match, chat, propostas e reputação em uma única plataforma.
+          Da publicação do pedido ao fechamento — match, chat, propostas e reputação em uma única plataforma.
         </p>
       </div>
       <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -176,7 +176,7 @@ export function AudienceSection() {
             Feito para os dois lados do B2B
           </h2>
           <p className="mt-3 text-muted-foreground">
-            Compradores ganham velocidade na cotação. Fornecedores ganham demandas qualificadas sem prospecção fria.
+            Compradores ganham velocidade na cotação. Fornecedores ganham pedidos qualificados sem prospecção fria.
           </p>
         </div>
         <div className="mt-12 grid gap-8 lg:grid-cols-2">
@@ -226,7 +226,7 @@ export function HowItWorksSection() {
     {
       icon: Globe,
       title: '1. Publique',
-      text: 'Comprador descreve a demanda com categoria, quantidade e localização.',
+      text: 'Comprador descreve o pedido com categoria, quantidade e localização.',
     },
     {
       icon: Bell,
@@ -236,7 +236,7 @@ export function HowItWorksSection() {
     {
       icon: ShieldCheck,
       title: '3. Compare e feche',
-      text: 'Propostas agrupadas, chat contextual e pedido com integridade e reputação.',
+      text: 'Propostas agrupadas, chat contextual e fechamento com integridade e reputação.',
     },
   ] as const
 
@@ -278,7 +278,7 @@ export function PricingTeaserSection() {
               Comece grátis, evolua quando precisar
             </h2>
             <p className="mt-4 text-white/80">
-              Plano Free para validar a plataforma. Pro e Gold ampliam demandas, propostas e catálogo — com 14 dias de
+              Plano Free para validar a plataforma. Pro e Gold ampliam pedidos, propostas e catálogo — com 14 dias de
               trial nos planos pagos.
             </p>
             <ul className="mt-6 space-y-2 text-sm text-white/80">

@@ -199,7 +199,7 @@ export default function BoardScreen() {
     <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
       <AppHeader
         title="Solicitações de compra"
-        subtitle="Demandas compatíveis com seu perfil e catálogo"
+        subtitle="Pedidos compatíveis com seu perfil e catálogo"
         supplierStatus={supplierStatus}
       />
       {!isLoading && allMatches.length > 0 ? <StatsBar items={stats} /> : null}
@@ -259,7 +259,7 @@ export default function BoardScreen() {
           title="Nenhuma oportunidade"
           description={
             statusFilter === 'all'
-              ? 'Novas demandas aparecerão aqui quando houver match com seu perfil.'
+              ? 'Novos pedidos aparecerão aqui quando houver match com seu perfil.'
               : 'Não há oportunidades neste filtro no momento.'
           }
         />

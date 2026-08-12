@@ -75,7 +75,7 @@ export function SupplierBoardPage() {
         <EmptyState
           icon={LayoutGrid}
           title="Nenhuma oportunidade"
-          description="Novas demandas aparecerão aqui quando houver match com seu perfil."
+          description="Novos pedidos aparecerão aqui quando houver match com seu perfil."
         />
       )}
 

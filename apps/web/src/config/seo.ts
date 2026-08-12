@@ -16,7 +16,7 @@ export type SeoConfig = {
 }
 
 const DEFAULT_DESCRIPTION =
-  'Plataforma B2B de busca reversa: publique sua demanda e receba propostas de fornecedores verificados na sua região. Cotações, chat e pedidos em um só lugar.'
+  'Plataforma B2B de busca reversa: publique seu pedido e receba propostas de fornecedores verificados na sua região. Cotações, chat e pedidos em um só lugar.'
 
 const DEFAULT_KEYWORDS = [
   'marketplace B2B',
@@ -40,7 +40,7 @@ export const SEO_CONFIG: Record<string, SeoConfig> = {
   '/para-compradores': {
     title: 'Para compradores — Cotações e fornecedores na sua região',
     description:
-      'Publique demandas, compare propostas na mesma tela e negocie com fornecedores verificados. Centralize cotações B2B com chat, SLAs e reputação.',
+      'Publique pedidos, compare propostas na mesma tela e negocie com fornecedores verificados. Centralize cotações B2B com chat, SLAs e reputação.',
     path: '/para-compradores',
     ogImage: '/og-image.png',
     keywords: [...DEFAULT_KEYWORDS, 'cotação online', 'comprador B2B'],
@@ -48,7 +48,7 @@ export const SEO_CONFIG: Record<string, SeoConfig> = {
   '/para-fornecedores': {
     title: 'Para fornecedores — Oportunidades qualificadas na sua região',
     description:
-      'Receba demandas compatíveis com seu catálogo e localização. Envie propostas, construa reputação e ganhe visibilidade com planos Gold.',
+      'Receba pedidos compatíveis com seu catálogo e localização. Envie propostas, construa reputação e ganhe visibilidade com planos Gold.',
     path: '/para-fornecedores',
     ogImage: '/og-image.png',
     keywords: [...DEFAULT_KEYWORDS, 'vendas B2B', 'leads qualificados', 'fornecedor'],
@@ -56,7 +56,7 @@ export const SEO_CONFIG: Record<string, SeoConfig> = {
   '/pricing': {
     title: 'Planos e preços — Assinatura SaaS com trial de 14 dias',
     description:
-      'Planos Free, Pro e Gold para compradores e fornecedores. Trial de 14 dias nos planos pagos. Limites de demandas, propostas e catálogo transparentes.',
+      'Planos Free, Pro e Gold para compradores e fornecedores. Trial de 14 dias nos planos pagos. Limites de pedidos, propostas e catálogo transparentes.',
     path: '/pricing',
     ogImage: '/og-image.png',
     keywords: [...DEFAULT_KEYWORDS, 'planos', 'preços', 'SaaS B2B'],

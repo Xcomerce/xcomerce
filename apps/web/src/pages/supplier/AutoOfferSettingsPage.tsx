@@ -151,7 +151,7 @@ export function AutoOfferSettingsPage() {
                   <div>
                     <p className="font-medium">Ativar auto-proposta</p>
                     <p className="text-sm text-muted-foreground">
-                      Dispara no momento em que a demanda é compatível com seu perfil.
+                      Dispara no momento em que o pedido é compatível com seu perfil.
                     </p>
                   </div>
                   <Switch
@@ -187,7 +187,7 @@ export function AutoOfferSettingsPage() {
                     name="min_demand_quantity"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Quantidade mínima da demanda</FormLabel>
+                        <FormLabel>Quantidade mínima do pedido</FormLabel>
                         <FormControl>
                           <Input type="number" min={1} {...field} />
                         </FormControl>

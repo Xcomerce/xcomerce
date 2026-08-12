@@ -8,7 +8,7 @@ export const BUYER_NOTIFICATION_PREFERENCES: NotificationPreferenceDefinition[] 
   {
     type: 'offer.received',
     label: 'Nova proposta recebida',
-    description: 'Quando um fornecedor envia proposta em uma demanda sua.',
+    description: 'Quando um fornecedor envia proposta em um pedido seu.',
   },
   {
     type: 'chat.message',
@@ -45,8 +45,8 @@ export const BUYER_NOTIFICATION_PREFERENCES: NotificationPreferenceDefinition[] 
 export const SUPPLIER_NOTIFICATION_PREFERENCES: NotificationPreferenceDefinition[] = [
   {
     type: 'demand.matched',
-    label: 'Nova oportunidade de demanda',
-    description: 'Quando uma demanda compatível é publicada na sua região.',
+    label: 'Nova oportunidade de pedido',
+    description: 'Quando um pedido compatível é publicado na sua região.',
   },
   {
     type: 'chat.message',

@@ -109,19 +109,41 @@ export async function uploadProductImage(
   uri: string,
   ext: string,
 ): Promise<Product> {
-  const normalizedExt = ext === 'jpeg' ? 'jpg' : ext
-  const path = productImagePath(supplierId, productId, normalizedExt)
-  const contentType =
-    normalizedExt === 'png' ? 'image/png' : normalizedExt === 'webp' ? 'image/webp' : 'image/jpeg'
-  await uploadFileFromUri('product-images', path, uri, contentType)
-  const { data } = supabase.storage.from('product-images').getPublicUrl(path)
-  return updateProductImage(productId, data.publicUrl)
+  const urls = await uploadProductImageFiles(supplierId, productId, [{ uri, ext }])
+  return updateProductImages(productId, urls)
+}
+
+export async function uploadProductImageFiles(
+  supplierId: string,
+  productId: string,
+  items: { uri: string; ext: string }[],
+): Promise<string[]> {
+  const uploaded: string[] = []
+  for (let index = 0; index < items.length; index += 1) {
+    const { uri, ext } = items[index]
+    const normalizedExt = ext === 'jpeg' ? 'jpg' : ext
+    const path = productImagePath(supplierId, productId, normalizedExt, `${Date.now()}-${index}`)
+    const contentType =
+      normalizedExt === 'png' ? 'image/png' : normalizedExt === 'webp' ? 'image/webp' : 'image/jpeg'
+    await uploadFileFromUri('product-images', path, uri, contentType)
+    const { data } = supabase.storage.from('product-images').getPublicUrl(path)
+    uploaded.push(data.publicUrl)
+  }
+  return uploaded
 }
 
 export async function updateProductImage(id: string, imageUrl: string): Promise<Product> {
+  return updateProductImages(id, [imageUrl])
+}
+
+export async function updateProductImages(id: string, imageUrls: string[]): Promise<Product> {
+  const urls = imageUrls.map((url) => url.trim()).filter(Boolean)
   const { data, error } = await supabase
     .from('products')
-    .update({ image_url: imageUrl })
+    .update({
+      image_urls: urls,
+      image_url: urls[0] ?? null,
+    })
     .eq('id', id)
     .select()
     .single()

@@ -15,6 +15,7 @@ import { useSubscription } from '@/hooks/use-billing'
 import { useCategories, type Category } from '@/hooks/use-categories'
 import type { Product } from '@/services/products'
 import { cn, formatCurrency } from '@/lib/utils'
+import { getPrimaryProductImageUrl } from '@keve/shared'
 import { getProductImageUri } from '@/lib/product-images'
 
 function ProductCard({
@@ -26,7 +27,7 @@ function ProductCard({
   categoryName?: string
   onPress: () => void
 }) {
-  const imageUri = getProductImageUri(product.nome, product.image_url)
+  const imageUri = getProductImageUri(product.nome, getPrimaryProductImageUrl(product))
   const location =
     product.cidade && product.uf ? `${product.cidade}/${product.uf}` : product.uf ?? null
 

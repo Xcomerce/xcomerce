@@ -84,6 +84,7 @@ function ChildrenModal({
   onToggle,
   onEdit,
   onDelete,
+  onCreateChild,
 }: {
   parent: Category
   items: Category[]
@@ -93,6 +94,7 @@ function ChildrenModal({
   onToggle: (cat: Category, next: boolean) => void
   onEdit: (cat: Category) => void
   onDelete: (cat: Category) => void
+  onCreateChild: (parent: Category) => void
 }) {
   return (
     <div
@@ -193,6 +195,13 @@ function ChildrenModal({
             </ul>
           )}
         </div>
+
+        <div className="border-t px-6 py-4">
+          <Button className="w-full" onClick={() => onCreateChild(parent)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Nova subcategoria
+          </Button>
+        </div>
       </div>
     </div>
   )
@@ -213,6 +222,7 @@ export function CategoriesAdminPage() {
   const [deletingCategory, setDeletingCategory] = useState<Category | null>(null)
   const [togglingId, setTogglingId] = useState<string | null>(null)
   const [selectedRoot, setSelectedRoot] = useState<Category | null>(null)
+  const [creatingParent, setCreatingParent] = useState<Category | null>(null)
 
   const childrenByParent = useMemo(() => {
     const map = new Map<string, Category[]>()
@@ -304,11 +314,27 @@ export function CategoriesAdminPage() {
   function closeForm() {
     setFormOpen(false)
     setEditing(null)
+    setCreatingParent(null)
   }
 
   function openCreate() {
     setEditing(null)
-    form.reset({ name: '', description: '', sort_order: 0, is_active: true })
+    setCreatingParent(null)
+    form.reset({ name: '', description: '', sort_order: 0, is_active: true, parent_id: null })
+    setFormOpen(true)
+  }
+
+  function openCreateChild(parent: Category) {
+    setEditing(null)
+    setCreatingParent(parent)
+    const childCount = childrenByParent.get(parent.id)?.length ?? 0
+    form.reset({
+      name: '',
+      description: '',
+      sort_order: childCount + 1,
+      is_active: true,
+      parent_id: parent.id,
+    })
     setFormOpen(true)
   }
 
@@ -328,16 +354,33 @@ export function CategoriesAdminPage() {
     try {
       if (editing) {
         await updateCategory.mutateAsync({ id: editing.id, input: values })
-        toast.success('Categoria atualizada')
+        toast.success(editing.parent_id ? 'Subcategoria atualizada' : 'Categoria atualizada')
       } else {
-        await createCategory.mutateAsync(values)
-        toast.success('Categoria criada')
+        const input: CategoryInput = creatingParent
+          ? { ...values, parent_id: creatingParent.id }
+          : { ...values, parent_id: null }
+        await createCategory.mutateAsync(input)
+        toast.success(creatingParent ? 'Subcategoria criada' : 'Categoria criada')
       }
       closeForm()
     } catch (err) {
       toast.error(translateSupabaseError(err instanceof Error ? err.message : 'Erro'))
     }
   }
+
+  const formTitle = editing
+    ? editing.parent_id
+      ? 'Editar subcategoria'
+      : 'Editar categoria'
+    : creatingParent
+      ? 'Nova subcategoria'
+      : 'Nova categoria'
+
+  const formDescription = editing
+    ? 'Altere os dados da categoria selecionada.'
+    : creatingParent
+      ? `Será vinculada à categoria principal "${creatingParent.name}".`
+      : 'Preencha os dados para criar uma nova categoria principal.'
 
   async function confirmDelete() {
     if (!deletingCategory) return
@@ -514,6 +557,7 @@ export function CategoriesAdminPage() {
           onToggle={(cat, next) => void toggleActive(cat, next)}
           onEdit={openEdit}
           onDelete={setDeletingCategory}
+          onCreateChild={openCreateChild}
         />
       ) : null}
 
@@ -521,12 +565,8 @@ export function CategoriesAdminPage() {
         open={formOpen}
         onClose={closeForm}
         onSubmit={form.handleSubmit(onSubmit)}
-        title={editing ? 'Editar categoria' : 'Nova categoria'}
-        description={
-          editing
-            ? 'Altere os dados da categoria selecionada.'
-            : 'Preencha os dados para criar uma nova categoria.'
-        }
+        title={formTitle}
+        description={formDescription}
         loading={isSaving}
       >
         <div className="space-y-2">

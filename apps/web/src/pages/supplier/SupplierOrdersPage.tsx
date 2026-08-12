@@ -48,12 +48,15 @@ export function SupplierOrdersPage() {
   }
 
   function handlePrint(order: SupplierOrderListItem) {
-    printOrderDocument({
+    const ok = printOrderDocument({
       order,
       demand: order.demand,
       offer: order.offer,
       buyer: order.buyer,
     })
+    if (!ok) {
+      toast.error('Não foi possível abrir a impressão. Tente novamente.')
+    }
   }
 
   return (
@@ -92,14 +95,14 @@ export function SupplierOrdersPage() {
                   <div className="space-y-3">
                     <div className="flex flex-wrap items-center gap-2">
                       <div className="inline-flex h-6 shrink-0 items-center rounded-full border border-border bg-transparent px-2.5 font-mono text-xs font-semibold leading-none tracking-wider text-foreground">
-                        ID#{order.id.slice(0, 8).toUpperCase()}
+                        Pedido#{order.id.slice(0, 8).toUpperCase()}
                       </div>
                       <StatusBadge status={order.status} kind="order" className="h-6 shrink-0 py-0 text-xs" />
                     </div>
 
                     <div className="min-w-0">
                       <p className="text-base font-semibold text-foreground line-clamp-2">
-                        {order.demand?.titulo ?? `Demanda ${order.demand_id.slice(0, 8)}…`}
+                        {order.demand?.titulo ?? `Pedido ${order.demand_id.slice(0, 8)}…`}
                       </p>
                       {order.demand ? (
                         <p className="mt-1 text-sm text-muted-foreground">

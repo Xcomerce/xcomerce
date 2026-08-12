@@ -22,6 +22,8 @@ export const productKeys = {
   detail: (id: string) => [...productKeys.all, 'detail', id] as const,
   count: (supplierId: string) => [...productKeys.all, 'count', supplierId] as const,
   feed: (filters?: object) => [...productKeys.all, 'feed', filters ?? {}] as const,
+  store: (supplierId: string) => [...productKeys.all, 'store', supplierId] as const,
+  catalog: (supplierId: string) => [...productKeys.all, 'catalog', supplierId] as const,
 }
 
 export function useProducts() {
@@ -98,9 +100,30 @@ export function useDeleteProduct() {
   })
 }
 
-export function useFeedProducts(filters?: { categoryId?: string; search?: string; uf?: string }) {
+export function useFeedProducts(filters?: {
+  categoryId?: string
+  categoryIds?: string[]
+  search?: string
+  uf?: string
+}) {
   return useQuery({
     queryKey: productKeys.feed(filters),
     queryFn: () => products.fetchFeedProducts(filters),
+  })
+}
+
+export function useSupplierStore(supplierId: string | undefined) {
+  return useQuery({
+    queryKey: productKeys.store(supplierId ?? ''),
+    queryFn: () => products.fetchSupplierStore(supplierId!),
+    enabled: !!supplierId,
+  })
+}
+
+export function useSupplierCatalog(supplierId: string | undefined) {
+  return useQuery({
+    queryKey: productKeys.catalog(supplierId ?? ''),
+    queryFn: () => products.fetchSupplierCatalog(supplierId!),
+    enabled: !!supplierId,
   })
 }

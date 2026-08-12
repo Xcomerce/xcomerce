@@ -45,7 +45,7 @@ export default function BillingScreen() {
               <Text className="text-lg font-bold text-brand-dark">{item.name}</Text>
               <Text className="mt-1 text-2xl font-bold text-brand">{formatCurrency(item.price)}</Text>
               <Text className="mt-2 text-sm text-slate-600">
-                Demandas/mês: {item.max_demands_monthly ?? '∞'} · Catálogo: {item.max_catalog_items}
+                Pedidos/mês: {item.max_demands_monthly ?? '∞'} · Catálogo: {item.max_catalog_items}
               </Text>
               {subscription?.plan_id === item.id ? (
                 <Text className="mt-2 text-sm font-semibold text-green-600">Plano atual</Text>

@@ -59,7 +59,7 @@ export function SelectRolePage() {
                       <CardTitle className="font-display text-lg font-semibold leading-none">{ROLE_LABELS[role]}</CardTitle>
                     </div>
                     <CardDescription className="text-sm text-muted-foreground leading-relaxed">
-                      {role === 'buyer' && 'Publique demandas e gerencie propostas'}
+                      {role === 'buyer' && 'Publique pedidos e gerencie propostas'}
                       {role === 'supplier' && 'Veja oportunidades e envie propostas'}
                       {role === 'admin' && 'Administre aprovações e métricas'}
                       {role === 'commercial' && 'Área comercial (em breve)'}

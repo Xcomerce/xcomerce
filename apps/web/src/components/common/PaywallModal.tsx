@@ -13,7 +13,7 @@ type Props = {
 }
 
 const MESSAGES = {
-  demands: 'Você atingiu o limite mensal de demandas do seu plano.',
+  demands: 'Você atingiu o limite mensal de pedidos do seu plano.',
   offers: 'Você atingiu o limite mensal de propostas do seu plano.',
   catalog: 'Você atingiu o limite de itens no catálogo do seu plano.',
 }

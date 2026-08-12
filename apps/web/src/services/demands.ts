@@ -144,10 +144,10 @@ async function assertDemandPublishQuota(buyerId: string): Promise<void> {
 export async function publishDemand(id: string): Promise<Demand> {
   const existing = await fetchDemand(id)
   if (!existing) {
-    throw new Error('Demanda não encontrada')
+    throw new Error('Pedido não encontrado')
   }
   if (existing.status !== 'RASCUNHO') {
-    throw new Error('Esta demanda não pode ser publicada')
+    throw new Error('Este pedido não pode ser publicado')
   }
 
   await assertDemandPublishQuota(existing.buyer_id)
@@ -167,7 +167,7 @@ export async function publishDemand(id: string): Promise<Demand> {
   try {
     await requestDemandMatch(id)
   } catch (matchError) {
-    console.warn('Falha ao processar match da demanda:', matchError)
+    console.warn('Falha ao processar match do pedido:', matchError)
   }
 
   return data as Demand

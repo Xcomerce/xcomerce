@@ -22,7 +22,7 @@ export default function SupportScreen() {
         <Card>
           <Text className="text-lg font-bold text-brand-dark">Central de ajuda</Text>
           <Text className="mt-2 text-slate-600">
-            Precisa de ajuda com demandas, propostas ou pedidos? Entre em contato com nossa equipe.
+            Precisa de ajuda com pedidos e propostas? Entre em contato com nossa equipe.
           </Text>
 
           {isLoading ? (
@@ -65,8 +65,8 @@ export default function SupportScreen() {
         <Card>
           <Text className="font-semibold text-slate-800">Perguntas frequentes</Text>
           <Text className="mt-2 text-sm text-slate-600">
-            • Como publicar uma demanda? Use o botão + na barra inferior.{'\n'}
-            • Como aceitar uma proposta? Abra a demanda e toque em Aceitar.{'\n'}
+            • Como publicar um pedido? Use o botão + na barra inferior.{'\n'}
+            • Como aceitar uma proposta? Abra o pedido e toque em Aceitar.{'\n'}
             • O pagamento é pela plataforma? Não — negociação externa após aceite.
           </Text>
         </Card>

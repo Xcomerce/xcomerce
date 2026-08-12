@@ -231,6 +231,7 @@ export function SupplierApprovalDetailDialog({
                 <DetailGrid>
                   <DetailItem label="Razão social" value={company?.razao_social ?? '—'} />
                   <DetailItem label="Nome fantasia" value={company?.nome_fantasia ?? '—'} />
+                  <DetailItem label="Nome da loja" value={data.profile.store_name ?? '—'} />
                   <DetailItem label="CNPJ" value={company?.cnpj ? formatCnpj(company.cnpj) : '—'} />
                   <DetailItem label="Situação cadastral" value={company?.situacao ?? '—'} />
                   <DetailItem label="Endereço" value={formatAddress(company)} />

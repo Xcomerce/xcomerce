@@ -41,7 +41,7 @@ export function SupportPage() {
           <p className="mt-2 text-sm text-muted-foreground">
             {canEdit
               ? 'Visualize e edite os contatos exibidos para compradores e fornecedores.'
-              : 'Precisa de ajuda com demandas, propostas ou pedidos? Entre em contato com nossa equipe.'}
+              : 'Precisa de ajuda com pedidos e propostas? Entre em contato com nossa equipe.'}
           </p>
         </div>
 

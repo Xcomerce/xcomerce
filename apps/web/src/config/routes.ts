@@ -41,7 +41,8 @@ export const PAGE_TITLES: Record<string, string> = {
 export function resolvePageTitle(pathname: string): string {
   if (PAGE_TITLES[pathname]) return PAGE_TITLES[pathname]
   if (pathname.startsWith('/admin/leads/')) return 'Detalhe do lead'
-  if (pathname.startsWith('/buyer/demands/')) return 'Detalhe da demanda'
+  if (pathname.startsWith('/buyer/demands/')) return 'Detalhe do pedido'
+  if (pathname.startsWith('/buyer/stores/')) return 'Loja'
   if (pathname.startsWith('/buyer/orders/')) return 'Detalhe do pedido'
   if (pathname.startsWith('/supplier/offers/')) return 'Proposta'
   if (pathname.startsWith('/supplier/catalog/') && pathname.endsWith('/edit')) return 'Editar produto'

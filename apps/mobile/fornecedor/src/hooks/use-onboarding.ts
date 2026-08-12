@@ -66,3 +66,16 @@ export function useSubmitForReview() {
     },
   })
 }
+
+export function useUpdateSupplierStoreName() {
+  const queryClient = useQueryClient()
+  const { user } = useAuth()
+
+  return useMutation({
+    mutationFn: (storeName: string | null) => onboarding.updateSupplierStoreName(user!.id, storeName),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['onboarding-state', user?.id] })
+      queryClient.invalidateQueries({ queryKey: ['products'] })
+    },
+  })
+}

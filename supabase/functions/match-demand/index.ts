@@ -61,10 +61,10 @@ Deno.serve(async (req) => {
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro ao processar match'
     if (message === 'DEMAND_NOT_FOUND') {
-      return error('DEMAND_NOT_FOUND', 'Demanda não encontrada.', 404)
+      return error('DEMAND_NOT_FOUND', 'Pedido não encontrado.', 404)
     }
     if (message === 'DEMAND_NOT_OPEN') {
-      return error('DEMAND_NOT_PUBLISHED', 'Demanda precisa estar aberta.', 422)
+      return error('DEMAND_NOT_PUBLISHED', 'Pedido precisa estar aberto.', 422)
     }
     console.error('match-demand:', err)
     return error('MATCH_FAILED', message, 500)

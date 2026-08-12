@@ -20,7 +20,7 @@ const SUBSCRIPTION_STATUS_LABELS: Record<string, string> = {
 }
 
 const USAGE_LABELS: Record<string, string> = {
-  demands_published: 'Demandas publicadas',
+  demands_published: 'Pedidos publicados',
   offers_sent: 'Propostas enviadas',
 }
 
@@ -192,7 +192,7 @@ export function BillingPage() {
                     <p className="text-xl font-semibold">{formatCurrency(plan.price)}/mês</p>
                     <ul className="space-y-1 text-sm text-muted-foreground">
                       <li>
-                        Demandas: {plan.max_demands_monthly ?? 'Ilimitadas'}/mês
+                        Pedidos: {plan.max_demands_monthly ?? 'Ilimitadas'}/mês
                       </li>
                       <li>
                         Propostas: {plan.max_offers_monthly ?? 'Ilimitadas'}/mês

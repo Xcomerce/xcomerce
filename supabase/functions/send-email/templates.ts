@@ -69,22 +69,22 @@ export function renderEmail(
   switch (template) {
     case 'demand_matched':
       return {
-        subject: locale === 'pt-BR' ? 'Nova oportunidade de demanda' : 'New demand opportunity',
+        subject: locale === 'pt-BR' ? 'Nova oportunidade de pedido' : 'New order opportunity',
         html: layout(
-          'Nova demanda compatível',
+          'Novo pedido compatível',
           `<p>Olá ${esc(data.supplier_name)},</p>
-           <p>Uma nova demanda foi publicada na sua região: <strong>${esc(data.demand_title)}</strong> (${esc(data.demand_city)}).</p>`,
+           <p>Um novo pedido foi publicado na sua região: <strong>${esc(data.demand_title)}</strong> (${esc(data.demand_city)}).</p>`,
           actionUrl,
           'Ver no board',
         ),
       }
     case 'offer_received':
       return {
-        subject: 'Nova proposta na sua demanda',
+        subject: 'Nova proposta no seu pedido',
         html: layout(
           'Proposta recebida',
           `<p>Olá ${esc(data.buyer_name)},</p>
-           <p>Você recebeu <strong>${esc(data.offer_count)}</strong> proposta(s) na demanda "${esc(data.demand_title)}".</p>`,
+           <p>Você recebeu <strong>${esc(data.offer_count)}</strong> proposta(s) no pedido "${esc(data.demand_title)}".</p>`,
           actionUrl,
         ),
       }

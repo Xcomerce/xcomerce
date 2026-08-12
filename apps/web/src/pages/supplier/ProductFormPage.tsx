@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState, type DragEvent, type SyntheticEvent } from 'react'
+import { useEffect, useMemo, useState, type DragEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
 import { ImagePlus, Trash2 } from 'lucide-react'
-import { productSchema, parseVariantStockRows, type ProductInput } from '@keve/shared'
+import { getLeafCategories, getProductImageUrls, productSchema, parseVariantStockRows, type ProductInput } from '@keve/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -25,35 +25,25 @@ import { useCategories } from '@/hooks/use-categories'
 import { useOnboardingState } from '@/hooks/use-onboarding'
 import { useSubscription } from '@/hooks/use-billing'
 import { useAuth } from '@/contexts/auth-context'
-import { updateProductImage } from '@/services/products'
+import { updateProductImages } from '@/services/products'
 import type { OnboardingState } from '@/services/onboarding'
 import { uploadFile, productImagePath } from '@/lib/storage'
 import { formatSupabaseError, translateSupabaseError } from '@/lib/errors'
 import { cn } from '@/lib/utils'
 
 import { ProductVariantsSection } from '@/components/catalog/ProductVariantsSection'
+import { SupplierStoreNameField } from '@/components/supplier/SupplierStoreNameField'
 
 const PRODUCT_IMAGE_ACCEPT = 'image/jpeg,image/png,image/webp'
 const PRODUCT_IMAGE_MAX_BYTES = 5 * 1024 * 1024
 const PRODUCT_IMAGE_MIN_DIMENSION = 800
 
-type ProductImageMeta = {
-  width?: number
-  height?: number
-}
+const PRODUCT_IMAGE_MAX_COUNT = 8
 
-async function readImageDimensions(file: File): Promise<{ width: number; height: number }> {
-  const url = URL.createObjectURL(file)
-  try {
-    return await new Promise((resolve, reject) => {
-      const img = new Image()
-      img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight })
-      img.onerror = () => reject(new Error('Não foi possível ler a imagem'))
-      img.src = url
-    })
-  } finally {
-    URL.revokeObjectURL(url)
-  }
+type PendingProductImage = {
+  id: string
+  file: File
+  preview: string
 }
 
 function isProductFormReady(values: ProductInput): boolean {
@@ -80,9 +70,8 @@ export function ProductFormPage() {
   const { user } = useAuth()
   const [paywallOpen, setPaywallOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [imageFile, setImageFile] = useState<File | null>(null)
-  const [imagePreview, setImagePreview] = useState<string | null>(null)
-  const [imageMeta, setImageMeta] = useState<ProductImageMeta | null>(null)
+  const [savedImageUrls, setSavedImageUrls] = useState<string[]>([])
+  const [pendingImages, setPendingImages] = useState<PendingProductImage[]>([])
   const [isDragOver, setIsDragOver] = useState(false)
 
   const { data: product, isLoading: productLoading } = useProduct(isEdit ? id : undefined)
@@ -122,9 +111,11 @@ export function ProductFormPage() {
     [onboardingState],
   )
 
+  const leafCategories = useMemo(() => getLeafCategories(categories), [categories])
+
   const categoryOptions = useMemo(
-    () => categories.map((category) => ({ value: category.id, label: category.name })),
-    [categories],
+    () => leafCategories.map((category) => ({ value: category.id, label: category.name })),
+    [leafCategories],
   )
 
   const formValues = form.watch()
@@ -150,10 +141,8 @@ export function ProductFormPage() {
         tamanhos: product.tamanhos ?? [],
         estoque_variacoes: parseVariantStockRows(product.estoque_variacoes),
       })
-      if (product.image_url) {
-        setImagePreview(product.image_url)
-        setImageMeta(null)
-      }
+      setSavedImageUrls(getProductImageUrls(product))
+      setPendingImages([])
     }
   }, [product, form, supplierLocation])
 
@@ -167,12 +156,17 @@ export function ProductFormPage() {
     if (!isEdit && atLimit) setPaywallOpen(true)
   }, [isEdit, atLimit])
 
-  async function uploadProductImage(productId: string, file: File) {
-    if (!user) return
-    const ext = file.name.split('.').pop() ?? 'jpg'
-    const path = productImagePath(user.id, productId, ext)
-    const url = await uploadFile('product-images', path, file)
-    await updateProductImage(productId, url)
+  async function uploadProductImages(productId: string, files: File[]): Promise<string[]> {
+    if (!user || files.length === 0) return []
+
+    const uploaded: string[] = []
+    for (const file of files) {
+      const ext = file.name.split('.').pop() ?? 'jpg'
+      const path = productImagePath(user.id, productId, ext, `${Date.now()}-${uploaded.length}`)
+      const url = await uploadFile('product-images', path, file)
+      uploaded.push(url)
+    }
+    return uploaded
   }
 
   async function confirmDelete() {
@@ -207,11 +201,15 @@ export function ProductFormPage() {
     try {
       if (isEdit && id) {
         await updateProduct.mutateAsync({ id, input: payload })
-        if (imageFile) await uploadProductImage(id, imageFile)
+        const uploaded = await uploadProductImages(id, pendingImages.map((item) => item.file))
+        await updateProductImages(id, [...savedImageUrls, ...uploaded])
         toast.success('Produto atualizado')
       } else {
         const created = await createProduct.mutateAsync(payload)
-        if (imageFile) await uploadProductImage(created.id, imageFile)
+        const uploaded = await uploadProductImages(created.id, pendingImages.map((item) => item.file))
+        if (uploaded.length > 0) {
+          await updateProductImages(created.id, uploaded)
+        }
         toast.success('Produto criado')
       }
       navigate('/supplier/catalog')
@@ -225,52 +223,57 @@ export function ProductFormPage() {
     }
   }
 
-  function handleImageChange(file: File | null) {
-    if (!file) return
+  const totalImages = savedImageUrls.length + pendingImages.length
 
+  function addImageFiles(files: File[]) {
     const allowedTypes = PRODUCT_IMAGE_ACCEPT.split(',')
-    if (!allowedTypes.includes(file.type)) {
-      toast.error('Use JPEG, PNG ou WebP')
-      return
-    }
-    if (file.size > PRODUCT_IMAGE_MAX_BYTES) {
-      toast.error('A imagem deve ter no máximo 5 MB')
+    const remaining = PRODUCT_IMAGE_MAX_COUNT - totalImages
+    if (remaining <= 0) {
+      toast.error(`Máximo de ${PRODUCT_IMAGE_MAX_COUNT} imagens por produto`)
       return
     }
 
-    setImageFile(file)
-    const url = URL.createObjectURL(file)
-    setImagePreview(url)
-    setImageMeta(null)
+    const validFiles = files
+      .filter((file) => allowedTypes.includes(file.type))
+      .filter((file) => file.size <= PRODUCT_IMAGE_MAX_BYTES)
+      .slice(0, remaining)
 
-    void readImageDimensions(file)
-      .then(({ width, height }) => {
-        setImageMeta({ width, height })
-      })
-      .catch(() => {
-        toast.error('Não foi possível ler as dimensões da imagem')
-      })
+    if (validFiles.length === 0) {
+      toast.error('Use JPEG, PNG ou WebP de até 5 MB')
+      return
+    }
+
+    if (validFiles.length < files.length) {
+      toast.error(`Algumas imagens foram ignoradas (limite de ${PRODUCT_IMAGE_MAX_COUNT} ou formato inválido)`)
+    }
+
+    setPendingImages((current) => [
+      ...current,
+      ...validFiles.map((file) => ({
+        id: `${file.name}-${file.lastModified}-${Math.random()}`,
+        file,
+        preview: URL.createObjectURL(file),
+      })),
+    ])
   }
 
-  function handlePreviewLoad(e: SyntheticEvent<HTMLImageElement>) {
-    if (imageFile) return
-    const { naturalWidth, naturalHeight } = e.currentTarget
-    setImageMeta((prev) => ({ ...prev, width: naturalWidth, height: naturalHeight }))
+  function removeSavedImage(url: string) {
+    setSavedImageUrls((current) => current.filter((item) => item !== url))
+  }
+
+  function removePendingImage(id: string) {
+    setPendingImages((current) => {
+      const target = current.find((item) => item.id === id)
+      if (target) URL.revokeObjectURL(target.preview)
+      return current.filter((item) => item.id !== id)
+    })
   }
 
   function handleImageDrop(e: DragEvent<HTMLDivElement>) {
     e.preventDefault()
     setIsDragOver(false)
-    const allowedTypes = PRODUCT_IMAGE_ACCEPT.split(',')
-    const file = Array.from(e.dataTransfer.files).find((f) => allowedTypes.includes(f.type))
-    if (file) handleImageChange(file)
+    addImageFiles(Array.from(e.dataTransfer.files))
   }
-
-  const minDimension =
-    imageMeta?.width && imageMeta?.height
-      ? Math.min(imageMeta.width, imageMeta.height)
-      : null
-  const isLowResolution = minDimension !== null && minDimension < PRODUCT_IMAGE_MIN_DIMENSION
 
   if (isEdit && productLoading) {
     return (
@@ -309,64 +312,86 @@ export function ProductFormPage() {
           <div className="grid gap-6 lg:grid-cols-[minmax(220px,320px)_1fr] lg:items-start">
         <Card className="h-fit">
           <CardHeader>
-            <CardTitle className="text-base">Imagem</CardTitle>
+            <CardTitle className="text-base">Imagens</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <label className="flex cursor-pointer flex-col items-center gap-3">
-              <div
-                className={cn(
-                  'flex aspect-square w-full max-w-sm items-center justify-center overflow-hidden rounded-xl border bg-muted transition-colors lg:max-w-none',
-                  isDragOver && 'border-primary bg-primary/5',
-                )}
-                onDragEnter={(e) => {
-                  e.preventDefault()
-                  setIsDragOver(true)
-                }}
-                onDragOver={(e) => {
-                  e.preventDefault()
-                  setIsDragOver(true)
-                }}
-                onDragLeave={(e) => {
-                  e.preventDefault()
-                  if (e.currentTarget === e.target) setIsDragOver(false)
-                }}
-                onDrop={handleImageDrop}
-              >
-                {imagePreview ? (
-                  <img
-                    src={imagePreview}
-                    alt=""
-                    className="h-full w-full object-cover"
-                    onLoad={handlePreviewLoad}
-                  />
-                ) : (
+            <div
+              className={cn(
+                'rounded-xl border border-dashed p-3 transition-colors',
+                isDragOver && 'border-primary bg-primary/5',
+              )}
+              onDragEnter={(e) => {
+                e.preventDefault()
+                setIsDragOver(true)
+              }}
+              onDragOver={(e) => {
+                e.preventDefault()
+                setIsDragOver(true)
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault()
+                if (e.currentTarget === e.target) setIsDragOver(false)
+              }}
+              onDrop={handleImageDrop}
+            >
+              {totalImages > 0 ? (
+                <div className="grid grid-cols-2 gap-2">
+                  {savedImageUrls.map((url) => (
+                    <div key={url} className="relative aspect-square overflow-hidden rounded-lg border bg-muted">
+                      <img src={url} alt="" className="h-full w-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => removeSavedImage(url)}
+                        className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-background/90 text-destructive shadow-sm"
+                        aria-label="Remover imagem"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                  {pendingImages.map((item) => (
+                    <div key={item.id} className="relative aspect-square overflow-hidden rounded-lg border bg-muted">
+                      <img src={item.preview} alt="" className="h-full w-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => removePendingImage(item.id)}
+                        className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-background/90 text-destructive shadow-sm"
+                        aria-label="Remover imagem"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex aspect-square w-full max-w-sm items-center justify-center rounded-xl bg-muted lg:max-w-none">
                   <ImagePlus className="h-12 w-12 text-muted-foreground" />
-                )}
-              </div>
-              <input
-                type="file"
-                accept={PRODUCT_IMAGE_ACCEPT}
-                className="hidden"
-                onChange={(e) => handleImageChange(e.target.files?.[0] ?? null)}
-              />
-              <span className="text-sm font-medium text-primary">Selecionar ou arrastar uma imagem</span>
-            </label>
+                </div>
+              )}
+
+              {totalImages < PRODUCT_IMAGE_MAX_COUNT ? (
+                <label className="mt-3 flex cursor-pointer flex-col items-center gap-2">
+                  <input
+                    type="file"
+                    accept={PRODUCT_IMAGE_ACCEPT}
+                    multiple
+                    className="hidden"
+                    onChange={(e) => {
+                      addImageFiles(Array.from(e.target.files ?? []))
+                      e.target.value = ''
+                    }}
+                  />
+                  <span className="text-sm font-medium text-primary">
+                    {totalImages > 0 ? 'Adicionar mais imagens' : 'Selecionar ou arrastar imagens'}
+                  </span>
+                </label>
+              ) : null}
+            </div>
 
             <p className="text-center text-xs text-muted-foreground">
-              JPEG, PNG ou WebP · até 5 MB · recomendado {PRODUCT_IMAGE_MIN_DIMENSION}×
-              {PRODUCT_IMAGE_MIN_DIMENSION} px ou maior, proporção 1:1
+              Até {PRODUCT_IMAGE_MAX_COUNT} imagens · JPEG, PNG ou WebP · 5 MB cada · recomendado{' '}
+              {PRODUCT_IMAGE_MIN_DIMENSION}×{PRODUCT_IMAGE_MIN_DIMENSION} px
             </p>
-
-            {isLowResolution && (
-              <div className="space-y-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-500">
-                <p className="font-medium">Melhore a qualidade da imagem</p>
-                <p>
-                  Para deixar seu produto mais nítido no catálogo, recomendamos usar uma imagem com pelo
-                  menos {PRODUCT_IMAGE_MIN_DIMENSION} × {PRODUCT_IMAGE_MIN_DIMENSION} px. Você pode continuar
-                  com esta imagem.
-                </p>
-              </div>
-            )}
           </CardContent>
         </Card>
 
@@ -374,6 +399,7 @@ export function ProductFormPage() {
           <CardContent className="pt-6">
             <Form {...form}>
               <form id="product-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <SupplierStoreNameField />
               <FormField
                 control={form.control}
                 name="nome"

@@ -30,7 +30,7 @@ export const ORDER_COMPLETED_STATUSES: OrderWorkflowStatus[] = ['CONCLUIDO', 'CA
 export const SLA_ACTION_LABELS: Record<string, string> = {
   inform_payment: 'Informar pagamento',
   confirm_payment: 'Confirmar pagamento',
-  inform_shipping: 'Informar envio',
+  inform_shipping: 'Informar pedido pronto',
   confirm_delivery: 'Confirmar recebimento',
   confirm_completion: 'Confirmar conclusão',
 }

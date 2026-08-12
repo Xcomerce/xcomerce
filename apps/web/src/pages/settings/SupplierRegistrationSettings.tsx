@@ -5,6 +5,7 @@ import { Alert } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
+import { SupplierStoreNameField } from '@/components/supplier/SupplierStoreNameField'
 import { useOnboardingState } from '@/hooks/use-onboarding'
 import { computeOnboardingStep } from '@/services/onboarding'
 import { cn } from '@/lib/utils'
@@ -47,18 +48,21 @@ export function SupplierRegistrationSettings({ supplierStatus, joinDate, classNa
       </div>
 
       {onboarding?.company?.razao_social ? (
-        <div className="rounded-xl border border-border bg-card p-4 space-y-1">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Empresa</p>
-          <p className="text-sm font-semibold">{onboarding.company.razao_social}</p>
-          {onboarding.company.cnpj ? (
-            <p className="text-sm text-muted-foreground">CNPJ {onboarding.company.cnpj}</p>
-          ) : null}
-          {onboarding.profile?.service_city ? (
-            <p className="text-sm text-muted-foreground">
-              Área: {onboarding.profile.service_city}/{onboarding.profile.service_uf} ·{' '}
-              {onboarding.profile.service_radius_km} km
-            </p>
-          ) : null}
+        <div className="rounded-xl border border-border bg-card p-4 space-y-4">
+          <div className="space-y-1">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Empresa</p>
+            <p className="text-sm font-semibold">{onboarding.company.razao_social}</p>
+            {onboarding.company.cnpj ? (
+              <p className="text-sm text-muted-foreground">CNPJ {onboarding.company.cnpj}</p>
+            ) : null}
+            {onboarding.profile?.service_city ? (
+              <p className="text-sm text-muted-foreground">
+                Área: {onboarding.profile.service_city}/{onboarding.profile.service_uf} ·{' '}
+                {onboarding.profile.service_radius_km} km
+              </p>
+            ) : null}
+          </div>
+          {onboarding.profile ? <SupplierStoreNameField /> : null}
         </div>
       ) : null}
 

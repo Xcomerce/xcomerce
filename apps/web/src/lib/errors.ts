@@ -45,7 +45,7 @@ export function translateSupabaseError(message: string): string {
     return 'Não é permitido compartilhar dados de contato sensíveis no chat.'
   }
   if (message.includes('supplier_auto_offer_max_gte_min')) {
-    return 'Quantidade máxima da demanda deve ser maior ou igual à mínima.'
+    return 'Quantidade máxima do pedido deve ser maior ou igual à mínima.'
   }
   if (message.includes('PGRST116') || message.includes('0 rows')) {
     return 'Nenhum registro encontrado para esta ação. Atualize a página e tente novamente.'

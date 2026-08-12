@@ -134,7 +134,7 @@ export default function AutoOffersScreen() {
           <View className="flex-row items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
             <View className="flex-1 pr-4">
               <Text className="font-medium text-slate-900">Ativar auto-proposta</Text>
-              <Text className="text-sm text-slate-500">Dispara quando a demanda é compatível.</Text>
+              <Text className="text-sm text-slate-500">Dispara quando o pedido é compatível.</Text>
             </View>
             <Switch
               value={watchedEnabled}

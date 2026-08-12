@@ -358,3 +358,18 @@ export async function submitForReview(userId: string): Promise<{
     alreadyApproved: false,
   }
 }
+
+export async function updateSupplierStoreName(
+  userId: string,
+  storeName: string | null,
+): Promise<SupplierProfile> {
+  const { data, error } = await supabase
+    .from('supplier_profiles')
+    .update({ store_name: storeName })
+    .eq('user_id', userId)
+    .select()
+    .single()
+
+  if (error) throw error
+  return data as SupplierProfile
+}

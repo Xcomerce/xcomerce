@@ -26,8 +26,9 @@ export function documentPath(userId: string, fileName: string) {
   return `${userId}/${fileName}`
 }
 
-export function productImagePath(userId: string, productId: string, ext: string) {
-  return `${userId}/${productId}.${ext}`
+export function productImagePath(userId: string, productId: string, ext: string, uniqueSuffix?: string) {
+  const suffix = uniqueSuffix ? `-${uniqueSuffix}` : ''
+  return `${userId}/${productId}${suffix}.${ext}`
 }
 
 export async function getSignedUrl(bucket: string, path: string, expiresIn = 3600): Promise<string> {

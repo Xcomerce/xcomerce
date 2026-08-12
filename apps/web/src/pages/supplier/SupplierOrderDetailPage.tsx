@@ -38,7 +38,7 @@ const SUPPLIER_ACTIONS: Partial<
 > = {
   COMPROVANTE_ENVIADO: [{ next: 'PAGAMENTO_CONFIRMADO', label: 'Confirmar pagamento' }],
   PAGAMENTO_INFORMADO: [{ next: 'PAGAMENTO_CONFIRMADO', label: 'Confirmar pagamento' }],
-  PAGAMENTO_CONFIRMADO: [{ next: 'ENVIO_INFORMADO', label: 'Informar envio' }],
+  PAGAMENTO_CONFIRMADO: [{ next: 'ENVIO_INFORMADO', label: 'Informar pedido pronto' }],
   ENTREGUE: [{ next: 'CONCLUIDO', label: 'Confirmar conclusão' }],
 }
 
@@ -210,7 +210,7 @@ export function SupplierOrderDetailPage() {
 
                 {demand && (
                   <Button variant="secondary" size="sm" className="w-full sm:w-auto" asChild>
-                    <Link to={`/supplier/offers/${demand.id}`}>Ver demanda original</Link>
+                    <Link to={`/supplier/offers/${demand.id}`}>Ver pedido original</Link>
                   </Button>
                 )}
               </CardContent>
@@ -252,14 +252,17 @@ export function SupplierOrderDetailPage() {
             <Button
               variant="outline"
               className="w-full rounded-xl font-semibold lg:w-auto"
-              onClick={() =>
-                printOrderDocument({
+              onClick={() => {
+                const ok = printOrderDocument({
                   order,
                   demand,
                   offer,
                   buyer: buyerProfile,
                 })
-              }
+                if (!ok) {
+                  toast.error('Não foi possível abrir a impressão. Tente novamente.')
+                }
+              }}
             >
               <Printer className="mr-2 h-4 w-4" />
               Imprimir pedido

@@ -1,17 +1,17 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Alert, Image, Pressable, ScrollView, Text, TextInput, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import * as ImagePicker from 'expo-image-picker'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { productSchema, type ProductInput } from '@keve/shared'
-import { ImagePlus } from 'lucide-react-native'
+import { getProductImageUrls, productSchema, getLeafCategories, type ProductInput } from '@keve/shared'
+import { ImagePlus, Trash2 } from 'lucide-react-native'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { QuotaBadge } from '@/components/common/QuotaBadge'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
-import { useCategories, type Category } from '@/hooks/use-categories'
+import { useCategories } from '@/hooks/use-categories'
 import { useBrazilianCities } from '@/hooks/use-brazilian-cities'
 import { useSubscription } from '@/hooks/use-billing'
 import {
@@ -20,12 +20,21 @@ import {
   useProduct,
   useProductCount,
   useUpdateProduct,
-  useUpdateProductImage,
 } from '@/hooks/use-products'
 import { BRAZILIAN_STATES } from '@/lib/brazil-locations'
 import { formatSupabaseError } from '@/lib/errors'
-import { cn, formatCurrency } from '@/lib/utils'
-import { getProductImageUri } from '@/lib/product-images'
+import { cn } from '@/lib/utils'
+import { SupplierStoreNameField } from '@/components/supplier/SupplierStoreNameField'
+import { updateProductImages, uploadProductImageFiles } from '@/services/products'
+import { useAuth } from '@/contexts/auth-context'
+
+const PRODUCT_IMAGE_MAX_COUNT = 8
+
+type PendingProductImage = {
+  id: string
+  uri: string
+  ext: string
+}
 
 type ProductFormProps = {
   productId?: string
@@ -33,19 +42,23 @@ type ProductFormProps = {
 
 export function ProductForm({ productId }: ProductFormProps) {
   const router = useRouter()
+  const { user } = useAuth()
   const isEdit = Boolean(productId)
-  const [imageUri, setImageUri] = useState<string | null>(null)
-  const [imageExt, setImageExt] = useState('jpg')
+  const [savedImageUrls, setSavedImageUrls] = useState<string[]>([])
+  const [pendingImages, setPendingImages] = useState<PendingProductImage[]>([])
+  const [isUploadingImages, setIsUploadingImages] = useState(false)
 
   const { data: product, isLoading: productLoading } = useProduct(isEdit ? productId : undefined)
   const { data: categoriesData } = useCategories()
-  const categories: Category[] = categoriesData ?? []
+  const leafCategories = useMemo(
+    () => getLeafCategories(categoriesData ?? []),
+    [categoriesData],
+  )
   const { data: count = 0 } = useProductCount()
   const { data: subscription } = useSubscription()
   const createProduct = useCreateProduct()
   const updateProduct = useUpdateProduct()
   const deleteProduct = useDeleteProduct()
-  const uploadImage = useUpdateProductImage()
 
   const limit = subscription?.plan?.max_catalog_items ?? null
   const atLimit = !isEdit && limit !== null && count >= limit
@@ -87,7 +100,8 @@ export function ProductForm({ productId }: ProductFormProps) {
         uf: product.uf,
         is_active: product.is_active,
       })
-      setImageUri(getProductImageUri(product.nome, product.image_url))
+      setSavedImageUrls(getProductImageUrls(product))
+      setPendingImages([])
     }
   }, [product, reset])
 
@@ -104,16 +118,59 @@ export function ProductForm({ productId }: ProductFormProps) {
     }
   }, [isEdit, atLimit, router])
 
-  async function pickImage() {
+  const totalImages = savedImageUrls.length + pendingImages.length
+
+  async function pickImages() {
+    if (totalImages >= PRODUCT_IMAGE_MAX_COUNT) {
+      Alert.alert('Limite de imagens', `Máximo de ${PRODUCT_IMAGE_MAX_COUNT} imagens por produto.`)
+      return
+    }
+
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       quality: 0.85,
+      allowsMultipleSelection: true,
+      selectionLimit: PRODUCT_IMAGE_MAX_COUNT - totalImages,
     })
-    if (result.canceled || !result.assets[0]) return
-    const asset = result.assets[0]
-    setImageUri(asset.uri)
-    const ext = asset.uri.split('.').pop()?.toLowerCase() ?? 'jpg'
-    setImageExt(ext === 'png' || ext === 'webp' ? ext : 'jpg')
+    if (result.canceled || result.assets.length === 0) return
+
+    const remaining = PRODUCT_IMAGE_MAX_COUNT - totalImages
+    const assets = result.assets.slice(0, remaining)
+
+    setPendingImages((current) => [
+      ...current,
+      ...assets.map((asset, index) => {
+        const ext = asset.uri.split('.').pop()?.toLowerCase() ?? 'jpg'
+        return {
+          id: `${asset.uri}-${asset.fileName ?? index}-${Date.now()}`,
+          uri: asset.uri,
+          ext: ext === 'png' || ext === 'webp' ? ext : 'jpg',
+        }
+      }),
+    ])
+  }
+
+  function removeSavedImage(url: string) {
+    setSavedImageUrls((current) => current.filter((item) => item !== url))
+  }
+
+  function removePendingImage(id: string) {
+    setPendingImages((current) => current.filter((item) => item.id !== id))
+  }
+
+  async function syncProductImages(productIdToSync: string) {
+    if (!user) return
+    setIsUploadingImages(true)
+    try {
+      const uploaded = await uploadProductImageFiles(
+        user.id,
+        productIdToSync,
+        pendingImages.map((item) => ({ uri: item.uri, ext: item.ext })),
+      )
+      await updateProductImages(productIdToSync, [...savedImageUrls, ...uploaded])
+    } finally {
+      setIsUploadingImages(false)
+    }
   }
 
   async function onSubmit(values: ProductInput) {
@@ -125,14 +182,12 @@ export function ProductForm({ productId }: ProductFormProps) {
     try {
       if (isEdit && productId) {
         await updateProduct.mutateAsync({ id: productId, input: values })
-        if (imageUri && !imageUri.startsWith('http')) {
-          await uploadImage.mutateAsync({ productId, uri: imageUri, ext: imageExt })
-        }
+        await syncProductImages(productId)
         Alert.alert('Sucesso', 'Produto atualizado')
       } else {
         const created = await createProduct.mutateAsync(values)
-        if (imageUri) {
-          await uploadImage.mutateAsync({ productId: created.id, uri: imageUri, ext: imageExt })
+        if (savedImageUrls.length > 0 || pendingImages.length > 0) {
+          await syncProductImages(created.id)
         }
         Alert.alert('Sucesso', 'Produto criado')
       }
@@ -167,7 +222,10 @@ export function ProductForm({ productId }: ProductFormProps) {
   }
 
   const isSaving =
-    createProduct.isPending || updateProduct.isPending || uploadImage.isPending || deleteProduct.isPending
+    createProduct.isPending ||
+    updateProduct.isPending ||
+    deleteProduct.isPending ||
+    isUploadingImages
 
   if (isEdit && productLoading) {
     return <LoadingSkeleton />
@@ -191,23 +249,55 @@ export function ProductForm({ productId }: ProductFormProps) {
       ) : null}
 
       <Card>
-        <Text className="mb-3 text-base font-semibold text-slate-900">Imagem</Text>
-        <Pressable onPress={pickImage} className="items-center gap-2">
-          <View className="aspect-square w-full max-w-xs items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
-            {imageUri ? (
-              <Image source={{ uri: imageUri }} className="h-full w-full" resizeMode="cover" />
-            ) : (
-              <ImagePlus size={48} color="#94a3b8" />
-            )}
+        <Text className="mb-3 text-base font-semibold text-slate-900">Imagens</Text>
+        {totalImages > 0 ? (
+          <View className="mb-3 flex-row flex-wrap gap-2">
+            {savedImageUrls.map((url) => (
+              <View key={url} className="relative h-28 w-[47%] overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+                <Image source={{ uri: url }} className="h-full w-full" resizeMode="cover" />
+                <Pressable
+                  onPress={() => removeSavedImage(url)}
+                  className="absolute right-1 top-1 rounded-full bg-white/95 p-1.5"
+                  accessibilityLabel="Remover imagem"
+                >
+                  <Trash2 size={14} color="#dc2626" />
+                </Pressable>
+              </View>
+            ))}
+            {pendingImages.map((item) => (
+              <View key={item.id} className="relative h-28 w-[47%] overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+                <Image source={{ uri: item.uri }} className="h-full w-full" resizeMode="cover" />
+                <Pressable
+                  onPress={() => removePendingImage(item.id)}
+                  className="absolute right-1 top-1 rounded-full bg-white/95 p-1.5"
+                  accessibilityLabel="Remover imagem"
+                >
+                  <Trash2 size={14} color="#dc2626" />
+                </Pressable>
+              </View>
+            ))}
           </View>
-          <Text className="text-sm font-medium text-brand">Selecionar imagem</Text>
-        </Pressable>
+        ) : (
+          <View className="mb-3 aspect-square w-full max-w-xs items-center justify-center self-center rounded-xl border border-dashed border-slate-200 bg-slate-50">
+            <ImagePlus size={48} color="#94a3b8" />
+          </View>
+        )}
+
+        {totalImages < PRODUCT_IMAGE_MAX_COUNT ? (
+          <Pressable onPress={pickImages} className="items-center gap-2">
+            <Text className="text-sm font-medium text-brand">
+              {totalImages > 0 ? 'Adicionar mais imagens' : 'Selecionar imagens'}
+            </Text>
+          </Pressable>
+        ) : null}
+
         <Text className="mt-2 text-center text-xs text-slate-500">
-          JPEG, PNG ou WebP · até 5 MB · recomendado 800×800 px
+          Até {PRODUCT_IMAGE_MAX_COUNT} imagens · JPEG, PNG ou WebP · até 5 MB · recomendado 800×800 px
         </Text>
       </Card>
 
       <Card className="gap-4">
+        <SupplierStoreNameField />
         <Controller
           control={control}
           name="nome"
@@ -223,7 +313,7 @@ export function ProductForm({ productId }: ProductFormProps) {
             name="category_id"
             render={({ field: { onChange, value } }) => (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-2">
-                {categories.map((cat) => (
+                {leafCategories.map((cat) => (
                   <Pressable
                     key={cat.id}
                     onPress={() => onChange(cat.id)}

@@ -14,7 +14,7 @@ export function AuthLayout() {
             Busca reversa B2B para compradores e fornecedores
           </h2>
           <p className="mt-4 max-w-md text-white/80">
-            Publique demandas, receba propostas qualificadas e negocie com fornecedores verificados na sua região.
+            Publique pedidos, receba propostas qualificadas e negocie com fornecedores verificados na sua região.
           </p>
         </div>
         <p className="text-sm text-white/60">© {new Date().getFullYear()} X COMERCE</p>

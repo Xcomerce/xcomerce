@@ -36,7 +36,7 @@ export function BuyerDeliveryAddressSettings() {
       <div className="mb-4 space-y-1">
         <h3 className="text-sm font-semibold text-foreground">Endereço de entrega</h3>
         <p className="text-xs text-muted-foreground">
-          Endereço padrão usado ao solicitar ofertas. Você poderá alterá-lo a cada demanda, se necessário.
+          Endereço padrão usado ao solicitar ofertas. Você poderá alterá-lo a cada pedido, se necessário.
         </p>
       </div>
       <BuyerAddressForm

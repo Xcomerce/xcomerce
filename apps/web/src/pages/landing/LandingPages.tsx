@@ -37,8 +37,8 @@ export function LandingPage() {
                 em minutos
               </h1>
               <p className="mt-6 text-base text-white/80 md:text-lg">
-                Cansado de ir até fornecedores ou mandar mensagens para saber se tem produto disponível? Publique sua
-                demanda e a XCOMERCE encontra fornecedores verificados prontos para atender você — por categoria e
+                Cansado de ir até fornecedores ou mandar mensagens para saber se tem produto disponível? Publique seu
+                pedido e a XCOMERCE encontra fornecedores verificados prontos para atender você — por categoria e
                 região.
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -86,7 +86,7 @@ export function ParaCompradoresPage() {
             Centralize cotações e compare fornecedores na mesma tela
           </h1>
           <p className="mt-4 max-w-2xl text-lg text-muted-foreground">
-            Publique demandas com categoria e raio geográfico, receba propostas agrupadas e negocie com fornecedores
+            Publique pedidos com categoria e raio geográfico, receba propostas agrupadas e negocie com fornecedores
             verificados — sem planilhas ou mensagens perdidas.
           </p>
         </div>
@@ -98,11 +98,11 @@ export function ParaCompradoresPage() {
             <ul className="mt-6 space-y-4 text-sm text-muted-foreground">
               <li className="flex gap-3">
                 <span className="font-semibold text-foreground">•</span>
-                Publique demandas com categoria, quantidade e localização em minutos
+                Publique pedidos com categoria, quantidade e localização em minutos
               </li>
               <li className="flex gap-3">
                 <span className="font-semibold text-foreground">•</span>
-                Receba propostas agrupadas por demanda, prontas para comparar
+                Receba propostas agrupadas por pedido, prontas para comparar
               </li>
               <li className="flex gap-3">
                 <span className="font-semibold text-foreground">•</span>
@@ -136,7 +136,7 @@ export function ParaFornecedoresPage() {
           </h1>
           <p className="mt-4 max-w-2xl text-lg text-muted-foreground">
             Match automático por categoria e localização, catálogo integrado e selo verificado após aprovação. Venda
-            B2B com demandas reais, não prospecção fria.
+            B2B com pedidos reais, não prospecção fria.
           </p>
         </div>
       </section>
@@ -213,7 +213,7 @@ export function PricingPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm text-muted-foreground">
-                  <p>Demandas: {formatLimit(plan.max_demands_monthly, '/mês')}</p>
+                  <p>Pedidos: {formatLimit(plan.max_demands_monthly, '/mês')}</p>
                   <p>Propostas: {formatLimit(plan.max_offers_monthly, '/mês')}</p>
                   <p>Catálogo: {plan.max_catalog_items} itens</p>
                   {plan.match_priority && <p className="font-medium text-accent">Prioridade no match</p>}

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { LogOut, X } from 'lucide-react'
 import type { RoleNavConfig } from '@/config/navigation'
 import { NavSectionBlock } from '@/components/layout/nav-items'
+import { QuickRoleSwitchButton } from '@/components/layout/QuickRoleSwitch'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { useAuth } from '@/contexts/auth-context'
@@ -65,6 +66,7 @@ export function MobileSidebar({ open, onClose, config }: MobileSidebarProps) {
               <p className="truncate text-xs text-muted-foreground">{profile?.email}</p>
             </div>
           </div>
+          <QuickRoleSwitchButton onAfterSwitch={onClose} />
           <Button
             variant="ghost"
             className="w-full justify-start"

@@ -149,7 +149,7 @@ function formatDemandNotificationBody(demand: DemandRow): string {
   if (demand.cor?.trim()) specs.push(`cor ${demand.cor.trim()}`)
   if (demand.tamanho?.trim()) specs.push(`tamanho ${demand.tamanho.trim()}`)
   if (specs.length > 0) parts.push(`(${specs.join(', ')})`)
-  return `Demanda compatível: ${parts.join(' ')}.`
+  return `Pedido compatível: ${parts.join(' ')}.`
 }
 
 export async function runDemandMatch(
@@ -355,7 +355,7 @@ export async function runDemandMatch(
     const notifRes = await invokeSendNotification({
       user_id: supplier.user_id,
       type: 'demand.matched',
-      title: 'Nova oportunidade de demanda',
+      title: 'Nova oportunidade de pedido',
       body: formatDemandNotificationBody(demandRow),
       data: {
         demand_id: demandId,

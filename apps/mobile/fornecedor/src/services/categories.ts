@@ -14,3 +14,16 @@ export async function fetchCategories(): Promise<Category[]> {
   if (error) throw error
   return (data ?? []) as Category[]
 }
+
+export async function fetchRootCategories(): Promise<Category[]> {
+  const { data, error } = await supabase
+    .from('categories')
+    .select('*')
+    .eq('is_active', true)
+    .is('parent_id', null)
+    .order('sort_order', { ascending: true })
+    .order('name', { ascending: true })
+
+  if (error) throw error
+  return (data ?? []) as Category[]
+}

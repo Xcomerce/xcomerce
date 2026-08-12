@@ -14,6 +14,7 @@ import { NewDemandPage } from '@/pages/buyer/NewDemandPage'
 import { BuyerOfferDetailPage } from '@/pages/buyer/BuyerOfferDetailPage'
 import { BuyerOrdersPage } from '@/pages/buyer/BuyerOrdersPage'
 import { BuyerOrderDetailPage } from '@/pages/buyer/BuyerOrderDetailPage'
+import { SupplierStorePage } from '@/pages/buyer/SupplierStorePage'
 import { ApprovalsPage } from '@/pages/admin/ApprovalsPage'
 import { MetricsPage } from '@/pages/admin/MetricsPage'
 import { CategoriesAdminPage } from '@/pages/admin/CategoriesAdminPage'
@@ -39,6 +40,7 @@ export const buyerPages = {
   offerDetail: <BuyerOfferDetailPage />,
   orders: <BuyerOrdersPage />,
   orderDetail: <BuyerOrderDetailPage />,
+  store: <SupplierStorePage />,
 }
 
 export const supplierPages = {

@@ -13,11 +13,12 @@ import { useAuth } from '@/contexts/auth-context'
 import { usePageTitle } from '@/hooks/use-page-title'
 import { useUnreadNotificationCount } from '@/hooks/use-notifications'
 import { cn, getInitials } from '@/lib/utils'
-
-const BRAZILIAN_UFS = [
-  'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG',
-  'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO',
-]
+import { BRAZILIAN_STATES } from '@/lib/brazil-locations'
+import { useFeedLocationFilter } from '@/hooks/use-feed-location-filter'
+import {
+  QuickRoleSwitchMenuItem,
+  shouldShowFullRolePicker,
+} from '@/components/layout/QuickRoleSwitch'
 
 type HeaderProps = {
   onMenuClick: () => void
@@ -49,6 +50,10 @@ export function Header({ onMenuClick, className }: HeaderProps) {
       ? '/buyer/orders'
       : null
   const orderDetailId = supplierOrderId ?? buyerOrderId
+  const isFeedPage = pathname === '/buyer/feed'
+  const isSupplierStorePage = pathname.startsWith('/buyer/stores/')
+
+  useFeedLocationFilter(isFeedPage)
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
@@ -77,11 +82,17 @@ export function Header({ onMenuClick, className }: HeaderProps) {
   return (
     <header
       className={cn(
-        'glass-navbar sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between px-4 lg:px-6',
+        'glass-navbar sticky top-0 z-30 flex shrink-0 items-center justify-between px-4 lg:px-6',
+        isFeedPage ? 'h-[4.5rem]' : 'h-14',
         className,
       )}
     >
-      <div className="flex min-w-0 items-center gap-3 flex-1 lg:flex-initial">
+      <div
+        className={cn(
+          'flex min-w-0 items-center gap-3',
+          isFeedPage ? 'flex-1' : 'flex-1 lg:flex-initial',
+        )}
+      >
         <button
           type="button"
           onClick={onMenuClick}
@@ -137,36 +148,50 @@ export function Header({ onMenuClick, className }: HeaderProps) {
               <ArrowLeft size={15} className="text-muted-foreground" />
             </button>
             {orderDetailId && (
-              <div className="inline-flex h-6 shrink-0 items-center rounded-full border border-border bg-transparent px-2 font-mono text-[10px] font-semibold leading-none tracking-wider text-foreground sm:px-2.5 sm:text-xs">
-                ID#{orderDetailId.slice(0, 8).toUpperCase()}
+              <div className="inline-flex h-6 shrink-0 items-center rounded-full border border-border bg-transparent px-2 text-[10px] font-semibold leading-none tracking-wide text-foreground sm:px-2.5 sm:text-xs">
+                Pedido#{orderDetailId.slice(0, 8).toUpperCase()}
               </div>
             )}
           </div>
-        ) : pathname === '/buyer/feed' ? (
-          <div className="flex h-9 w-52 sm:w-80 items-center gap-2 rounded-xl border border-border bg-secondary/50 px-3 py-1 focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2">
-            <Search className="h-4 w-4 text-muted-foreground shrink-0" />
-            <input
-              type="text"
-              placeholder="Buscar produto..."
-              value={searchQuery}
-              onChange={handleSearchChange}
-              className="flex-1 bg-transparent py-1 text-sm outline-none placeholder:text-muted-foreground min-w-0 text-foreground h-full"
-            />
-            <div className="h-4 w-px bg-border shrink-0" />
-            <div className="relative shrink-0 flex items-center pr-3">
+        ) : isSupplierStorePage ? (
+          <button
+            type="button"
+            onClick={() => navigate('/buyer/feed')}
+            className="flex min-w-0 items-center gap-1.5 rounded-xl px-2 py-1 hover:bg-secondary/50 transition-colors -ml-1"
+            aria-label="Voltar ao Explorar"
+          >
+            <ArrowLeft size={15} className="shrink-0 text-muted-foreground" />
+            <h1 className="truncate font-display text-sm font-semibold sm:text-base lg:text-lg">
+              Voltar ao Explorar
+            </h1>
+          </button>
+        ) : isFeedPage ? (
+          <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
+            <div className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-xl border border-border bg-secondary/50 px-3 focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2 sm:max-w-md lg:max-w-lg">
+              <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Buscar produto, categoria ou fornecedor"
+                value={searchQuery}
+                onChange={handleSearchChange}
+                className="min-w-0 flex-1 bg-transparent py-1 text-sm text-foreground outline-none placeholder:text-muted-foreground"
+              />
+            </div>
+            <div className="relative shrink-0">
               <select
                 value={selectedUf}
                 onChange={handleUfChange}
-                className="appearance-none bg-transparent py-1 pl-1 pr-4 text-sm font-medium text-muted-foreground hover:text-foreground focus:outline-none cursor-pointer"
+                aria-label="Filtrar por estado"
+                className="h-10 min-w-[9.5rem] cursor-pointer appearance-none rounded-xl border border-border bg-secondary/50 py-1 pl-3 pr-8 text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 sm:min-w-[11.5rem]"
               >
-                <option value="">UF</option>
-                {BRAZILIAN_UFS.map((uf) => (
-                  <option key={uf} value={uf}>
-                    {uf}
+                <option value="">Todos os estados</option>
+                {BRAZILIAN_STATES.map((state) => (
+                  <option key={state.uf} value={state.uf}>
+                    {state.name}, {state.uf}
                   </option>
                 ))}
               </select>
-              <div className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 text-muted-foreground">
+              <div className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground">
                 <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
                 </svg>
@@ -214,9 +239,10 @@ export function Header({ onMenuClick, className }: HeaderProps) {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => navigate('/settings/profile')}>Meu perfil</DropdownMenuItem>
-            {roles.length > 1 && (
+            <QuickRoleSwitchMenuItem />
+            {shouldShowFullRolePicker(roles) ? (
               <DropdownMenuItem onClick={() => navigate('/auth/select-role')}>Trocar perfil</DropdownMenuItem>
-            )}
+            ) : null}
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => signOut()}>Sair</DropdownMenuItem>
           </DropdownMenuContent>

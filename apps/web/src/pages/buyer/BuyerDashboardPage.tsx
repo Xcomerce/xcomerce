@@ -27,10 +27,6 @@ function formatCurrency(value: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
 }
 
-function formatShortId(id: string) {
-  return id.slice(0, 8).toUpperCase()
-}
-
 function getProductImage(nome: string): string | null {
   const nameLower = nome.toLowerCase()
   if (nameLower.includes('cimento')) return '/products/cimento.png'
@@ -252,7 +248,7 @@ function OfferPlaceholderCard({
       <div className="p-3 flex-1 flex flex-col justify-between gap-2.5">
         <div className="space-y-0.5">
           <h4 className="font-medium text-xs text-muted-foreground italic">
-            {isDraft ? 'Demanda em rascunho' : 'Esperando propostas'}
+            {isDraft ? 'Pedido em rascunho' : 'Esperando propostas'}
           </h4>
           <p className="text-[9px] text-muted-foreground/60 leading-tight">
             {isDraft ? 'Publique para iniciar o leilão' : 'Notificando fornecedores parceiros'}
@@ -305,7 +301,7 @@ function DemandItem({ demand }: { demand: Demand }) {
           <p className="text-xs text-muted-foreground/60 mt-0.5 px-4">
             {demand.status === 'RASCUNHO' ? (
               <>
-                Publique esta demanda para <br className="sm:hidden" /> começar a receber propostas.
+                Publique este pedido para <br className="sm:hidden" /> começar a receber propostas.
               </>
             ) : (
               <>
@@ -354,7 +350,7 @@ function DemandItem({ demand }: { demand: Demand }) {
 
   const headerContent = (
     <>
-      <span className="text-muted-foreground font-mono">ID#{formatShortId(demand.id)}</span>
+      <span className="text-muted-foreground">Solicitação</span>
       <span className="text-muted-foreground/40 font-normal">&gt;</span>
       <span className={cn(isDraft && "group-hover:text-primary transition-colors")}>{demand.titulo}</span>
     </>
@@ -362,7 +358,7 @@ function DemandItem({ demand }: { demand: Demand }) {
 
   return (
     <div className="group flex flex-col gap-3.5 w-full min-w-0">
-      {/* ID PEDIDO > Produto (Header) */}
+      {/* Solicitação > Produto (Header) */}
       {isDraft ? (
         <Link
           to={destination}
@@ -455,7 +451,7 @@ export function BuyerDashboardPage() {
             <EmptyState
               icon={Gavel}
               title="Nenhuma solicitação criada"
-              description="Você ainda não solicitou nenhuma proposta. Comece criando uma nova demanda."
+              description="Você ainda não solicitou nenhuma proposta. Comece criando um novo pedido."
               actionLabel="Solicitar oferta"
               onAction={() => navigate('/buyer/demands/new')}
             />

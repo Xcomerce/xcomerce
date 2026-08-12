@@ -79,7 +79,7 @@ export function RegisterPage({ role }: RegisterPageProps) {
   const title = role === 'buyer' ? 'Cadastro comprador' : 'Cadastro fornecedor'
   const description =
     role === 'buyer'
-      ? 'Publique demandas e receba propostas de fornecedores verificados'
+      ? 'Publique pedidos e receba propostas de fornecedores verificados'
       : 'Cadastre-se e complete o onboarding para vender na plataforma'
 
   return (

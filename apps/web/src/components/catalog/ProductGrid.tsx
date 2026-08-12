@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { Package } from 'lucide-react'
+import { getPrimaryProductImageUrl } from '@keve/shared'
 import type { Product } from '@/services/products'
 import { cn } from '@/lib/utils'
 
@@ -110,11 +111,12 @@ export function ProductGrid({
 }
 
 function ProductImage({ product }: { product: Product }) {
+  const imageUrl = getPrimaryProductImageUrl(product)
   return (
     <div className="relative aspect-[4/4.5] w-full overflow-hidden rounded-xl border border-border/40 bg-secondary transition-all duration-300 group-hover:border-primary/45 group-hover:scale-[1.03] group-hover:shadow-sm">
-      {product.image_url ? (
+      {imageUrl ? (
         <img
-          src={product.image_url}
+          src={imageUrl}
           alt={product.nome}
           className="h-full w-full object-cover"
           loading="lazy"

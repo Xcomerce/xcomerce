@@ -222,7 +222,7 @@ Deno.serve(async (req) => {
         profile_type: 'buyer',
         supplier_name: 'Fornecedor Teste',
         buyer_name: 'Comprador Teste',
-        demand_title: 'Demanda de teste',
+        demand_title: 'Pedido de teste',
         demand_city: 'São Paulo',
         offer_count: 2,
         sender_name: 'Sistema',

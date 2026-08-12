@@ -9,14 +9,17 @@ import { BackButton } from '@/components/common/back-button'
 import { EligibleSuppliersPanel } from '@/components/demand/EligibleSuppliersPanel'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { getLeafCategories } from '@keve/shared'
 import { useCategories } from '@/hooks/use-categories'
 import { useCreateDemand, usePublishDemand } from '@/hooks/use-demands'
-import { fetchAddressByCep, formatCep } from '@/lib/cep'
 import { formatSupabaseError, isQuotaExceededError } from '@/lib/errors'
 import { formatCurrency } from '@/lib/utils'
 import type { Category } from '@/services/categories'
 
 const MAX_ATTACHMENTS = 10
+const DEFAULT_CITY = 'São Paulo'
+const DEFAULT_UF = 'SP'
+const DEFAULT_RADIUS_KM = 50
 
 type PrefillParams = {
   categoryId?: string
@@ -28,10 +31,48 @@ type PrefillParams = {
   returnTo?: string
 }
 
+async function resolveDemandLocation(
+  cityParam?: string,
+  ufParam?: string,
+): Promise<{ cidade: string; uf: string; raio_km: number }> {
+  if (cityParam?.trim() && ufParam?.trim()) {
+    return {
+      cidade: cityParam.trim(),
+      uf: ufParam.trim().toUpperCase(),
+      raio_km: DEFAULT_RADIUS_KM,
+    }
+  }
+
+  try {
+    const { status } = await Location.requestForegroundPermissionsAsync()
+    if (status === 'granted') {
+      const loc = await Location.getCurrentPositionAsync({})
+      const [place] = await Location.reverseGeocodeAsync({
+        latitude: loc.coords.latitude,
+        longitude: loc.coords.longitude,
+      })
+      const cidade = place?.city?.trim() || place?.subregion?.trim()
+      const uf = place?.region?.slice(0, 2).toUpperCase()
+      if (cidade && uf) {
+        return { cidade, uf, raio_km: DEFAULT_RADIUS_KM }
+      }
+    }
+  } catch {
+    // fallback below
+  }
+
+  return {
+    cidade: DEFAULT_CITY,
+    uf: DEFAULT_UF,
+    raio_km: DEFAULT_RADIUS_KM,
+  }
+}
+
 export default function NewDemandScreen() {
   const router = useRouter()
   const params = useLocalSearchParams<PrefillParams>()
   const { data: categories = [] } = useCategories()
+  const leafCategories = useMemo(() => getLeafCategories(categories), [categories])
   const createDemand = useCreateDemand()
   const publishDemand = usePublishDemand()
 
@@ -42,23 +83,17 @@ export default function NewDemandScreen() {
   const [unidade, setUnidade] = useState('un')
   const [cidade, setCidade] = useState('')
   const [uf, setUf] = useState('')
-  const [raioKm, setRaioKm] = useState('50')
+  const [raioKm, setRaioKm] = useState(String(DEFAULT_RADIUS_KM))
   const [prazoDesejado, setPrazoDesejado] = useState('')
   const [precoReferencia, setPrecoReferencia] = useState('')
   const [observacoes, setObservacoes] = useState('')
-  const [cep, setCep] = useState('')
-  const [cepLoading, setCepLoading] = useState(false)
-  const [logradouro, setLogradouro] = useState('')
-  const [numero, setNumero] = useState('')
-  const [bairro, setBairro] = useState('')
   const [attachments, setAttachments] = useState<ImagePicker.ImagePickerAsset[]>([])
   const [loading, setLoading] = useState(false)
   const [prefilled, setPrefilled] = useState(false)
 
   const returnTo = typeof params.returnTo === 'string' ? params.returnTo : undefined
   const backFallback = returnTo === 'feed' ? '/(app)' : '/(app)/demands'
-  const selectedCategory = categories.find((cat: Category) => cat.id === categoryId)
-  const deliverySummary = [logradouro, numero && `nº ${numero}`, bairro].filter(Boolean).join(', ')
+  const selectedCategory = leafCategories.find((cat: Category) => cat.id === categoryId)
 
   useEffect(() => {
     if (prefilled) return
@@ -72,63 +107,16 @@ export default function NewDemandScreen() {
     if (categoryIdParam) setCategoryId(categoryIdParam)
     if (titleParam) setTitulo(titleParam)
     if (descriptionParam) setDescricao(descriptionParam)
-    if (cityParam) setCidade(cityParam)
-    if (ufParam) setUf(ufParam)
     if (precoParam) setPrecoReferencia(precoParam)
-  }, [params, prefilled])
 
-  useEffect(() => {
-    if (prefilled) return
-    if (
-      params.categoryId ||
-      params.title ||
-      params.description ||
-      params.city ||
-      params.uf ||
-      params.precoReferencia
-    ) {
-      setPrefilled(true)
-    }
-  }, [params, prefilled])
-
-  const suggestLocation = async () => {
-    const { status } = await Location.requestForegroundPermissionsAsync()
-    if (status !== 'granted') {
-      Alert.alert('Localização', 'Permissão negada. Informe cidade e UF manualmente.')
-      return
-    }
-    const loc = await Location.getCurrentPositionAsync({})
-    const [place] = await Location.reverseGeocodeAsync({
-      latitude: loc.coords.latitude,
-      longitude: loc.coords.longitude,
+    void resolveDemandLocation(cityParam, ufParam).then((location) => {
+      setCidade(location.cidade)
+      setUf(location.uf)
+      setRaioKm(String(location.raio_km))
     })
-    if (place?.city) setCidade(place.city)
-    if (place?.region) setUf(place.region.slice(0, 2).toUpperCase())
-    if (place?.street) setLogradouro(place.street)
-    if (place?.district) setBairro(place.district)
-  }
 
-  const handleCepLookup = async (rawCep: string) => {
-    const digits = rawCep.replace(/\D/g, '')
-    if (digits.length !== 8) return
-
-    setCepLoading(true)
-    try {
-      const address = await fetchAddressByCep(digits)
-      if (!address) {
-        Alert.alert('CEP', 'CEP não encontrado.')
-        return
-      }
-      setCidade(address.cidade)
-      setUf(address.uf)
-      if (address.logradouro) setLogradouro(address.logradouro)
-      if (address.bairro) setBairro(address.bairro)
-    } catch {
-      Alert.alert('CEP', 'Não foi possível consultar o CEP. Tente novamente.')
-    } finally {
-      setCepLoading(false)
-    }
-  }
+    setPrefilled(true)
+  }, [params, prefilled])
 
   const pickAttachments = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -158,14 +146,18 @@ export default function NewDemandScreen() {
   }, [precoReferencia])
 
   const handleSubmit = async (publish: boolean) => {
-    if (!titulo || !descricao || !categoryId || !cidade || !uf) {
-      Alert.alert('Campos obrigatórios', 'Preencha título, descrição, categoria, cidade e UF.')
+    if (!titulo || !descricao || !categoryId) {
+      Alert.alert('Campos obrigatórios', 'Preencha título, descrição e categoria.')
       return
     }
     if (descricao.length < 10) {
       Alert.alert('Descrição', 'A descrição deve ter no mínimo 10 caracteres.')
       return
     }
+
+    const location = cidade && uf
+      ? { cidade, uf: uf.toUpperCase(), raio_km: Number(raioKm) || DEFAULT_RADIUS_KM }
+      : await resolveDemandLocation()
 
     setLoading(true)
     try {
@@ -175,23 +167,23 @@ export default function NewDemandScreen() {
         category_id: categoryId,
         quantidade: Number(quantidade),
         unidade,
-        cidade,
-        uf: uf.toUpperCase(),
-        raio_km: Number(raioKm) || 50,
+        cidade: location.cidade,
+        uf: location.uf,
+        raio_km: location.raio_km,
         prazo_desejado: prazoDesejado || undefined,
         observacoes: observacoes || undefined,
         preco_referencia_mercado: parsedPrecoReferencia,
       })
       if (publish) {
         await publishDemand.mutateAsync(demand.id)
-        Alert.alert('Publicada', 'Sua demanda foi publicada e os fornecedores serão notificados.')
+        Alert.alert('Publicada', 'Seu pedido foi publicado e os fornecedores serão notificados.')
       } else {
-        Alert.alert('Rascunho', 'Demanda salva como rascunho.')
+        Alert.alert('Rascunho', 'Pedido salvo como rascunho.')
       }
       router.replace(`/(app)/demands/${demand.id}`)
     } catch (err) {
       if (isQuotaExceededError(err)) {
-        Alert.alert('Limite do plano', 'Você atingiu o limite mensal de demandas.')
+        Alert.alert('Limite do plano', 'Você atingiu o limite mensal de pedidos.')
       } else {
         Alert.alert('Erro', formatSupabaseError(err))
       }
@@ -207,11 +199,11 @@ export default function NewDemandScreen() {
           <BackButton className="mb-1" fallbackHref={backFallback} preferFallback={!!returnTo} />
           <Text className="text-2xl font-bold text-brand-dark">Nova solicitação</Text>
 
-          <Input label="Título da demanda" value={titulo} onChangeText={setTitulo} placeholder="Ex.: Arroz Integral Agulhinha Tipo 1 5kg" />
+          <Input label="Título do pedido" value={titulo} onChangeText={setTitulo} placeholder="Ex.: Arroz Integral Agulhinha Tipo 1 5kg" />
           <View>
             <Text className="mb-2 text-sm font-medium text-slate-700">Categoria</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-              {categories.map((cat: Category) => (
+              {leafCategories.map((cat: Category) => (
                 <Pressable
                   key={cat.id}
                   onPress={() => setCategoryId(cat.id)}
@@ -224,7 +216,7 @@ export default function NewDemandScreen() {
           </View>
 
           <Input
-            label="Descrição da demanda"
+            label="Descrição do pedido"
             value={descricao}
             onChangeText={setDescricao}
             multiline
@@ -238,7 +230,6 @@ export default function NewDemandScreen() {
           </View>
 
           <Input label="Prazo desejado" value={prazoDesejado} onChangeText={setPrazoDesejado} placeholder="AAAA-MM-DD" />
-          <Input label="Raio de busca (km)" value={raioKm} onChangeText={setRaioKm} keyboardType="numeric" />
 
           {parsedPrecoReferencia ? (
             <View className="rounded-xl border border-brand/20 bg-brand/5 px-4 py-3">
@@ -254,44 +245,6 @@ export default function NewDemandScreen() {
               placeholder="Ex.: 22.00"
             />
           )}
-
-          <View className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <Text className="text-sm font-semibold text-slate-800">Endereço de entrega</Text>
-            <Text className="mt-1 text-xs text-slate-500">Informe o CEP para preencher logradouro, bairro, cidade e estado.</Text>
-
-            <View className="mt-4 flex-row gap-2">
-              <Input
-                containerClassName="flex-1"
-                label="CEP"
-                value={formatCep(cep)}
-                onChangeText={(value) => setCep(value.replace(/\D/g, '').slice(0, 8))}
-                onBlur={() => void handleCepLookup(cep)}
-                placeholder="00000-000"
-                keyboardType="numeric"
-              />
-              <View className="justify-end">
-                <Button
-                  label={cepLoading ? '...' : 'Buscar'}
-                  variant="outline"
-                  onPress={() => void handleCepLookup(cep)}
-                  disabled={cep.replace(/\D/g, '').length !== 8 || cepLoading}
-                  className="h-12 px-4"
-                />
-              </View>
-            </View>
-
-            <Input label="Logradouro" value={logradouro} onChangeText={setLogradouro} placeholder="Rua, avenida, rodovia..." />
-            <View className="flex-row gap-3">
-              <Input containerClassName="flex-1" label="Número" value={numero} onChangeText={setNumero} placeholder="123" />
-              <Input containerClassName="flex-2" label="Bairro" value={bairro} onChangeText={setBairro} placeholder="Ex.: Centro" />
-            </View>
-            <View className="flex-row gap-3">
-              <Input containerClassName="flex-2" label="Cidade" value={cidade} onChangeText={setCidade} />
-              <Input containerClassName="flex-1" label="UF" value={uf} onChangeText={setUf} maxLength={2} autoCapitalize="characters" />
-            </View>
-          </View>
-
-          <Button label="Usar minha localização" variant="outline" onPress={suggestLocation} />
 
           <View className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4">
             <View className="items-center">
@@ -325,11 +278,10 @@ export default function NewDemandScreen() {
             categoryName={selectedCategory?.name}
             cidade={cidade}
             uf={uf}
-            deliverySummary={deliverySummary}
           />
 
           <Button label="Salvar rascunho" variant="outline" onPress={() => void handleSubmit(false)} loading={loading} />
-          <Button label="Publicar demanda" onPress={() => void handleSubmit(true)} loading={loading} />
+          <Button label="Publicar pedido" onPress={() => void handleSubmit(true)} loading={loading} />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

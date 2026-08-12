@@ -103,7 +103,7 @@ export default function OfferScreen() {
   if (!demand) {
     return (
       <SafeAreaView className="flex-1 items-center justify-center bg-white px-6">
-        <Text className="text-slate-500">Demanda não encontrada.</Text>
+        <Text className="text-slate-500">Pedido não encontrado.</Text>
         <Button label="Voltar ao mural" className="mt-4" onPress={() => router.replace('/(app)/board')} />
       </SafeAreaView>
     )
@@ -121,7 +121,7 @@ export default function OfferScreen() {
         </View>
 
         <SectionCard
-          title="Demanda"
+          title="Pedido"
           action={<StatusBadge status={demand.status} type="demand" />}
         >
           <Text className="text-sm leading-relaxed text-slate-700">{demand.descricao}</Text>

@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
 import { Building2, Check, ChevronDown, FileUp, MapPin, Tags, type LucideIcon } from 'lucide-react'
-import { supplierAddressSchema, SUPPLIER_STATUS_LABELS } from '@keve/shared'
+import { supplierAddressSchema, SUPPLIER_STATUS_LABELS, getLeafCategories } from '@keve/shared'
 import type { SupplierAddressInput } from '@/services/onboarding'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -347,6 +347,7 @@ export function OnboardingPage() {
   const saveCategories = useSaveSupplierCategories()
   const submitReview = useSubmitForReview()
   const { data: categories = [], isLoading: categoriesLoading } = useCategories()
+  const leafCategories = useMemo(() => getLeafCategories(categories), [categories])
 
   const addressForm = useForm<SupplierAddressInput>({
     resolver: zodResolver(supplierAddressSchema),
@@ -636,7 +637,7 @@ export function OnboardingPage() {
               <p className="text-sm text-muted-foreground">Carregando categorias...</p>
             ) : (
               <div className="grid max-h-[min(28rem,55vh)] grid-cols-1 gap-2 overflow-y-auto sm:grid-cols-2 lg:grid-cols-3">
-                {categories.map((cat) => (
+                {leafCategories.map((cat) => (
                   <label
                     key={cat.id}
                     className={cn(
@@ -660,7 +661,7 @@ export function OnboardingPage() {
           </div>
         )
       case 5: {
-        const selectedCategoryNames = categories
+        const selectedCategoryNames = leafCategories
           .filter((cat) => selectedCategories.includes(cat.id))
           .map((cat) => cat.name)
         const serviceCity = addressForm.getValues('service_city')

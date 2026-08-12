@@ -37,12 +37,19 @@ function esc(value: unknown): string {
 }
 
 function formatCurrency(value: number): string {
+  if (!Number.isFinite(value)) return '—'
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
+}
+
+function formatOrderDate(value: string | null | undefined): string {
+  if (!value) return '—'
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString('pt-BR')
 }
 
 export function buildOrderPrintHtml(data: OrderPrintData): string {
   const orderId = data.order.id.slice(0, 8).toUpperCase()
-  const createdAt = new Date(data.order.created_at).toLocaleString('pt-BR')
+  const createdAt = formatOrderDate(data.order.created_at)
 
   return `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -81,7 +88,7 @@ export function buildOrderPrintHtml(data: OrderPrintData): string {
   </div>
 
   <div class="box" style="margin-top:16px">
-    <div class="section-title">Demanda / Produto</div>
+    <div class="section-title">Pedido / Produto</div>
     <div class="label">Título</div><div class="value">${esc(data.demand?.titulo)}</div>
     ${data.demand?.descricao ? `<div class="label" style="margin-top:12px">Descrição</div><div class="value">${esc(data.demand.descricao)}</div>` : ''}
     <div class="label" style="margin-top:12px">Localização</div>
@@ -112,14 +119,50 @@ export function buildOrderPrintHtml(data: OrderPrintData): string {
 </html>`
 }
 
-export function printOrderDocument(data: OrderPrintData): void {
+export function printOrderDocument(data: OrderPrintData): boolean {
   const html = buildOrderPrintHtml(data)
-  const printWindow = window.open('', '_blank', 'noopener,noreferrer,width=900,height=700')
-  if (!printWindow) return
-  printWindow.document.write(html)
-  printWindow.document.close()
-  printWindow.focus()
-  printWindow.onload = () => {
-    printWindow.print()
+
+  const iframe = document.createElement('iframe')
+  iframe.setAttribute('title', 'Impressão do pedido')
+  iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0'
+  document.body.appendChild(iframe)
+
+  const win = iframe.contentWindow
+  const doc = iframe.contentDocument ?? win?.document
+  if (!win || !doc) {
+    iframe.remove()
+    return false
   }
+
+  doc.open()
+  doc.write(html)
+  doc.close()
+
+  let printed = false
+
+  const cleanup = () => {
+    iframe.remove()
+  }
+
+  const doPrint = () => {
+    if (printed) return
+    printed = true
+    try {
+      win.focus()
+      win.print()
+      win.addEventListener('afterprint', cleanup, { once: true })
+      setTimeout(cleanup, 60_000)
+    } catch {
+      cleanup()
+    }
+  }
+
+  if (doc.readyState === 'complete') {
+    doPrint()
+  } else {
+    win.addEventListener('load', doPrint, { once: true })
+    setTimeout(doPrint, 500)
+  }
+
+  return true
 }

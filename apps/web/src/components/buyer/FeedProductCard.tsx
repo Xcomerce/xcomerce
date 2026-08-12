@@ -1,0 +1,101 @@
+import { Package } from 'lucide-react'
+import { getPrimaryProductImageUrl, getSupplierStoreDisplayName } from '@keve/shared'
+import { cn } from '@/lib/utils'
+import type { FeedProduct } from '@/services/products'
+
+export const HORIZONTAL_CARD_CLASS =
+  'w-[42%] min-w-[140px] max-w-[200px] flex-shrink-0 snap-start sm:w-[200px] md:w-[220px] lg:w-[240px]'
+
+export function formatFeedProductCurrency(value: number | null): string {
+  if (value === null || value === undefined) return 'Sob consulta'
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
+}
+
+export function getFeedProductImage(nome: string, dbUrl: string | null): string | null {
+  if (dbUrl) return dbUrl
+
+  const nameLower = nome.toLowerCase()
+  if (nameLower.includes('cimento')) return '/products/cimento.png'
+  if (nameLower.includes('tijolo')) return '/products/tijolo.png'
+  if (nameLower.includes('brita')) return '/products/brita.png'
+  if (nameLower.includes('tinta') || nameLower.includes('esmalte')) return '/products/tinta.png'
+  if (
+    nameLower.includes('notebook') ||
+    nameLower.includes('computador') ||
+    nameLower.includes('switch') ||
+    nameLower.includes('impressora')
+  ) {
+    return '/products/notebook.png'
+  }
+  if (nameLower.includes('arroz') || nameLower.includes('feijão') || nameLower.includes('azeite')) {
+    return '/products/arroz.png'
+  }
+  if (nameLower.includes('água') || nameLower.includes('agua')) return '/products/agua.png'
+  if (nameLower.includes('epi') || nameLower.includes('capacete') || nameLower.includes('uniforme')) {
+    return '/products/epi.png'
+  }
+  if (
+    nameLower.includes('caixa') ||
+    nameLower.includes('embalagem') ||
+    nameLower.includes('filme stretch') ||
+    nameLower.includes('saco')
+  ) {
+    return '/products/caixa.png'
+  }
+
+  return null
+}
+
+type FeedProductCardProps = {
+  product: FeedProduct
+  onSelect: (product: FeedProduct) => void
+  layout: 'horizontal' | 'vertical'
+}
+
+export function FeedProductCard({ product, onSelect, layout }: FeedProductCardProps) {
+  const imageUrl = getFeedProductImage(product.nome, getPrimaryProductImageUrl(product))
+
+  return (
+    <div
+      onClick={() => onSelect(product)}
+      className={cn('cursor-pointer', layout === 'horizontal' && HORIZONTAL_CARD_CLASS)}
+    >
+      <div className="relative aspect-[4/4.5] w-full overflow-hidden rounded-xl border border-border/40 bg-secondary transition-all duration-300 hover:border-primary/45 hover:scale-[1.03] hover:shadow-sm">
+        {imageUrl ? (
+          <img
+            src={imageUrl}
+            alt={product.nome}
+            className="h-full w-full object-cover"
+            loading="lazy"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+            <Package size={32} />
+          </div>
+        )}
+      </div>
+
+      <div className="mt-2.5 space-y-1.5 px-0.5">
+        <div className="min-w-0 space-y-0.5">
+          <h4
+            className="truncate font-display text-sm font-semibold leading-tight text-foreground transition-colors hover:text-primary"
+            title={product.nome}
+          >
+            {product.nome}
+          </h4>
+          <p className="truncate text-xs text-muted-foreground">
+            {product.supplier
+              ? `${getSupplierStoreDisplayName(product.supplier)}${product.category?.name ? ` · ${product.category.name}` : ''}`
+              : product.category?.name || ''}
+          </p>
+        </div>
+
+        <div className="flex items-center justify-between gap-1.5 pt-0.5">
+          <span className="font-display text-sm font-bold text-foreground">
+            {formatFeedProductCurrency(product.preco_referencia)}
+          </span>
+        </div>
+      </div>
+    </div>
+  )
+}

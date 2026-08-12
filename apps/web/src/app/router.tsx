@@ -90,6 +90,7 @@ export const router = createBrowserRouter([
               { path: 'buyer/feed', element: buyerPages.feed },
               { path: 'buyer/dashboard', element: buyerPages.dashboard },
               { path: 'buyer/demands/new', element: buyerPages.newDemand },
+              { path: 'buyer/stores/:supplierId', element: buyerPages.store },
               { path: 'buyer/offers/:id', element: buyerPages.offerDetail },
               { path: 'buyer/orders', element: buyerPages.orders },
               { path: 'buyer/orders/:id', element: buyerPages.orderDetail },

@@ -161,7 +161,7 @@ export default function SupplierOrdersScreen() {
                     </View>
 
                     <Text className="text-base font-semibold text-slate-900" numberOfLines={2}>
-                      {item.demand?.titulo ?? `Demanda ${item.demand_id.slice(0, 8)}…`}
+                      {item.demand?.titulo ?? `Pedido ${item.demand_id.slice(0, 8)}…`}
                     </Text>
 
                     {item.demand ? (

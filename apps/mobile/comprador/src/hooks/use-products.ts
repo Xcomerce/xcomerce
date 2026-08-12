@@ -6,7 +6,12 @@ export const productKeys = {
   feed: (filters?: object) => [...productKeys.all, 'feed', filters ?? {}] as const,
 }
 
-export function useFeedProducts(filters?: { categoryId?: string; search?: string; uf?: string }) {
+export function useFeedProducts(filters?: {
+  categoryId?: string
+  categoryIds?: string[]
+  search?: string
+  uf?: string
+}) {
   return useQuery({
     queryKey: productKeys.feed(filters),
     queryFn: () => products.fetchFeedProducts(filters),

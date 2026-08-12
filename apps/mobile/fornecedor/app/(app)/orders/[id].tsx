@@ -21,7 +21,7 @@ import { formatSupabaseError } from '@/lib/errors'
 const SUPPLIER_ACTIONS: Partial<Record<OrderStatus, { next: OrderStatus; label: string }[]>> = {
   COMPROVANTE_ENVIADO: [{ next: 'PAGAMENTO_CONFIRMADO', label: 'Confirmar pagamento' }],
   PAGAMENTO_INFORMADO: [{ next: 'PAGAMENTO_CONFIRMADO', label: 'Confirmar pagamento' }],
-  PAGAMENTO_CONFIRMADO: [{ next: 'ENVIO_INFORMADO', label: 'Informar envio' }],
+  PAGAMENTO_CONFIRMADO: [{ next: 'ENVIO_INFORMADO', label: 'Informar pedido pronto' }],
   ENTREGUE: [{ next: 'CONCLUIDO', label: 'Confirmar conclusão' }],
 }
 
@@ -137,7 +137,7 @@ export default function SupplierOrderDetailScreen() {
           ) : null}
           {demand ? (
             <Button
-              label="Ver demanda original"
+              label="Ver pedido original"
               variant="outline"
               className="mt-4"
               onPress={() => router.push(`/(app)/offers/${demand.id}`)}

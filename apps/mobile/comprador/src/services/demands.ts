@@ -120,8 +120,8 @@ async function assertDemandPublishQuota(buyerId: string): Promise<void> {
 
 export async function publishDemand(id: string): Promise<Demand> {
   const existing = await fetchDemand(id)
-  if (!existing) throw new Error('Demanda não encontrada')
-  if (existing.status !== 'RASCUNHO') throw new Error('Esta demanda não pode ser publicada')
+  if (!existing) throw new Error('Pedido não encontrado')
+  if (existing.status !== 'RASCUNHO') throw new Error('Este pedido não pode ser publicado')
 
   await assertDemandPublishQuota(existing.buyer_id)
 

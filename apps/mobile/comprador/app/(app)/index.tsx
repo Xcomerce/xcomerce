@@ -7,8 +7,9 @@ import { AppHeader } from '@/components/layout/AppHeader'
 import { EmptyState } from '@/components/common/EmptyState'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import { FeedSearchBar } from '@/components/feed/FeedSearchBar'
-import { useCategories } from '@/hooks/use-categories'
+import { useCategories, useRootCategories } from '@/hooks/use-categories'
 import { useFeedProducts } from '@/hooks/use-products'
+import { getDescendantCategoryIds, getPrimaryProductImageUrl } from '@keve/shared'
 import { getProductImageUri } from '@/lib/product-images'
 import { formatCurrency } from '@/lib/utils'
 import type { Category } from '@/services/categories'
@@ -37,10 +38,17 @@ export default function FeedScreen() {
   const [search, setSearch] = useState('')
   const [selectedUf, setSelectedUf] = useState('')
   const [categoryId, setCategoryId] = useState<string | undefined>()
-  const { data: categories = [] } = useCategories()
+  const { data: rootCategories = [] } = useRootCategories()
+  const { data: allCategories = [] } = useCategories()
+
+  const categoryIds = useMemo(() => {
+    if (!categoryId) return undefined
+    return getDescendantCategoryIds(categoryId, allCategories)
+  }, [categoryId, allCategories])
+
   const { data: products = [], isLoading } = useFeedProducts({
     search: search || undefined,
-    categoryId,
+    categoryIds,
     uf: selectedUf || undefined,
   })
 
@@ -51,7 +59,7 @@ export default function FeedScreen() {
       let title = 'Resultados'
       if (search) title = `Resultados para "${search}"`
       else if (categoryId) {
-        const category = categories.find((cat: Category) => cat.id === categoryId)
+        const category = rootCategories.find((cat: Category) => cat.id === categoryId)
         title = category?.name ?? 'Categoria'
       } else if (selectedUf) {
         title = `Produtos em ${selectedUf}`
@@ -65,7 +73,7 @@ export default function FeedScreen() {
       grouped.get(key)!.push(p)
     }
     return Array.from(grouped.entries()).map(([title, data]) => ({ title, data }))
-  }, [products, categoryId, search, selectedUf, isFilteredView, categories])
+  }, [products, categoryId, search, selectedUf, isFilteredView, rootCategories])
 
   return (
     <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
@@ -80,7 +88,7 @@ export default function FeedScreen() {
         <FlatList
           horizontal
           showsHorizontalScrollIndicator={false}
-          data={[{ id: 'all', name: 'Todos' }, ...categories]}
+          data={[{ id: 'all', name: 'Todos' }, ...rootCategories]}
           keyExtractor={(item) => item.id}
           className="mt-3"
           contentContainerStyle={{ gap: 8 }}
@@ -101,7 +109,7 @@ export default function FeedScreen() {
       {isLoading ? (
         <LoadingSkeleton rows={4} />
       ) : products.length === 0 ? (
-        <EmptyState title="Nenhum produto no feed" description="Publique uma demanda para receber propostas dos fornecedores." />
+        <EmptyState title="Nenhum produto no feed" description="Publique um pedido para receber propostas dos fornecedores." />
       ) : (
         <FlatList
           data={sections}
@@ -112,7 +120,7 @@ export default function FeedScreen() {
               <Text className="mb-3 text-lg font-bold text-brand-dark">{section.title}</Text>
               <View className="flex-row flex-wrap gap-3">
                 {section.data.map((product: FeedProduct) => {
-                  const imageUri = getProductImageUri(product.nome, product.image_url)
+                  const imageUri = getProductImageUri(product.nome, getPrimaryProductImageUrl(product))
                   return (
                     <Pressable
                       key={product.id}

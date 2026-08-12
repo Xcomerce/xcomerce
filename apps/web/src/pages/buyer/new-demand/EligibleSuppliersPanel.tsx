@@ -9,7 +9,6 @@ type EligibleSuppliersPanelProps = {
   selectedCategory?: { name: string }
   watchedCity: string
   watchedUf: string
-  deliverySummary?: string
   isSaving: boolean
   selectedCategoryId: string
   isSearching: boolean
@@ -43,7 +42,6 @@ export function EligibleSuppliersPanel({
   selectedCategory,
   watchedCity,
   watchedUf,
-  deliverySummary,
   isSaving,
   selectedCategoryId,
   isSearching,
@@ -53,9 +51,8 @@ export function EligibleSuppliersPanel({
 }: EligibleSuppliersPanelProps) {
   const showIdle = !selectedCategoryId
   const showSearching = !!selectedCategoryId && isSearching
-  const showAwaitingAddress = !!selectedCategoryId && !isSearching && !watchedCity
   const showResults = !!selectedCategoryId && !isSearching && !!watchedCity && eligible.count > 0
-  const showCenteredGlobe = showIdle || showSearching || showAwaitingAddress
+  const showCenteredGlobe = showIdle || showSearching
 
   return (
     <aside className="glass-sidebar flex h-full min-h-0 w-full flex-col overflow-hidden border-sidebar-border max-lg:min-h-[min(20rem,40dvh)] lg:border-l">
@@ -90,15 +87,7 @@ export function EligibleSuppliersPanel({
           <GlobeState
             spinRadar
             title="Buscando fornecedores..."
-            description="Mapeando parceiros compatíveis com a categoria e o endereço informado."
-          />
-        )}
-
-        {showAwaitingAddress && (
-          <GlobeState
-            spinRadar
-            title="Quase lá"
-            description="Informe o CEP e a cidade para refinar os fornecedores elegíveis na região."
+            description="Mapeando parceiros compatíveis com a categoria e a localização informada."
           />
         )}
 
@@ -111,19 +100,12 @@ export function EligibleSuppliersPanel({
               <p className="mt-1 text-5xl font-bold tracking-tight text-primary">{eligible.count}</p>
             </div>
 
-            {(watchedCity || deliverySummary) && (
+            {watchedCity && (
               <div className="flex items-start gap-2 rounded-lg border border-sidebar-border bg-muted/30 px-3 py-2.5 text-sm text-muted-foreground">
                 <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                 <span>
-                  {deliverySummary && (
-                    <span className="block font-medium text-foreground">{deliverySummary}</span>
-                  )}
-                  {watchedCity && (
-                    <span>
-                      {watchedCity}
-                      {watchedUf ? `/${watchedUf}` : ''}
-                    </span>
-                  )}
+                  {watchedCity}
+                  {watchedUf ? `/${watchedUf}` : ''}
                 </span>
               </div>
             )}
@@ -149,7 +131,7 @@ export function EligibleSuppliersPanel({
           </div>
         )}
 
-        {!showIdle && !showSearching && !showAwaitingAddress && !showResults && (
+        {!showIdle && !showSearching && !showResults && (
           <p className="w-full text-center text-sm text-muted-foreground">
             Nenhum fornecedor encontrado para esta combinação de categoria e região.
           </p>

@@ -53,8 +53,8 @@ export function BuyerOrdersPage() {
         <EmptyState
           icon={ShoppingBag}
           title="Nenhum pedido ainda"
-          description="Aceite uma proposta em uma demanda para iniciar um pedido."
-          actionLabel="Ver demandas"
+          description="Aceite uma proposta para confirmar seu pedido."
+          actionLabel="Ver pedidos"
           onAction={() => (window.location.href = '/buyer/dashboard')}
         />
       ) : (
@@ -156,7 +156,7 @@ export function BuyerOrdersPage() {
                     <div className="min-w-0 flex-1 space-y-2">
                       <div className="flex flex-nowrap items-center gap-2">
                         <div className="inline-flex h-6 shrink-0 items-center rounded-full border border-border bg-transparent px-2 font-mono text-[10px] font-semibold leading-none tracking-wider text-foreground sm:px-2.5 sm:text-xs">
-                          ID#{order.id.slice(0, 8).toUpperCase()}
+                          Pedido#{order.id.slice(0, 8).toUpperCase()}
                         </div>
                         <StatusBadge
                           status={order.status}
@@ -184,7 +184,7 @@ export function BuyerOrdersPage() {
                     <div className="min-w-0 flex-1 space-y-2">
                       <div className="flex flex-wrap items-center gap-2">
                         <div className="inline-flex h-6 shrink-0 items-center rounded-full border border-border bg-transparent px-2.5 font-mono text-xs font-semibold leading-none tracking-wider text-foreground">
-                          ID#{order.id.slice(0, 8).toUpperCase()}
+                          Pedido#{order.id.slice(0, 8).toUpperCase()}
                         </div>
                         <StatusBadge
                           status={order.status}

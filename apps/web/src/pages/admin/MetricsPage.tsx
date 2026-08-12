@@ -143,13 +143,13 @@ function exportMetricsCsv(metrics: AdminMetricsDashboard, periodLabel: string) {
     ['Novos compradores', metrics.periodCounts.newBuyers, formatTrendForCsv(metrics.trends.newBuyers)],
     ['Novos fornecedores', metrics.periodCounts.newSuppliers, formatTrendForCsv(metrics.trends.newSuppliers)],
     ['Aprovações pendentes', metrics.pendingApprovals, formatTrendForCsv(metrics.trends.newPendingApprovals)],
-    ['Demandas publicadas', metrics.periodCounts.newDemands, formatTrendForCsv(metrics.trends.newDemands)],
+    ['Pedidos publicados', metrics.periodCounts.newDemands, formatTrendForCsv(metrics.trends.newDemands)],
     ['Propostas enviadas', metrics.periodCounts.newOffers, formatTrendForCsv(metrics.trends.newOffers)],
     ['Assinaturas ativas', metrics.activeSubscriptions, formatTrendForCsv(metrics.trends.activeSubscriptions)],
     ['MRR', metrics.mrr.toFixed(2), formatTrendForCsv(metrics.trends.mrr)],
     [],
     ['Evolução diária'],
-    ['Data', 'Usuários', 'Demandas', 'Propostas', 'Pedidos'],
+    ['Data', 'Usuários', 'Pedidos publicados', 'Propostas', 'Pedidos fechados'],
     ...metrics.daily.map((day) => [day.label, day.users, day.demands, day.offers, day.orders]),
   ]
 
@@ -276,7 +276,7 @@ export function MetricsPage() {
               trendHint="Movimentações na fila vs período anterior"
             />
             <KpiCard
-              title="Demandas publicadas"
+              title="Pedidos publicados"
               value={metrics.periodCounts.newDemands}
               icon={FileText}
               description={periodLabel}
@@ -340,7 +340,7 @@ export function MetricsPage() {
                       <Line
                         type="monotone"
                         dataKey="demands"
-                        name="Demandas"
+                        name="Pedidos publicados"
                         stroke={CHART_COLORS.demands}
                         strokeWidth={2}
                         dot={false}
@@ -356,7 +356,7 @@ export function MetricsPage() {
                       <Line
                         type="monotone"
                         dataKey="orders"
-                        name="Pedidos"
+                        name="Pedidos fechados"
                         stroke={CHART_COLORS.orders}
                         strokeWidth={2}
                         dot={false}
@@ -385,9 +385,9 @@ export function MetricsPage() {
                       <YAxis allowDecimals={false} tick={{ fontSize: 11 }} width={32} />
                       <Tooltip content={<ChartTooltip />} />
                       <Legend />
-                      <Bar dataKey="demands" name="Demandas" stackId="a" fill={CHART_COLORS.demands} />
+                      <Bar dataKey="demands" name="Pedidos publicados" stackId="a" fill={CHART_COLORS.demands} />
                       <Bar dataKey="offers" name="Propostas" stackId="a" fill={CHART_COLORS.offers} />
-                      <Bar dataKey="orders" name="Pedidos" stackId="a" fill={CHART_COLORS.orders} radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="orders" name="Pedidos fechados" stackId="a" fill={CHART_COLORS.orders} radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>

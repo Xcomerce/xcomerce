@@ -39,11 +39,11 @@ Deno.serve(async (req) => {
     .maybeSingle()
 
   if (demandErr || !demand) {
-    return error('DEMAND_NOT_FOUND', 'Demanda não encontrada.', 404)
+    return error('DEMAND_NOT_FOUND', 'Pedido não encontrado.', 404)
   }
 
   if (demand.buyer_id !== user!.id) {
-    return error('FORBIDDEN', 'Sem permissão para esta demanda.', 403)
+    return error('FORBIDDEN', 'Sem permissão para este pedido.', 403)
   }
 
   try {
@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro ao processar match'
     if (message === 'DEMAND_NOT_OPEN') {
-      return error('DEMAND_NOT_OPEN', 'Demanda não está aberta para match.', 422)
+      return error('DEMAND_NOT_OPEN', 'Pedido não está aberto para match.', 422)
     }
     console.error('request-demand-match:', err)
     return error('MATCH_FAILED', message, 500)

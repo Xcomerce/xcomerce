@@ -59,7 +59,7 @@ export const SETTINGS_MENU_ITEMS: {
   {
     id: 'notifications',
     label: 'Notificações',
-    description: 'Demandas, pedidos, mensagens e plano da sua conta.',
+    description: 'Pedidos, mensagens e plano da sua conta.',
     icon: Bell,
   },
   {
