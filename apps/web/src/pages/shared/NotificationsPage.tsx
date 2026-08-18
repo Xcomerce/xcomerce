@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { EmptyState } from '@/components/common/EmptyState'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
+import { formatNotificationBody, formatNotificationTitle } from '@keve/shared'
 import { useNotifications, useMarkNotificationRead, useMarkAllNotificationsRead } from '@/hooks/use-notifications'
 
 function getNotificationRoute(data: unknown): string | null {
@@ -64,8 +65,8 @@ export function NotificationsPage() {
                 className="min-w-0 flex-1 text-left"
                 onClick={() => void handleOpen(n.id, n.data)}
               >
-                <p className="font-medium">{n.title}</p>
-                <p className="mt-1 text-sm text-muted-foreground">{n.body}</p>
+                <p className="font-medium">{formatNotificationTitle(n.title)}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{formatNotificationBody(n.body)}</p>
                 <p className="mt-2 text-xs text-muted-foreground">
                   {new Date(n.created_at).toLocaleString('pt-BR')}
                   {(n.group_count ?? 1) > 1 ? ` · ${n.group_count} eventos agrupados` : ''}

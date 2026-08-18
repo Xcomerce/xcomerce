@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -80,6 +80,7 @@ export function NewDemandPage() {
   const [paywallOpen, setPaywallOpen] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [isSearchingSuppliers, setIsSearchingSuppliers] = useState(false)
+  const hasAppliedProductPrefillRef = useRef(false)
 
   const form = useForm<DemandInput>({
     resolver: zodResolver(demandSchema),
@@ -104,6 +105,11 @@ export function NewDemandPage() {
     [leafCategories],
   )
   const selectedCategory = leafCategories.find((c) => c.id === selectedCategoryId)
+  const descricaoPlaceholder = useMemo(() => {
+    const names = leafCategories.slice(0, 5).map((category) => category.name)
+    if (names.length === 0) return 'Ex> ...'
+    return `Ex> ${names.join(', ')}`
+  }, [leafCategories])
   const eligible = getEligibleSuppliers(selectedCategory?.slug)
   const isSearchingSidebar = isSearchingSuppliers
 
@@ -114,16 +120,19 @@ export function NewDemandPage() {
     form.formState.isSubmitting
 
   useEffect(() => {
-    if (isEditing) return
-    if (stateData?.categoryId) form.setValue('category_id', stateData.categoryId)
-    if (stateData?.title) form.setValue('titulo', stateData.title)
-    if (stateData?.description) form.setValue('descricao', stateData.description)
-    if (stateData?.city) form.setValue('cidade', stateData.city)
-    if (stateData?.uf) form.setValue('uf', stateData.uf)
-    if (stateData?.precoReferencia != null && stateData.precoReferencia > 0) {
+    if (isEditing || hasAppliedProductPrefillRef.current) return
+    if (!stateData) return
+    hasAppliedProductPrefillRef.current = true
+
+    if (stateData.categoryId) form.setValue('category_id', stateData.categoryId)
+    if (stateData.title) form.setValue('titulo', stateData.title)
+    if (stateData.description) form.setValue('descricao', stateData.description)
+    if (stateData.city) form.setValue('cidade', stateData.city)
+    if (stateData.uf) form.setValue('uf', stateData.uf)
+    if (stateData.precoReferencia != null && stateData.precoReferencia > 0) {
       form.setValue('preco_referencia_mercado', stateData.precoReferencia)
     }
-    if (stateData?.selectedCor || stateData?.selectedTamanho) {
+    if (stateData.selectedCor || stateData.selectedTamanho) {
       form.setValue('especificacoes', [
         {
           cor: stateData.selectedCor ?? '',
@@ -336,11 +345,11 @@ export function NewDemandPage() {
                   name="descricao"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Descrição</FormLabel>
+                      <FormLabel>Descrição (opcional)</FormLabel>
                       <FormControl>
                         <textarea
                           className={cn(NATIVE_FIELD_CLASS, 'min-h-[100px] py-2')}
-                          placeholder="Descreva o produto, quantidade, certificações e demais requisitos..."
+                          placeholder={descricaoPlaceholder}
                           {...field}
                         />
                       </FormControl>

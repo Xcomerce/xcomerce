@@ -13,6 +13,10 @@
     "dev:mobile:comprador": "npm run start -w comprador",
     "build": "npm run build -w web",
     "lint": "npm run lint -w web",
+    "test": "npm run test -w @keve/shared",
+    "test:search": "npm run test -w @keve/shared",
+    "validate:search": "node scripts/run-search-validation.mjs --linked",
+    "validate:search:local": "node scripts/run-search-validation.mjs",
     "deploy:functions:lookup-cnpj": "npx supabase functions deploy lookup-cnpj --no-verify-jwt --project-ref wjoyobxpwkdyhnfrwbiu",
     "deploy:functions:match": "npx supabase functions deploy match-demand request-demand-match sync-supplier-matches --project-ref wjoyobxpwkdyhnfrwbiu"
   },

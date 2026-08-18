@@ -5,16 +5,21 @@ export const demandSpecificationSchema = z.object({
   tamanho: z.string().trim().optional().or(z.literal('')),
   quantidade: z.preprocess(
     (value) => {
-      if (value === '' || value === null || value === undefined) return 1
+      if (value === '' || value === null || value === undefined) return undefined
       return Number(value)
     },
-    z.number({ invalid_type_error: 'Quantidade inválida' }).int().min(1, 'Quantidade mínima é 1'),
+    z.number({ invalid_type_error: 'Informe a quantidade' }).int().min(1, 'Quantidade mínima é 1'),
   ),
 })
 
 export const demandSchema = z.object({
   titulo: z.string().min(3, 'Título deve ter no mínimo 3 caracteres'),
-  descricao: z.string().min(10, 'Descrição deve ter no mínimo 10 caracteres'),
+  descricao: z
+    .string()
+    .trim()
+    .refine((value) => value.length === 0 || value.length >= 10, {
+      message: 'Descrição deve ter no mínimo 10 caracteres',
+    }),
   category_id: z.string().uuid('Selecione uma categoria'),
   quantidade: z.coerce.number().int().min(1, 'Quantidade mínima é 1').optional(),
   unidade: z.string().min(1).default('un'),

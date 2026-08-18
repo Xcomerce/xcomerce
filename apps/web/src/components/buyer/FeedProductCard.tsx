@@ -1,7 +1,7 @@
 import { Package } from 'lucide-react'
 import { getPrimaryProductImageUrl, getSupplierStoreDisplayName } from '@keve/shared'
 import { cn } from '@/lib/utils'
-import type { FeedProduct } from '@/services/products'
+import type { FeedProduct, FeedProductSearchResult } from '@/services/products'
 
 export const HORIZONTAL_CARD_CLASS =
   'w-[42%] min-w-[140px] max-w-[200px] flex-shrink-0 snap-start sm:w-[200px] md:w-[220px] lg:w-[240px]'
@@ -47,13 +47,23 @@ export function getFeedProductImage(nome: string, dbUrl: string | null): string 
 }
 
 type FeedProductCardProps = {
-  product: FeedProduct
-  onSelect: (product: FeedProduct) => void
+  product: FeedProduct | FeedProductSearchResult
+  onSelect: (product: FeedProduct | FeedProductSearchResult) => void
   layout: 'horizontal' | 'vertical'
+}
+
+const MATCH_SOURCE_LABELS: Record<string, string> = {
+  cor: 'Cor',
+  tamanho: 'Tamanho',
+  marca: 'Marca',
+  categoria: 'Categoria',
+  fornecedor: 'Fornecedor',
 }
 
 export function FeedProductCard({ product, onSelect, layout }: FeedProductCardProps) {
   const imageUrl = getFeedProductImage(product.nome, getPrimaryProductImageUrl(product))
+  const matchSource = 'matchSource' in product ? product.matchSource : undefined
+  const matchLabel = matchSource ? MATCH_SOURCE_LABELS[matchSource] : null
 
   return (
     <div
@@ -73,6 +83,11 @@ export function FeedProductCard({ product, onSelect, layout }: FeedProductCardPr
             <Package size={32} />
           </div>
         )}
+        {matchLabel ? (
+          <span className="absolute left-2 top-2 rounded-full bg-primary/90 px-2 py-0.5 text-[10px] font-semibold text-primary-foreground">
+            {matchLabel}
+          </span>
+        ) : null}
       </div>
 
       <div className="mt-2.5 space-y-1.5 px-0.5">

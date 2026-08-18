@@ -1,6 +1,11 @@
 import { useEffect, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { detectUserUf, getStoredDetectedUf, isBrazilianUf, storeDetectedUf } from '@/lib/detect-user-uf'
+import {
+  detectUserLocation,
+  getStoredDetectedLocation,
+  isBrazilianUf,
+  storeDetectedLocation,
+} from '@/lib/detect-user-uf'
 
 export function useFeedLocationFilter(enabled: boolean) {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -22,16 +27,16 @@ export function useFeedLocationFilter(enabled: boolean) {
       )
     }
 
-    const storedUf = getStoredDetectedUf()
-    if (storedUf) {
-      applyUf(storedUf)
+    const storedLocation = getStoredDetectedLocation()
+    if (storedLocation) {
+      applyUf(storedLocation.uf)
       return
     }
 
-    void detectUserUf().then((uf) => {
-      if (!isBrazilianUf(uf)) return
-      storeDetectedUf(uf)
-      applyUf(uf)
+    void detectUserLocation().then((location) => {
+      if (!location || !isBrazilianUf(location.uf)) return
+      storeDetectedLocation(location)
+      applyUf(location.uf)
     })
   }, [enabled, selectedUf, setSearchParams])
 }

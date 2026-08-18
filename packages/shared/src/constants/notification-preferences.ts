@@ -45,8 +45,8 @@ export const BUYER_NOTIFICATION_PREFERENCES: NotificationPreferenceDefinition[] 
 export const SUPPLIER_NOTIFICATION_PREFERENCES: NotificationPreferenceDefinition[] = [
   {
     type: 'demand.matched',
-    label: 'Nova oportunidade de pedido',
-    description: 'Quando um pedido compatível é publicado na sua região.',
+    label: 'Nova oportunidade de solicitação',
+    description: 'Quando uma solicitação compatível é publicada na sua região.',
   },
   {
     type: 'chat.message',

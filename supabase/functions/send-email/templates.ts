@@ -69,11 +69,11 @@ export function renderEmail(
   switch (template) {
     case 'demand_matched':
       return {
-        subject: locale === 'pt-BR' ? 'Nova oportunidade de pedido' : 'New order opportunity',
+        subject: locale === 'pt-BR' ? 'Nova oportunidade de solicitação' : 'New request opportunity',
         html: layout(
-          'Novo pedido compatível',
+          'Nova solicitação compatível',
           `<p>Olá ${esc(data.supplier_name)},</p>
-           <p>Um novo pedido foi publicado na sua região: <strong>${esc(data.demand_title)}</strong> (${esc(data.demand_city)}).</p>`,
+           <p>Uma nova solicitação foi publicada na sua região: <strong>${esc(data.demand_title)}</strong> (${esc(data.demand_city)}).</p>`,
           actionUrl,
           'Ver no board',
         ),

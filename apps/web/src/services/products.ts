@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase'
-import type { ProductInput } from '@keve/shared'
+import type { ProductInput, ProductMatchSource, SearchSuggestion } from '@keve/shared'
+import { mapSearchSuggestionRow } from '@keve/shared'
 import type { Tables } from '@keve/shared'
 
 export type Product = Tables<'products'>
@@ -144,6 +145,78 @@ export type FeedProduct = Product & {
   } | null
 }
 
+export type FeedProductSearchResult = FeedProduct & {
+  rank?: number
+  matchSource?: ProductMatchSource | null
+  isOutsideUf?: boolean
+}
+
+type SearchFeedProductRow = Product & {
+  rank: number | null
+  match_source: ProductMatchSource | null
+  is_outside_uf: boolean
+  supplier: FeedProductSupplier | null
+  category: { name: string } | null
+}
+
+function mapSearchFeedProductRow(row: SearchFeedProductRow): FeedProductSearchResult {
+  const {
+    rank,
+    match_source,
+    is_outside_uf,
+    supplier,
+    category,
+    ...product
+  } = row
+
+  return {
+    ...(product as Product),
+    supplier,
+    category,
+    rank: rank ?? undefined,
+    matchSource: match_source ?? undefined,
+    isOutsideUf: is_outside_uf,
+  }
+}
+
+export async function fetchFeedProducts(filters?: {
+  categoryId?: string
+  categoryIds?: string[]
+  search?: string
+  uf?: string
+}): Promise<FeedProductSearchResult[]> {
+  const categoryIds =
+    filters?.categoryIds && filters.categoryIds.length > 0
+      ? filters.categoryIds
+      : filters?.categoryId
+        ? [filters.categoryId]
+        : null
+
+  const { data, error } = await supabase.rpc('search_feed_products', {
+    p_query: filters?.search?.trim() || null,
+    p_category_ids: categoryIds,
+    p_uf: filters?.uf?.toUpperCase() || null,
+    p_limit: 50,
+    p_offset: 0,
+  })
+
+  if (error) throw error
+  return ((data ?? []) as SearchFeedProductRow[]).map(mapSearchFeedProductRow)
+}
+
+export async function fetchSearchSuggestions(query: string, limit = 8): Promise<SearchSuggestion[]> {
+  const trimmed = query.trim()
+  const { data, error } = await supabase.rpc('search_product_suggestions', {
+    p_query: trimmed || ' ',
+    p_limit: limit,
+  })
+
+  if (error) throw error
+  return ((data ?? []) as Array<{ suggestion: string; suggestion_type: string; score: number }>).map(
+    mapSearchSuggestionRow,
+  )
+}
+
 export type SupplierStoreProfile = {
   supplierId: string
   store_name: string | null
@@ -161,45 +234,6 @@ export type SupplierStoreProfile = {
     full_name: string
     avatar_url: string | null
   } | null
-}
-
-export async function fetchFeedProducts(filters?: {
-  categoryId?: string
-  categoryIds?: string[]
-  search?: string
-  uf?: string
-}): Promise<FeedProduct[]> {
-  let query = supabase
-    .from('products')
-    .select(`
-      *,
-      supplier:supplier_profiles!inner(
-        status,
-        store_name,
-        avg_rating,
-        company:companies(nome_fantasia, razao_social)
-      ),
-      category:categories(name)
-    `)
-    .eq('is_active', true)
-    .eq('supplier_profiles.status', 'aprovado')
-
-  if (filters?.categoryIds && filters.categoryIds.length > 0) {
-    query = query.in('category_id', filters.categoryIds)
-  } else if (filters?.categoryId) {
-    query = query.eq('category_id', filters.categoryId)
-  }
-  if (filters?.uf) {
-    query = query.eq('uf', filters.uf.toUpperCase())
-  }
-  if (filters?.search) {
-    query = query.ilike('nome', `%${filters.search}%`)
-  }
-
-  const { data, error } = await query.order('created_at', { ascending: false })
-
-  if (error) throw error
-  return (data ?? []) as FeedProduct[]
 }
 
 export async function fetchSupplierStore(supplierId: string): Promise<SupplierStoreProfile | null> {

@@ -14,8 +14,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Alert } from '@/components/ui/alert'
 import { StatusBadge } from '@/components/common/StatusBadge'
-import { DemandVariantSummary } from '@/components/buyer/DemandVariantSummary'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
+import { OfferItemsTable, OfferProposalSummary } from '@/components/supplier/OfferItemsTable'
+import { DemandSpecificationsTable } from '@/components/buyer/DemandSpecificationsTable'
+import { demandHasVariantSpecs } from '@keve/shared'
 import { useDemand } from '@/hooks/use-demands'
 import { useCategories } from '@/hooks/use-categories'
 import { useCreateOffer, useOffersForDemand } from '@/hooks/use-offers'
@@ -23,7 +25,14 @@ import { useChatMessages, useSendMessage, useChatSubscription } from '@/hooks/us
 import { useAuth } from '@/contexts/auth-context'
 import { translateSupabaseError } from '@/lib/errors'
 import { formatDemandDateTime } from '@/lib/datetime'
-import { fetchDemandMarketPrice } from '@/services/pricing'
+import {
+  buildOfferLineItemsFromDemand,
+  roundCurrency,
+  sumOfferLineQuantity,
+  sumOfferLineTotal,
+  type OfferLineItem,
+} from '@/lib/offer-variant-pricing'
+import { fetchSupplierCatalogUnitPriceForDemand } from '@/services/pricing'
 import { cn, formatExpiresAt } from '@/lib/utils'
 import { ScrollPageShell, SCROLL_PAGE_SECTION_CLASS } from '@/components/layout/ScrollPageShell'
 
@@ -33,6 +42,11 @@ function formatCurrency(value: number): string {
 
 function formatDemandDate(value: string | null | undefined): string {
   return formatDemandDateTime(value)
+}
+
+function formatDemandReferenceId(demandId: string): string {
+  const compact = demandId.replace(/-/g, '').slice(0, 8).toUpperCase()
+  return `#SC-${compact.slice(0, 4)}-${compact.slice(4)}`
 }
 
 type OfferChatPanelProps = {
@@ -112,12 +126,65 @@ function OfferChatPanel({
   )
 }
 
+function OfferConditionsFields({ form }: { form: ReturnType<typeof useForm<OfferInput>> }) {
+  return (
+    <div className="space-y-3">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <FormField
+          control={form.control}
+          name="prazo_entrega_dias"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Prazo de entrega (dias)</FormLabel>
+              <FormControl>
+                <Input type="number" min={1} {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="validade_dias"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Validade da proposta (dias)</FormLabel>
+              <FormControl>
+                <Input type="number" min={1} max={30} {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
+      <FormField
+        control={form.control}
+        name="mensagem"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Mensagem (opcional)</FormLabel>
+            <FormControl>
+              <textarea
+                className="scrollbar-custom flex min-h-[72px] w-full rounded-xl border border-input bg-background px-3 py-2 text-sm"
+                placeholder="Detalhes da proposta..."
+                {...field}
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+    </div>
+  )
+}
+
 export function OfferDetailPage() {
   const { demandId } = useParams<{ demandId: string }>()
   const { user } = useAuth()
   const [chatBody, setChatBody] = useState('')
   const [mobileChatOpen, setMobileChatOpen] = useState(false)
-  const [marketUnitPrice, setMarketUnitPrice] = useState<number | null>(null)
+  const [catalogUnitPrice, setCatalogUnitPrice] = useState<number | null>(null)
+  const [lineItems, setLineItems] = useState<OfferLineItem[]>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const { data: demand, isLoading: demandLoading } = useDemand(demandId)
@@ -130,7 +197,7 @@ export function OfferDetailPage() {
   useChatSubscription(demandId, user?.id)
 
   const myOffer = offers.find((o) => o.supplier_id === user?.id)
-  const showOfferFooter = !myOffer
+  const showOfferForm = !myOffer
 
   const offerSchemaResolved = useMemo(() => createOfferSchema(), [])
 
@@ -141,11 +208,10 @@ export function OfferDetailPage() {
       valor: 0,
       prazo_entrega_dias: 7,
       validade_dias: 7,
-      quantidade: demand?.quantidade ?? 1,
+      quantidade: 1,
       mensagem: '',
     },
   })
-
 
   const categoryName = useMemo(
     () => categories.find((c) => c.id === demand?.category_id)?.name,
@@ -157,28 +223,62 @@ export function OfferDetailPage() {
     [demand?.expires_at, demand],
   )
 
-  useEffect(() => {
-    if (demandId) form.setValue('demand_id', demandId)
-    if (demand) form.setValue('quantidade', demand.quantidade)
-  }, [demandId, demand, form])
+  const totalQuantity = useMemo(() => sumOfferLineQuantity(lineItems), [lineItems])
+  const totalValue = useMemo(() => roundCurrency(sumOfferLineTotal(lineItems)), [lineItems])
+
+  const submittedLineItems = useMemo(() => {
+    if (!demand || !myOffer) return []
+
+    const unitPrice =
+      myOffer.quantidade > 0 ? roundCurrency(myOffer.valor / myOffer.quantidade) : myOffer.valor
+
+    return buildOfferLineItemsFromDemand(demand, unitPrice)
+  }, [demand, myOffer])
 
   useEffect(() => {
-    if (!demandId) return
+    if (demandId) form.setValue('demand_id', demandId)
+  }, [demandId, form])
+
+  useEffect(() => {
+    if (!demand || !user?.id || !demandId) return
 
     let cancelled = false
 
-    fetchDemandMarketPrice(demandId)
+    fetchSupplierCatalogUnitPriceForDemand(user.id, demandId, demand)
       .then((price) => {
-        if (!cancelled) setMarketUnitPrice(price)
+        if (!cancelled) setCatalogUnitPrice(price)
       })
       .catch(() => {
-        if (!cancelled) setMarketUnitPrice(null)
+        if (!cancelled) setCatalogUnitPrice(null)
       })
 
     return () => {
       cancelled = true
     }
-  }, [demandId, demand?.preco_referencia_mercado, demand?.category_id])
+  }, [demand, demandId, user?.id])
+
+  useEffect(() => {
+    if (!demand) return
+
+    const defaultPrice = catalogUnitPrice ?? 0
+    setLineItems((previous) => {
+      if (previous.length === 0) {
+        return buildOfferLineItemsFromDemand(demand, defaultPrice)
+      }
+
+      if (defaultPrice <= 0) return previous
+
+      return previous.map((item) =>
+        item.precoUnitario === 0 ? { ...item, precoUnitario: defaultPrice } : item,
+      )
+    })
+  }, [demand, catalogUnitPrice])
+
+  useEffect(() => {
+    if (!showOfferForm) return
+    form.setValue('valor', totalValue)
+    form.setValue('quantidade', totalQuantity)
+  }, [form, showOfferForm, totalQuantity, totalValue])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -196,10 +296,16 @@ export function OfferDetailPage() {
 
   async function onSubmit(values: OfferInput) {
     try {
-      await createOffer.mutateAsync(values)
+      await createOffer.mutateAsync({
+        ...values,
+        valor: totalValue,
+        quantidade: totalQuantity,
+      })
       toast.success('Proposta enviada')
       form.reset({
         ...values,
+        valor: totalValue,
+        quantidade: totalQuantity,
         mensagem: '',
       })
     } catch (err) {
@@ -238,7 +344,7 @@ export function OfferDetailPage() {
   if (!demand) {
     return (
       <div className="py-12 text-center">
-        <p className="text-muted-foreground">Pedido não encontrado.</p>
+        <p className="text-muted-foreground">Solicitação não encontrada.</p>
         <Button className="mt-4" asChild>
           <Link to="/supplier/board">Voltar ao mural</Link>
         </Button>
@@ -250,38 +356,39 @@ export function OfferDetailPage() {
     <div className="flex h-full max-h-full min-h-0 flex-col overflow-hidden">
       <ScrollPageShell className="min-h-0 flex-1">
         <section className={cn(SCROLL_PAGE_SECTION_CLASS, 'space-y-6')}>
-          <div>
-            <h1 className="font-display text-xl font-bold">{demand.titulo}</h1>
-            <p className="text-sm text-muted-foreground">
-              {demand.cidade}/{demand.uf} · {demand.quantidade} {demand.unidade}
-            </p>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="min-w-0 space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="font-display text-xl font-bold">{demand.titulo}</h1>
+                <StatusBadge status={demand.status} kind="demand" />
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {demand.cidade}/{demand.uf} · {demand.quantidade} {demand.unidade}
+              </p>
+            </div>
+            <div className="rounded-xl border border-border/70 bg-muted/20 px-3 py-2 text-right">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                ID da solicitação
+              </p>
+              <p className="text-sm font-semibold text-foreground">{formatDemandReferenceId(demand.id)}</p>
+            </div>
           </div>
 
           <Card>
             <CardHeader className="pb-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <CardTitle className="text-base">Pedido</CardTitle>
-                <StatusBadge status={demand.status} kind="demand" />
-              </div>
+              <CardTitle className="text-base">Detalhes da solicitação</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-sm leading-relaxed">{demand.descricao}</p>
-              <DemandVariantSummary demand={demand} />
+              {demand.descricao ? (
+                <p className="text-sm leading-relaxed text-muted-foreground">{demand.descricao}</p>
+              ) : null}
 
-              <dl className="grid grid-cols-2 gap-x-3 gap-y-3">
+              <dl className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
                 <div className="min-w-0 space-y-0.5">
                   <dt className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                     Categoria
                   </dt>
                   <dd className="text-sm font-medium break-words">{categoryName ?? '—'}</dd>
-                </div>
-                <div className="min-w-0 space-y-0.5">
-                  <dt className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                    Quantidade
-                  </dt>
-                  <dd className="text-sm font-medium break-words">
-                    {demand.quantidade} {demand.unidade}
-                  </dd>
                 </div>
                 <div className="min-w-0 space-y-0.5">
                   <dt className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -293,26 +400,22 @@ export function OfferDetailPage() {
                 </div>
                 <div className="min-w-0 space-y-0.5">
                   <dt className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                    Raio de entrega
+                    Data da solicitação
                   </dt>
-                  <dd className="text-sm font-medium">{demand.raio_km} km</dd>
+                  <dd className="text-sm font-medium break-words">
+                    {formatDemandDate(demand.published_at ?? demand.created_at)}
+                  </dd>
                 </div>
                 <div className="min-w-0 space-y-0.5">
                   <dt className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                    Prazo desejado
+                    Prazo desejado pelo comprador
                   </dt>
                   <dd className="text-sm font-medium break-words">{formatDemandDate(demand.prazo_desejado)}</dd>
                 </div>
-                <div className="min-w-0 space-y-0.5">
-                  <dt className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                    Publicada em
-                  </dt>
-                  <dd className="text-sm font-medium break-words">{formatDemandDate(demand.published_at)}</dd>
-                </div>
-                {expiresInfo && (
-                  <div className="min-w-0 space-y-0.5 col-span-2">
+                {expiresInfo ? (
+                  <div className="min-w-0 space-y-0.5 sm:col-span-2">
                     <dt className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                      Validade do pedido
+                      Validade da solicitação
                     </dt>
                     <dd
                       className={cn(
@@ -324,125 +427,68 @@ export function OfferDetailPage() {
                       {expiresInfo.label}
                     </dd>
                   </div>
-                )}
+                ) : null}
               </dl>
 
-              {demand.observacoes && (
+              {demand.observacoes ? (
                 <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2.5">
                   <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                     Observações do comprador
                   </p>
                   <p className="mt-1 text-sm leading-relaxed">{demand.observacoes}</p>
                 </div>
-              )}
+              ) : null}
 
-              {marketUnitPrice != null && marketUnitPrice > 0 && (
-                <div className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2.5 text-sm">
-                  <p className="text-muted-foreground">
-                    Preço de referência (seu catálogo / mercado):{' '}
-                    <span className="font-semibold text-foreground">{formatCurrency(marketUnitPrice)}</span>
-                    {' '}/ unidade
+              {demandHasVariantSpecs(demand) ? (
+                <div className="space-y-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Especificações solicitadas
                   </p>
+                  <DemandSpecificationsTable demand={demand} unidade={demand.unidade} />
                 </div>
-              )}
+              ) : null}
             </CardContent>
           </Card>
 
           {myOffer ? (
-            <Alert className="border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/30">
-              <p className="font-medium">Proposta já enviada</p>
-              <p className="mt-1 text-sm">
-                Valor:{' '}
-                {formatCurrency(myOffer.valor)}
-                {' · '}
-                Prazo: {myOffer.prazo_entrega_dias} dias
-              </p>
-              <StatusBadge status={myOffer.status} kind="offer" className="mt-2" />
-            </Alert>
+            <>
+              <OfferItemsTable
+                demand={demand}
+                items={submittedLineItems}
+                unidade={demand.unidade}
+                readOnly
+              />
+              <Alert className="border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/30">
+                <p className="font-medium">Proposta já enviada</p>
+                <p className="mt-1 text-sm">
+                  Valor: {formatCurrency(myOffer.valor)}
+                  {' · '}
+                  Prazo: {myOffer.prazo_entrega_dias} dias
+                </p>
+                <StatusBadge status={myOffer.status} kind="offer" className="mt-2" />
+              </Alert>
+            </>
           ) : (
             <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Nova proposta</CardTitle>
-              </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-6 pt-6">
+                <OfferItemsTable
+                  demand={demand}
+                  items={lineItems}
+                  unidade={demand.unidade}
+                  onChange={setLineItems}
+                />
+
+                <div className="lg:hidden">
+                  <OfferProposalSummary
+                    totalQuantity={totalQuantity}
+                    totalValue={totalValue}
+                    unidade={demand.unidade}
+                  />
+                </div>
+
                 <Form {...form}>
                   <form id="offer-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="valor"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Valor total (R$)</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              min={0}
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <FormField
-                        control={form.control}
-                        name="quantidade"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Quantidade</FormLabel>
-                            <FormControl>
-                              <Input type="number" min={1} {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="prazo_entrega_dias"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Prazo (dias)</FormLabel>
-                            <FormControl>
-                              <Input type="number" min={1} {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    <FormField
-                      control={form.control}
-                      name="validade_dias"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Validade (dias)</FormLabel>
-                          <FormControl>
-                            <Input type="number" min={1} max={30} {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="mensagem"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Mensagem</FormLabel>
-                          <FormControl>
-                            <textarea
-                              className="scrollbar-custom flex min-h-[72px] w-full rounded-xl border border-input bg-background px-3 py-2 text-sm"
-                              placeholder="Detalhes da proposta..."
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    <OfferConditionsFields form={form} />
                   </form>
                 </Form>
               </CardContent>
@@ -472,13 +518,13 @@ export function OfferDetailPage() {
           </button>
         </section>
 
-        <aside className="glass-sidebar hidden min-h-0 w-full shrink-0 flex-col overflow-hidden lg:flex lg:h-full lg:w-72 lg:border-l xl:w-80">
+        <aside className="glass-sidebar hidden min-h-0 w-full shrink-0 flex-col overflow-hidden lg:flex lg:h-full lg:w-80 lg:border-l xl:w-96">
           <div className="shrink-0 px-4 pt-4 pb-2 lg:px-6">
             <p className="flex items-center gap-2 text-sm font-semibold">
               <MessageSquare className="h-4 w-4" />
               Chat com comprador
             </p>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="mt-1 text-xs text-muted-foreground">
               Negocie antes de enviar ou após a proposta
             </p>
           </div>
@@ -492,7 +538,29 @@ export function OfferDetailPage() {
             onSendChat={handleSendChat}
             sending={sendMessage.isPending}
             messagesEndRef={messagesEndRef}
+            className="min-h-[220px] max-h-[42vh]"
           />
+
+          {showOfferForm ? (
+            <div className="scrollbar-custom shrink-0 space-y-4 border-t border-sidebar-border bg-background p-4 lg:p-6">
+              <OfferProposalSummary
+                totalQuantity={totalQuantity}
+                totalValue={totalValue}
+                unidade={demand.unidade}
+              />
+              <Button
+                type="submit"
+                form="offer-form"
+                className="w-full rounded-xl font-semibold"
+                disabled={createOffer.isPending || totalValue <= 0}
+              >
+                {createOffer.isPending ? 'Enviando...' : 'Enviar proposta'}
+              </Button>
+              <p className="text-center text-xs text-muted-foreground">
+                Ao enviar, você concorda com os termos da plataforma.
+              </p>
+            </div>
+          ) : null}
         </aside>
       </ScrollPageShell>
 
@@ -538,13 +606,13 @@ export function OfferDetailPage() {
         </div>
       )}
 
-      {showOfferFooter && (
-        <footer className="flex shrink-0 flex-col gap-2 border-t border-border bg-background/95 px-4 py-3 pb-safe-bottom backdrop-blur-sm lg:flex-row lg:items-center lg:justify-end lg:px-6">
+      {showOfferForm && (
+        <footer className="flex shrink-0 flex-col gap-2 border-t border-border bg-background/95 px-4 py-3 pb-safe-bottom backdrop-blur-sm lg:hidden">
           <Button
             type="submit"
             form="offer-form"
-            className="w-full rounded-xl font-semibold lg:w-auto"
-            disabled={createOffer.isPending}
+            className="w-full rounded-xl font-semibold"
+            disabled={createOffer.isPending || totalValue <= 0}
           >
             {createOffer.isPending ? 'Enviando...' : 'Enviar proposta'}
           </Button>

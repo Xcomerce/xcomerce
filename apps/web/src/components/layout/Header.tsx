@@ -1,5 +1,5 @@
-import { ArrowLeft, Bell, Menu, Search } from 'lucide-react'
-import { Link, useLocation, useMatch, useNavigate, useSearchParams } from 'react-router-dom'
+import { ArrowLeft, Bell, Menu } from 'lucide-react'
+import { Link, useLocation, useMatch, useNavigate } from 'react-router-dom'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,16 +13,34 @@ import { useAuth } from '@/contexts/auth-context'
 import { usePageTitle } from '@/hooks/use-page-title'
 import { useUnreadNotificationCount } from '@/hooks/use-notifications'
 import { cn, getInitials } from '@/lib/utils'
-import { BRAZILIAN_STATES } from '@/lib/brazil-locations'
 import { useFeedLocationFilter } from '@/hooks/use-feed-location-filter'
 import {
   QuickRoleSwitchMenuItem,
   shouldShowFullRolePicker,
 } from '@/components/layout/QuickRoleSwitch'
+import { FeedSearchInput } from '@/components/buyer/FeedSearchInput'
+import { FeedLocationControl } from '@/components/buyer/FeedLocationControl'
 
 type HeaderProps = {
   onMenuClick: () => void
   className?: string
+}
+
+function NotificationButton({ unreadCount }: { unreadCount: number }) {
+  return (
+    <Link
+      to="/notifications"
+      className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl hover:bg-secondary/50"
+      aria-label="Notificações"
+    >
+      <Bell size={20} />
+      {unreadCount > 0 && (
+        <span className="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground">
+          {unreadCount > 99 ? '99+' : unreadCount}
+        </span>
+      )}
+    </Link>
+  )
 }
 
 export function Header({ onMenuClick, className }: HeaderProps) {
@@ -31,9 +49,6 @@ export function Header({ onMenuClick, className }: HeaderProps) {
   const { pathname } = useLocation()
   const { profile, roles, signOut } = useAuth()
   const { data: unreadCount = 0 } = useUnreadNotificationCount()
-  const [searchParams, setSearchParams] = useSearchParams()
-  const searchQuery = searchParams.get('search') || ''
-  const selectedUf = searchParams.get('uf') || ''
 
   const isBackToOffersPage = pathname.startsWith('/buyer/offers/')
   const isCatalogFormPage =
@@ -55,44 +70,71 @@ export function Header({ onMenuClick, className }: HeaderProps) {
 
   useFeedLocationFilter(isFeedPage)
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value
-    setSearchParams((prev) => {
-      if (value) {
-        prev.set('search', value)
-      } else {
-        prev.delete('search')
-      }
-      return prev
-    }, { replace: true })
-  }
+  if (isFeedPage) {
+    return (
+      <header
+        className={cn(
+          'glass-navbar sticky top-0 z-30 flex shrink-0 flex-col gap-2 px-4 py-2 lg:flex-row lg:items-center lg:justify-between lg:px-6 lg:py-0 lg:h-[4.5rem]',
+          className,
+        )}
+      >
+        <div className="flex w-full items-center justify-between gap-3 lg:hidden">
+          <div className="min-w-0">
+            <FeedLocationControl variant="link" />
+          </div>
+          <NotificationButton unreadCount={unreadCount} />
+        </div>
 
-  const handleUfChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = e.target.value
-    setSearchParams((prev) => {
-      if (value) {
-        prev.set('uf', value)
-      } else {
-        prev.delete('uf')
-      }
-      return prev
-    }, { replace: true })
+        <div className="flex min-w-0 w-full flex-col gap-2 lg:flex-1 lg:flex-row lg:items-center lg:gap-3">
+          <FeedSearchInput className="w-full lg:max-w-lg" />
+          <div className="hidden lg:block lg:w-auto">
+            <FeedLocationControl className="min-w-[11.5rem]" />
+          </div>
+        </div>
+
+        <div className="hidden items-center gap-2 lg:flex">
+          <NotificationButton unreadCount={unreadCount} />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="flex items-center gap-2 rounded-xl p-1.5 hover:bg-secondary/50"
+              >
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback className="text-xs">{getInitials(profile?.full_name ?? 'U')}</AvatarFallback>
+                </Avatar>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>
+                <div className="flex flex-col">
+                  <span>{profile?.full_name}</span>
+                  <span className="text-xs font-normal text-muted-foreground">{profile?.email}</span>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => navigate('/settings/profile')}>Meu perfil</DropdownMenuItem>
+              <QuickRoleSwitchMenuItem />
+              {shouldShowFullRolePicker(roles) ? (
+                <DropdownMenuItem onClick={() => navigate('/auth/select-role')}>Trocar perfil</DropdownMenuItem>
+              ) : null}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => signOut()}>Sair</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </header>
+    )
   }
 
   return (
     <header
       className={cn(
-        'glass-navbar sticky top-0 z-30 flex shrink-0 items-center justify-between px-4 lg:px-6',
-        isFeedPage ? 'h-[4.5rem]' : 'h-14',
+        'glass-navbar sticky top-0 z-30 flex shrink-0 items-center justify-between px-4 lg:px-6 h-14',
         className,
       )}
     >
-      <div
-        className={cn(
-          'flex min-w-0 items-center gap-3',
-          isFeedPage ? 'flex-1' : 'flex-1 lg:flex-initial',
-        )}
-      >
+      <div className="flex min-w-0 flex-1 items-center gap-3 lg:flex-initial">
         <button
           type="button"
           onClick={onMenuClick}
@@ -109,9 +151,7 @@ export function Header({ onMenuClick, className }: HeaderProps) {
             aria-label="Voltar para ofertas"
           >
             <ArrowLeft size={15} className="shrink-0 text-muted-foreground" />
-            <h1 className="font-display text-sm font-semibold">
-              Voltar para ofertas
-            </h1>
+            <h1 className="font-display text-sm font-semibold">Voltar para ofertas</h1>
           </button>
         ) : isCatalogFormPage ? (
           <button
@@ -121,9 +161,7 @@ export function Header({ onMenuClick, className }: HeaderProps) {
             aria-label="Voltar ao catálogo"
           >
             <ArrowLeft size={15} className="shrink-0 text-muted-foreground" />
-            <h1 className="truncate font-display text-sm font-semibold sm:text-base lg:text-lg">
-              {pageTitle}
-            </h1>
+            <h1 className="truncate font-display text-sm font-semibold sm:text-base lg:text-lg">{pageTitle}</h1>
           </button>
         ) : isSupplierOfferPage ? (
           <button
@@ -133,9 +171,7 @@ export function Header({ onMenuClick, className }: HeaderProps) {
             aria-label="Voltar ao mural"
           >
             <ArrowLeft size={15} className="shrink-0 text-muted-foreground" />
-            <h1 className="truncate font-display text-sm font-semibold sm:text-base lg:text-lg">
-              {pageTitle}
-            </h1>
+            <h1 className="truncate font-display text-sm font-semibold sm:text-base lg:text-lg">{pageTitle}</h1>
           </button>
         ) : orderDetailBackPath ? (
           <div className="flex min-w-0 items-center gap-1 sm:gap-1.5 -ml-1">
@@ -161,43 +197,8 @@ export function Header({ onMenuClick, className }: HeaderProps) {
             aria-label="Voltar ao Explorar"
           >
             <ArrowLeft size={15} className="shrink-0 text-muted-foreground" />
-            <h1 className="truncate font-display text-sm font-semibold sm:text-base lg:text-lg">
-              Voltar ao Explorar
-            </h1>
+            <h1 className="truncate font-display text-sm font-semibold sm:text-base lg:text-lg">Voltar ao Explorar</h1>
           </button>
-        ) : isFeedPage ? (
-          <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
-            <div className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-xl border border-border bg-secondary/50 px-3 focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2 sm:max-w-md lg:max-w-lg">
-              <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
-              <input
-                type="text"
-                placeholder="Buscar produto, categoria ou fornecedor"
-                value={searchQuery}
-                onChange={handleSearchChange}
-                className="min-w-0 flex-1 bg-transparent py-1 text-sm text-foreground outline-none placeholder:text-muted-foreground"
-              />
-            </div>
-            <div className="relative shrink-0">
-              <select
-                value={selectedUf}
-                onChange={handleUfChange}
-                aria-label="Filtrar por estado"
-                className="h-10 min-w-[9.5rem] cursor-pointer appearance-none rounded-xl border border-border bg-secondary/50 py-1 pl-3 pr-8 text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 sm:min-w-[11.5rem]"
-              >
-                <option value="">Todos os estados</option>
-                {BRAZILIAN_STATES.map((state) => (
-                  <option key={state.uf} value={state.uf}>
-                    {state.name}, {state.uf}
-                  </option>
-                ))}
-              </select>
-              <div className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground">
-                <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
-            </div>
-          </div>
         ) : (
           <h1 className="max-w-[180px] truncate font-display text-lg font-semibold lg:max-w-none lg:text-xl">
             {pageTitle}
@@ -206,19 +207,7 @@ export function Header({ onMenuClick, className }: HeaderProps) {
       </div>
 
       <div className="flex items-center gap-2">
-        <Link
-          to="/notifications"
-          className="relative flex h-10 w-10 items-center justify-center rounded-xl hover:bg-secondary/50"
-          aria-label="Notificações"
-        >
-          <Bell size={20} />
-          {unreadCount > 0 && (
-            <span className="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground">
-              {unreadCount > 99 ? '99+' : unreadCount}
-            </span>
-          )}
-        </Link>
-
+        <NotificationButton unreadCount={unreadCount} />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button

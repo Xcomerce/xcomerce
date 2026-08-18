@@ -8,7 +8,7 @@ import { EmptyState } from '@/components/common/EmptyState'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import { FeedSearchBar } from '@/components/feed/FeedSearchBar'
 import { useCategories, useRootCategories } from '@/hooks/use-categories'
-import { useFeedProducts } from '@/hooks/use-products'
+import { useFeedProducts, useSearchSuggestions } from '@/hooks/use-products'
 import { getDescendantCategoryIds, getPrimaryProductImageUrl } from '@keve/shared'
 import { getProductImageUri } from '@/lib/product-images'
 import { formatCurrency } from '@/lib/utils'
@@ -52,7 +52,10 @@ export default function FeedScreen() {
     uf: selectedUf || undefined,
   })
 
-  const isFilteredView = Boolean(categoryId || search || selectedUf)
+  const hasOutsideUfResults = Boolean(selectedUf && products.some((product) => product.isOutsideUf))
+  const { data: emptySuggestions = [] } = useSearchSuggestions(search, !isLoading && products.length === 0)
+
+  const isFilteredView = Boolean(categoryId || search)
 
   const sections = useMemo(() => {
     if (isFilteredView) {
@@ -61,8 +64,6 @@ export default function FeedScreen() {
       else if (categoryId) {
         const category = rootCategories.find((cat: Category) => cat.id === categoryId)
         title = category?.name ?? 'Categoria'
-      } else if (selectedUf) {
-        title = `Produtos em ${selectedUf}`
       }
       return [{ title, data: products }]
     }
@@ -109,12 +110,39 @@ export default function FeedScreen() {
       {isLoading ? (
         <LoadingSkeleton rows={4} />
       ) : products.length === 0 ? (
-        <EmptyState title="Nenhum produto no feed" description="Publique um pedido para receber propostas dos fornecedores." />
+        <View className="flex-1 px-4">
+          <EmptyState
+            title="Nenhum produto encontrado"
+            description="Tente redefinir seus filtros ou altere a busca para encontrar produtos dos fornecedores."
+          />
+          {emptySuggestions.length > 0 ? (
+            <View className="mt-4 flex-row flex-wrap justify-center gap-2">
+              {emptySuggestions.map((item) => (
+                <Pressable
+                  key={`${item.suggestionType}-${item.suggestion}`}
+                  onPress={() => setSearch(item.suggestion)}
+                  className="rounded-full border border-slate-200 bg-white px-3 py-1.5"
+                >
+                  <Text className="text-xs font-medium text-slate-700">{item.suggestion}</Text>
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
+        </View>
       ) : (
         <FlatList
           data={sections}
           keyExtractor={(item) => item.title}
           contentContainerStyle={{ padding: 16, gap: 16 }}
+          ListHeaderComponent={
+            hasOutsideUfResults ? (
+              <View className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                <Text className="text-sm text-amber-900">
+                  Nenhum produto em {selectedUf}. Exibindo resultados de outras regiões.
+                </Text>
+              </View>
+            ) : null
+          }
           renderItem={({ item: section }) => (
             <View>
               <Text className="mb-3 text-lg font-bold text-brand-dark">{section.title}</Text>

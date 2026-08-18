@@ -94,6 +94,11 @@ export default function NewDemandScreen() {
   const returnTo = typeof params.returnTo === 'string' ? params.returnTo : undefined
   const backFallback = returnTo === 'feed' ? '/(app)' : '/(app)/demands'
   const selectedCategory = leafCategories.find((cat: Category) => cat.id === categoryId)
+  const descricaoPlaceholder = useMemo(() => {
+    const names = leafCategories.slice(0, 5).map((cat: Category) => cat.name)
+    if (names.length === 0) return 'Ex> ...'
+    return `Ex> ${names.join(', ')}`
+  }, [leafCategories])
 
   useEffect(() => {
     if (prefilled) return
@@ -146,11 +151,12 @@ export default function NewDemandScreen() {
   }, [precoReferencia])
 
   const handleSubmit = async (publish: boolean) => {
-    if (!titulo || !descricao || !categoryId) {
-      Alert.alert('Campos obrigatórios', 'Preencha título, descrição e categoria.')
+    if (!titulo || !categoryId) {
+      Alert.alert('Campos obrigatórios', 'Preencha título e categoria.')
       return
     }
-    if (descricao.length < 10) {
+    const trimmedDescricao = descricao.trim()
+    if (trimmedDescricao.length > 0 && trimmedDescricao.length < 10) {
       Alert.alert('Descrição', 'A descrição deve ter no mínimo 10 caracteres.')
       return
     }
@@ -163,7 +169,7 @@ export default function NewDemandScreen() {
     try {
       const demand = await createDemand.mutateAsync({
         titulo,
-        descricao,
+        descricao: trimmedDescricao,
         category_id: categoryId,
         quantidade: Number(quantidade),
         unidade,
@@ -216,12 +222,12 @@ export default function NewDemandScreen() {
           </View>
 
           <Input
-            label="Descrição do pedido"
+            label="Descrição do pedido (opcional)"
             value={descricao}
             onChangeText={setDescricao}
             multiline
             className="min-h-24 py-3"
-            placeholder="Necessito 500 capacetes de obra com CA válido, cor branca..."
+            placeholder={descricaoPlaceholder}
           />
 
           <View className="flex-row gap-3">

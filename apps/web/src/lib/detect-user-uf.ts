@@ -9,6 +9,30 @@ export type DetectedUserLocation = {
   uf: string
 }
 
+export function normalizeGeocodedCityName(cidade: string): string {
+  let normalized = cidade.trim()
+  if (!normalized) return normalized
+
+  const metroMatch = normalized.match(/^regi[aã]o metropolitana\s+(?:de|do|da|dos|das)\s+(.+)$/i)
+  if (metroMatch?.[1]) {
+    normalized = metroMatch[1].trim()
+  }
+
+  const regionMatch = normalized.match(/^regi[aã]o\s+(?:de|do|da|dos|das)\s+(.+)$/i)
+  if (regionMatch?.[1]) {
+    normalized = regionMatch[1].trim()
+  }
+
+  return normalized
+}
+
+function normalizeDetectedLocation(location: DetectedUserLocation): DetectedUserLocation {
+  return {
+    cidade: normalizeGeocodedCityName(location.cidade),
+    uf: location.uf.toUpperCase(),
+  }
+}
+
 export function isBrazilianUf(value: string | null | undefined): value is string {
   return Boolean(value && VALID_UFS.has(value))
 }
@@ -36,7 +60,7 @@ export function getStoredDetectedLocation(): DetectedUserLocation | null {
     if (!stored) return null
     const parsed = JSON.parse(stored) as DetectedUserLocation
     if (!parsed.cidade?.trim() || !isBrazilianUf(parsed.uf)) return null
-    return { cidade: parsed.cidade.trim(), uf: parsed.uf.toUpperCase() }
+    return normalizeDetectedLocation({ cidade: parsed.cidade.trim(), uf: parsed.uf.toUpperCase() })
   } catch {
     return null
   }
@@ -44,8 +68,9 @@ export function getStoredDetectedLocation(): DetectedUserLocation | null {
 
 export function storeDetectedLocation(location: DetectedUserLocation): void {
   try {
-    sessionStorage.setItem(DETECTED_LOCATION_STORAGE_KEY, JSON.stringify(location))
-    storeDetectedUf(location.uf)
+    const normalized = normalizeDetectedLocation(location)
+    sessionStorage.setItem(DETECTED_LOCATION_STORAGE_KEY, JSON.stringify(normalized))
+    storeDetectedUf(normalized.uf)
   } catch {
     // ignore storage errors
   }
@@ -72,9 +97,9 @@ function readLocationFromCoordinates(
       if (!code?.startsWith('BR-')) return null
       const uf = code.slice(3).toUpperCase()
       if (!isBrazilianUf(uf)) return null
-      const cidade = data.city?.trim() || data.locality?.trim()
-      if (!cidade) return null
-      return { cidade, uf }
+      const rawCity = data.locality?.trim() || data.city?.trim()
+      if (!rawCity) return null
+      return normalizeDetectedLocation({ cidade: rawCity, uf })
     })
     .catch(() => null)
 }

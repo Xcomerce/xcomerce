@@ -37,7 +37,7 @@ export const SUPPLIER_STATUS_LABELS: Record<string, string> = {
 }
 
 export const NOTIFICATION_TYPE_LABELS: Record<string, string> = {
-  'demand.matched': 'Nova oportunidade de pedido',
+  'demand.matched': 'Nova oportunidade de solicitação',
   'offer.received': 'Nova proposta recebida',
   'offer.auto_sent': 'Proposta automática enviada',
   'offer.contact_revealed': 'Contato revelado',

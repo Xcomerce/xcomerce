@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect, useMemo, type ReactNode } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, Package } from 'lucide-react'
-import { useFeedProducts } from '@/hooks/use-products'
+import { useFeedProducts, useSearchSuggestions } from '@/hooks/use-products'
 import { useCategories, useRootCategories } from '@/hooks/use-categories'
 import { getDescendantCategoryIds } from '@keve/shared'
 import { cn } from '@/lib/utils'
-import type { FeedProduct } from '@/services/products'
+import type { FeedProductSearchResult } from '@/services/products'
 import {
   FeedProductCard,
   HORIZONTAL_CARD_CLASS,
@@ -141,7 +141,7 @@ export function BuyerFeedPage() {
   const searchQuery = searchParams.get('search') || ''
   const selectedUf = searchParams.get('uf') || ''
   const [selectedCategory, setSelectedCategory] = useState<string>('')
-  const [selectedProduct, setSelectedProduct] = useState<FeedProduct | null>(null)
+  const [selectedProduct, setSelectedProduct] = useState<FeedProductSearchResult | null>(null)
   const categoriesRef = useRef<HTMLDivElement>(null)
   const [showLeftArrow, setShowLeftArrow] = useState(false)
   const [showRightArrow, setShowRightArrow] = useState(true)
@@ -160,7 +160,14 @@ export function BuyerFeedPage() {
     uf: selectedUf || undefined,
   })
 
-  const isFilteredView = Boolean(selectedCategory || searchQuery || selectedUf)
+  const hasOutsideUfResults = useMemo(
+    () => Boolean(selectedUf && products.some((product) => product.isOutsideUf)),
+    [products, selectedUf],
+  )
+
+  const { data: emptySuggestions = [] } = useSearchSuggestions(searchQuery, !loadingProducts && products.length === 0)
+
+  const isFilteredView = Boolean(selectedCategory || searchQuery)
 
   const filteredTitle = useMemo(() => {
     if (searchQuery) return `Resultados para "${searchQuery}"`
@@ -168,9 +175,8 @@ export function BuyerFeedPage() {
       const category = rootCategories.find((cat) => cat.id === selectedCategory)
       return category?.name ?? 'Categoria'
     }
-    if (selectedUf) return `Produtos em ${selectedUf}`
     return ''
-  }, [rootCategories, searchQuery, selectedCategory, selectedUf])
+  }, [rootCategories, searchQuery, selectedCategory])
 
   const groupedProducts = useMemo(() => {
     if (isFilteredView) return []
@@ -291,21 +297,15 @@ export function BuyerFeedPage() {
           </button>
         </div>
 
-        {isFilteredView && (
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <h3 className="font-display text-lg font-normal text-foreground">{filteredTitle}</h3>
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedCategory('')
-                navigate('/buyer/feed', { replace: true })
-              }}
-              className="self-start text-sm font-medium text-primary transition-colors hover:text-primary/80"
-            >
-              Voltar ao feed
-            </button>
+        {isFilteredView ? (
+          <h3 className="font-display text-lg font-normal text-foreground">{filteredTitle}</h3>
+        ) : null}
+
+        {hasOutsideUfResults ? (
+          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-foreground">
+            Nenhum produto em {selectedUf}. Exibindo resultados de outras regiões.
           </div>
-        )}
+        ) : null}
 
         <div className="space-y-4">
           {loadingProducts ? (
@@ -319,6 +319,24 @@ export function BuyerFeedPage() {
               <p className="mt-1 max-w-sm text-sm text-muted-foreground">
                 Tente redefinir seus filtros ou altere a busca para encontrar produtos dos fornecedores.
               </p>
+              {emptySuggestions.length > 0 ? (
+                <div className="mt-5 flex max-w-lg flex-wrap justify-center gap-2">
+                  {emptySuggestions.map((item) => (
+                    <button
+                      key={`${item.suggestionType}-${item.suggestion}`}
+                      type="button"
+                      onClick={() =>
+                        navigate(`/buyer/feed?search=${encodeURIComponent(item.suggestion)}${selectedUf ? `&uf=${selectedUf}` : ''}`, {
+                          replace: true,
+                        })
+                      }
+                      className="rounded-full border border-border bg-secondary/50 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-secondary"
+                    >
+                      {item.suggestion}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
             </div>
           ) : isFilteredView ? (
             <ProductVerticalGrid>

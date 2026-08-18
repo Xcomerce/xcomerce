@@ -220,8 +220,8 @@ export function BuyerOrderDetailPage() {
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Próximas ações</CardTitle>
-            <CardDescription>O que você precisa fazer nesta etapa.</CardDescription>
+            <CardTitle>Status do pedido</CardTitle>
+            <CardDescription>Acompanhe o andamento do seu pedido.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {order.status === 'AGUARDANDO_CONFIRMACAO_EXTERNA' && (
@@ -352,8 +352,8 @@ export function BuyerOrderDetailPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>SLAs e prazos</CardTitle>
-            <CardDescription>Prazos por etapa do workflow.</CardDescription>
+            <CardTitle>Prazos de pagamento</CardTitle>
+            <CardDescription>Acompanhe os prazos das etapas de pagamento.</CardDescription>
           </CardHeader>
           <CardContent>
             {loadingSlas ? (

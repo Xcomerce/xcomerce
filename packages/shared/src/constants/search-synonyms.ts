@@ -1,0 +1,38 @@
+/** Sinônimos PT moda — espelham expand_search_token no Postgres */
+export const SEARCH_SYNONYMS: Record<string, string[]> = {
+  preta: ['preta', 'preto', 'pretas', 'pretos'],
+  pretas: ['preta', 'preto', 'pretas', 'pretos'],
+  preto: ['preta', 'preto', 'pretas', 'pretos'],
+  pretos: ['preta', 'preto', 'pretas', 'pretos'],
+  branca: ['branca', 'branco', 'brancas', 'brancos'],
+  brancas: ['branca', 'branco', 'brancas', 'brancos'],
+  branco: ['branca', 'branco', 'brancas', 'brancos'],
+  brancos: ['branca', 'branco', 'brancas', 'brancos'],
+  azul: ['azul', 'azuis'],
+  azuis: ['azul', 'azuis'],
+  camisa: ['camisa', 'camiseta', 'camisas', 'camisetas'],
+  camisas: ['camisa', 'camiseta', 'camisas', 'camisetas'],
+  camiseta: ['camisa', 'camiseta', 'camisas', 'camisetas'],
+  camisetas: ['camisa', 'camiseta', 'camisas', 'camisetas'],
+  calcado: ['calcado', 'calcados', 'calçado', 'calçados'],
+  calcados: ['calcado', 'calcados', 'calçado', 'calçados'],
+  calçado: ['calcado', 'calcados', 'calçado', 'calçados'],
+  calçados: ['calcado', 'calcados', 'calçado', 'calçados'],
+}
+
+export const SEARCH_STOPWORDS = new Set([
+  'de',
+  'da',
+  'do',
+  'das',
+  'dos',
+  'e',
+  'em',
+  'na',
+  'no',
+  'nas',
+  'nos',
+  'para',
+  'com',
+  'por',
+])

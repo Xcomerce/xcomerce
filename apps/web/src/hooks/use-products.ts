@@ -22,6 +22,7 @@ export const productKeys = {
   detail: (id: string) => [...productKeys.all, 'detail', id] as const,
   count: (supplierId: string) => [...productKeys.all, 'count', supplierId] as const,
   feed: (filters?: object) => [...productKeys.all, 'feed', filters ?? {}] as const,
+  suggestions: (query: string) => [...productKeys.all, 'suggestions', query] as const,
   store: (supplierId: string) => [...productKeys.all, 'store', supplierId] as const,
   catalog: (supplierId: string) => [...productKeys.all, 'catalog', supplierId] as const,
 }
@@ -109,6 +110,15 @@ export function useFeedProducts(filters?: {
   return useQuery({
     queryKey: productKeys.feed(filters),
     queryFn: () => products.fetchFeedProducts(filters),
+  })
+}
+
+export function useSearchSuggestions(query: string, enabled = true) {
+  return useQuery({
+    queryKey: productKeys.suggestions(query),
+    queryFn: () => products.fetchSearchSuggestions(query),
+    enabled: enabled && query.trim().length >= 1,
+    staleTime: 30_000,
   })
 }
 

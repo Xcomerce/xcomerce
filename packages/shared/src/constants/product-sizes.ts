@@ -11,6 +11,21 @@ export const PRODUCT_SIZE_TYPE_LABELS: Record<ProductSizeType, string> = {
 
 export const CLOTHING_SIZES = ['PP', 'P', 'M', 'G', 'GG', 'XG', 'XXG'] as const
 
+export const DEFAULT_PRODUCT_COLORS = [
+  'Preto',
+  'Branco',
+  'Azul',
+  'Azul Marinho',
+  'Vermelho',
+  'Verde',
+  'Amarelo',
+  'Cinza',
+  'Bege',
+  'Rosa',
+  'Marrom',
+  'Nude',
+] as const
+
 /** Numeração BR inteira (33–48). */
 export const SHOE_SIZES_BR = Array.from({ length: 16 }, (_, i) => String(33 + i))
 
@@ -39,6 +54,15 @@ export function dedupeVariantValues(values: string[]): string[] {
     result.push(trimmed)
   }
   return result
+}
+
+export function resolveColorOptions(catalogColors: string[] | undefined, currentValue?: string): string[] {
+  const base = catalogColors?.length ? dedupeVariantValues(catalogColors) : [...DEFAULT_PRODUCT_COLORS]
+  const trimmed = currentValue?.trim()
+  if (trimmed && !variantArrayContains(base, trimmed)) {
+    return [trimmed, ...base]
+  }
+  return base
 }
 
 export function sortSizeValues(values: string[], tipo: ProductSizeType | null | undefined): string[] {
@@ -70,6 +94,39 @@ export type DemandVariantFields = {
   cor?: string | null
   tamanho?: string | null
   especificacoes?: DemandSpecification[] | null
+}
+
+export type DemandSpecificationGroup = {
+  cor: string
+  items: DemandSpecification[]
+}
+
+export function groupDemandSpecificationsByColor(
+  demand: DemandVariantFields,
+): DemandSpecificationGroup[] {
+  const specs = normalizeDemandSpecifications(demand).filter(
+    (spec) => spec.cor || spec.tamanho || (spec.quantidade ?? 0) > 0,
+  )
+  if (specs.length === 0) return []
+
+  const groups: DemandSpecificationGroup[] = []
+  const groupIndexByColor = new Map<string, number>()
+
+  for (const spec of specs) {
+    const cor = spec.cor?.trim() ?? ''
+    const key = cor ? normalizeVariantValue(cor) : '__sem_cor__'
+    let groupIndex = groupIndexByColor.get(key)
+
+    if (groupIndex === undefined) {
+      groupIndex = groups.length
+      groupIndexByColor.set(key, groupIndex)
+      groups.push({ cor, items: [] })
+    }
+
+    groups[groupIndex].items.push(spec)
+  }
+
+  return groups
 }
 
 export function normalizeDemandSpecifications(demand: DemandVariantFields): DemandSpecification[] {

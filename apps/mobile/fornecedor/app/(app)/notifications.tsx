@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/common/EmptyState'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import { useNotifications, useMarkNotificationRead, useMarkAllNotificationsRead } from '@/hooks/use-notifications'
+import { formatNotificationBody, formatNotificationTitle } from '@keve/shared'
 import { formatDate } from '@/lib/utils'
 
 export default function NotificationsScreen() {
@@ -35,8 +36,8 @@ export default function NotificationsScreen() {
           renderItem={({ item }) => (
             <Pressable onPress={() => markRead.mutate(item.id)}>
               <Card className={item.read_at ? 'opacity-60' : ''}>
-                <Text className="font-semibold text-slate-900">{item.title}</Text>
-                <Text className="mt-1 text-sm text-slate-600">{item.body}</Text>
+                <Text className="font-semibold text-slate-900">{formatNotificationTitle(item.title)}</Text>
+                <Text className="mt-1 text-sm text-slate-600">{formatNotificationBody(item.body)}</Text>
                 <Text className="mt-2 text-xs text-slate-400">{formatDate(item.created_at)}</Text>
               </Card>
             </Pressable>
