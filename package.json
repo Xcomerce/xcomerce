@@ -17,6 +17,9 @@
     "test:search": "npm run test -w @keve/shared",
     "validate:search": "node scripts/run-search-validation.mjs --linked",
     "validate:search:local": "node scripts/run-search-validation.mjs",
+    "seed:search-load": "node scripts/run-search-load-test.mjs --linked --seed",
+    "test:search-load": "node scripts/run-search-load-test.mjs --linked --test",
+    "cleanup:search-load": "node scripts/run-search-load-test.mjs --linked --cleanup",
     "deploy:functions:lookup-cnpj": "npx supabase functions deploy lookup-cnpj --no-verify-jwt --project-ref wjoyobxpwkdyhnfrwbiu",
     "deploy:functions:match": "npx supabase functions deploy match-demand request-demand-match sync-supplier-matches --project-ref wjoyobxpwkdyhnfrwbiu"
   },

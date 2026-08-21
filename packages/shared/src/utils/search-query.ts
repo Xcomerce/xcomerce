@@ -1,4 +1,5 @@
 import { SEARCH_STOPWORDS, SEARCH_SYNONYMS } from '../constants/search-synonyms'
+import { SEARCH_CLOTHING_SIZE_TOKENS } from '../constants/product-sizes'
 
 const ACCENT_MAP: Record<string, string> = {
   á: 'a',
@@ -41,6 +42,12 @@ export function expandSearchToken(token: string): string[] {
   return SEARCH_SYNONYMS[normalized] ?? [normalized]
 }
 
+export function isValidSearchToken(token: string): boolean {
+  if (!token || SEARCH_STOPWORDS.has(token)) return false
+  if (token.length >= 2) return true
+  return SEARCH_CLOTHING_SIZE_TOKENS.has(token)
+}
+
 export function parseSearchQuery(query: string): string[] {
   const normalized = normalizeSearchTerm(query)
   if (!normalized) return []
@@ -50,7 +57,7 @@ export function parseSearchQuery(query: string): string[] {
 
   for (const rawToken of normalized.split(/\s+/)) {
     const token = rawToken.trim()
-    if (token.length < 2 || SEARCH_STOPWORDS.has(token) || seen.has(token)) {
+    if (!isValidSearchToken(token) || seen.has(token)) {
       continue
     }
     seen.add(token)

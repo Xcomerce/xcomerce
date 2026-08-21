@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   expandSearchToken,
+  isValidSearchToken,
   normalizeSearchTerm,
   parseSearchQuery,
   removeAccents,
@@ -29,6 +30,29 @@ describe('parseSearchQuery', () => {
 
   it('retorna vazio para string vazia', () => {
     expect(parseSearchQuery('   ')).toEqual([])
+  })
+
+  it('mantém tokens de tamanho de 1 caractere válidos', () => {
+    expect(parseSearchQuery('camiseta preta m')).toEqual(['camiseta', 'preta', 'm'])
+    expect(parseSearchQuery('camiseta g p')).toEqual(['camiseta', 'g', 'p'])
+  })
+
+  it('ignora tokens de 1 caractere que não são tamanho', () => {
+    expect(parseSearchQuery('camiseta x preta')).toEqual(['camiseta', 'preta'])
+  })
+})
+
+describe('isValidSearchToken', () => {
+  it('aceita tokens longos e tamanhos P/M/G', () => {
+    expect(isValidSearchToken('camiseta')).toBe(true)
+    expect(isValidSearchToken('m')).toBe(true)
+    expect(isValidSearchToken('g')).toBe(true)
+    expect(isValidSearchToken('p')).toBe(true)
+  })
+
+  it('rejeita stopwords e tokens inválidos curtos', () => {
+    expect(isValidSearchToken('de')).toBe(false)
+    expect(isValidSearchToken('x')).toBe(false)
   })
 })
 

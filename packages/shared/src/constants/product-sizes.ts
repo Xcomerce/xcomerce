@@ -11,6 +11,11 @@ export const PRODUCT_SIZE_TYPE_LABELS: Record<ProductSizeType, string> = {
 
 export const CLOTHING_SIZES = ['PP', 'P', 'M', 'G', 'GG', 'XG', 'XXG'] as const
 
+/** Tokens de tamanho de 1 caractere aceitos na busca (espelha is_valid_search_size_token no Postgres). */
+export const SEARCH_CLOTHING_SIZE_TOKENS = new Set(
+  CLOTHING_SIZES.filter((size) => size.length === 1).map((size) => size.toLowerCase()),
+)
+
 export const DEFAULT_PRODUCT_COLORS = [
   'Preto',
   'Branco',
