@@ -43,6 +43,7 @@ export function VariantStockTable({ rows, onChange, error }: VariantStockTablePr
           <thead>
             <tr className="border-b border-border/60 bg-muted/30 text-left text-xs text-muted-foreground">
               <th className="px-3 py-2 font-medium">Variação</th>
+              <th className="px-3 py-2 font-medium">Preço (R$)</th>
               <th className="px-3 py-2 font-medium">Quantidade</th>
               <th className="px-3 py-2 font-medium text-right">Estoque</th>
             </tr>
@@ -51,6 +52,27 @@ export function VariantStockTable({ rows, onChange, error }: VariantStockTablePr
             {rows.map((row, index) => (
               <tr key={`${row.cor ?? ''}|${row.tamanho ?? ''}`} className="border-b border-border/40 last:border-0">
                 <td className="px-3 py-2 font-medium text-foreground">{formatVariantStockLabel(row)}</td>
+                <td className="px-3 py-2">
+                  <Input
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    inputMode="decimal"
+                    placeholder="0,00"
+                    value={row.preco ?? ''}
+                    onChange={(e) => {
+                      const raw = e.target.value
+                      if (raw === '') {
+                        updateRow(index, { preco: null })
+                        return
+                      }
+                      const parsed = Number.parseFloat(raw)
+                      if (Number.isNaN(parsed)) return
+                      updateRow(index, { preco: Math.max(0, parsed) })
+                    }}
+                    className="h-9 max-w-[120px]"
+                  />
+                </td>
                 <td className="px-3 py-2">
                   <Input
                     type="number"

@@ -91,8 +91,8 @@ export const buyerNav: RoleNavConfig = {
       title: 'Principal',
       items: [
         { to: '/buyer/feed', label: 'Explorar', icon: LayoutGrid },
-        { to: '/buyer/dashboard', label: 'Minhas solicitações', icon: LayoutList },
         { to: '/buyer/demands/new', label: 'Nova solicitação', icon: PlusCircle },
+        { to: '/buyer/dashboard', label: 'Minhas solicitações', icon: LayoutList },
         { to: '/buyer/orders', label: 'Meus pedidos', icon: Package },
       ],
     },

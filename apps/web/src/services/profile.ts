@@ -58,3 +58,11 @@ export async function fetchUserProfile(userId: string): Promise<UserProfileBundl
     hasBuyerProfile: !!buyerRes.data,
   }
 }
+
+export async function ensureBuyerAccess(userId: string): Promise<void> {
+  const roleInsert = await supabase.from('user_roles').insert({ user_id: userId, role: 'buyer' })
+  if (roleInsert.error && roleInsert.error.code !== '23505') throw roleInsert.error
+
+  const buyerInsert = await supabase.from('buyer_profiles').insert({ user_id: userId })
+  if (buyerInsert.error && buyerInsert.error.code !== '23505') throw buyerInsert.error
+}

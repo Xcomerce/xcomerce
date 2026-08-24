@@ -17,6 +17,7 @@ export const productVariantStockRowSchema = z.object({
   tamanho: z.string().nullable(),
   quantidade: z.number().int().min(0).nullable(),
   ilimitado: z.boolean(),
+  preco: z.number().min(0).nullable().default(null),
 })
 
 export const productSchema = z

@@ -5,6 +5,7 @@ export type ProductVariantStockRow = {
   tamanho: string | null
   quantidade: number | null
   ilimitado: boolean
+  preco: number | null
 }
 
 export function variantStockKey(cor: string | null | undefined, tamanho: string | null | undefined): string {
@@ -36,6 +37,7 @@ export function buildVariantStockMatrix(
         tamanho,
         quantidade: null,
         ilimitado: false,
+        preco: null,
       },
     )
   }
@@ -70,6 +72,10 @@ export function parseVariantStockRows(value: unknown): ProductVariantStockRow[] 
             ? Math.max(0, Math.floor(row.quantidade))
             : null,
         ilimitado: row.ilimitado === true,
+        preco:
+          typeof row.preco === 'number' && Number.isFinite(row.preco) && row.preco >= 0
+            ? row.preco
+            : null,
       } satisfies ProductVariantStockRow
     })
     .filter((row): row is ProductVariantStockRow => row !== null)
@@ -85,5 +91,9 @@ export function normalizeVariantStockRows(rows: ProductVariantStockRow[]): Produ
       : row.quantidade === null || row.quantidade === undefined
         ? null
         : Math.max(0, Math.floor(row.quantidade)),
+    preco:
+      typeof row.preco === 'number' && Number.isFinite(row.preco) && row.preco >= 0
+        ? row.preco
+        : null,
   }))
 }

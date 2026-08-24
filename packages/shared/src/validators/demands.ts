@@ -1,5 +1,10 @@
 import { z } from 'zod'
 
+export const cityLocationSchema = z.object({
+  cidade: z.string().min(2, 'Informe a cidade'),
+  uf: z.string().length(2, 'UF deve ter 2 caracteres'),
+})
+
 export const demandSpecificationSchema = z.object({
   cor: z.string().trim().optional().or(z.literal('')),
   tamanho: z.string().trim().optional().or(z.literal('')),
@@ -25,6 +30,7 @@ export const demandSchema = z.object({
   unidade: z.string().min(1).default('un'),
   cidade: z.string().min(2, 'Informe a cidade'),
   uf: z.string().length(2, 'UF deve ter 2 caracteres'),
+  cidades: z.array(cityLocationSchema).default([]),
   raio_km: z.coerce.number().int().min(1).max(500).default(50),
   prazo_desejado: z.string().optional(),
   observacoes: z.string().optional(),

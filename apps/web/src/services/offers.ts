@@ -36,6 +36,7 @@ export async function createOffer(supplierId: string, input: OfferInput): Promis
       supplier_id: supplierId,
       valor: input.valor,
       prazo_entrega_dias: input.prazo_entrega_dias,
+      prazo_entrega_em: input.prazo_entrega_em,
       validade_dias: input.validade_dias,
       quantidade: input.quantidade,
       mensagem: input.mensagem ?? null,

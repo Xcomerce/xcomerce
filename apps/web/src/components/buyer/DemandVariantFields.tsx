@@ -30,35 +30,6 @@ type ColorGroup = {
   indices: number[]
 }
 
-function VariantSelect({
-  value,
-  onChange,
-  options,
-  placeholder,
-  className,
-}: {
-  value: string
-  onChange: (value: string) => void
-  options: string[]
-  placeholder: string
-  className?: string
-}) {
-  return (
-    <select
-      className={className}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-    >
-      <option value="">{placeholder}</option>
-      {options.map((opt) => (
-        <option key={opt} value={opt}>
-          {opt}
-        </option>
-      ))}
-    </select>
-  )
-}
-
 function QuantityInput({
   value,
   onChange,
@@ -149,29 +120,41 @@ export function DemandVariantFields({
     [specifications, fields],
   )
 
-  const showColorSelect = Boolean(optionSource?.temCor && (optionSource.cores?.length ?? 0) > 0)
-  const showSizeSelect = Boolean(optionSource?.temTamanho && (optionSource.tamanhos?.length ?? 0) > 0)
-  const collectsColor = showColorSelect || !showSizeSelect
-  const collectsSize = showSizeSelect || !showColorSelect
+  const collectsColor = optionSource?.temCor !== false
+  const collectsSize = optionSource?.temTamanho !== false
   const groupedByColor = collectsColor && collectsSize
-  const sizeOptions = showSizeSelect
-    ? sortSizeValues(optionSource!.tamanhos ?? [], optionSource?.tipoTamanho)
-    : []
   const sizeLabel = optionSource?.tipoTamanho === 'calcado' ? 'Numeração' : 'Tamanho'
 
-  function getColorOptions(currentValue?: string) {
-    return resolveColorOptions(showColorSelect ? optionSource?.cores : undefined, currentValue)
-  }
+  const colorHints = useMemo(
+    () => resolveColorOptions(optionSource?.cores, undefined),
+    [optionSource?.cores],
+  )
+  const sizeHints = useMemo(
+    () =>
+      sortSizeValues(optionSource?.tamanhos ?? [], optionSource?.tipoTamanho).filter(Boolean),
+    [optionSource?.tamanhos, optionSource?.tipoTamanho],
+  )
+  const colorHintId = 'demand-color-hints'
+  const sizeHintId = 'demand-size-hints'
 
-  function renderColorSelect(value: string, onChange: (value: string) => void) {
+  function renderColorInput(value: string, onChange: (value: string) => void) {
     return (
-      <VariantSelect
-        value={value}
-        onChange={onChange}
-        options={getColorOptions(value)}
-        placeholder="Selecione a cor"
-        className={cn(nativeFieldClass, 'h-10')}
-      />
+      <>
+        <Input
+          list={colorHints.length > 0 ? colorHintId : undefined}
+          placeholder="Ex.: lilás, nude, preto"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className={nativeFieldClass}
+        />
+        {colorHints.length > 0 ? (
+          <datalist id={colorHintId}>
+            {colorHints.map((hint) => (
+              <option key={hint} value={hint} />
+            ))}
+          </datalist>
+        ) : null}
+      </>
     )
   }
 
@@ -201,29 +184,6 @@ export function DemandVariantFields({
   }
 
   function renderSizeField(index: number) {
-    if (showSizeSelect) {
-      return (
-        <FormField
-          control={form.control}
-          name={`especificacoes.${index}.tamanho`}
-          render={({ field: sizeField }) => (
-            <FormItem className="space-y-1">
-              <FormControl>
-                <VariantSelect
-                  value={sizeField.value ?? ''}
-                  onChange={sizeField.onChange}
-                  options={sizeOptions}
-                  placeholder={`Selecione ${sizeLabel.toLowerCase()}`}
-                  className={cn(nativeFieldClass, 'h-10 w-full')}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      )
-    }
-
     return (
       <FormField
         control={form.control}
@@ -231,7 +191,21 @@ export function DemandVariantFields({
         render={({ field: sizeField }) => (
           <FormItem className="space-y-1">
             <FormControl>
-              <Input placeholder="Ex.: M ou 40" {...sizeField} value={sizeField.value ?? ''} />
+              <>
+                <Input
+                  list={sizeHints.length > 0 ? sizeHintId : undefined}
+                  placeholder="Ex.: M, G ou 42"
+                  {...sizeField}
+                  value={sizeField.value ?? ''}
+                />
+                {sizeHints.length > 0 ? (
+                  <datalist id={sizeHintId}>
+                    {sizeHints.map((hint) => (
+                      <option key={hint} value={hint} />
+                    ))}
+                  </datalist>
+                ) : null}
+              </>
             </FormControl>
             <FormMessage />
           </FormItem>
@@ -287,7 +261,7 @@ export function DemandVariantFields({
         render={({ field: corField }) => (
           <FormItem className="min-w-0 flex-1 space-y-1">
             <FormControl>
-              {renderColorSelect(corField.value ?? '', onColorChange)}
+              {renderColorInput(corField.value ?? '', onColorChange)}
             </FormControl>
             <FormMessage />
           </FormItem>
@@ -472,7 +446,7 @@ export function DemandVariantFields({
                 key={field.id}
                 className="space-y-3 rounded-xl border border-border/70 bg-card p-3"
               >
-                {(showColorSelect || !showSizeSelect) && (
+                {collectsColor && (
                   <div>
                     <p className={mobileFieldLabelClass}>Cor</p>
                     <FormField
@@ -481,7 +455,7 @@ export function DemandVariantFields({
                       render={({ field: corField }) => (
                         <FormItem className="space-y-1">
                           <FormControl>
-                            {renderColorSelect(corField.value ?? '', corField.onChange)}
+                            {renderColorInput(corField.value ?? '', corField.onChange)}
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -490,7 +464,7 @@ export function DemandVariantFields({
                   </div>
                 )}
                 <div className="grid grid-cols-[minmax(0,1fr)_5.5rem_auto] items-end gap-2">
-                  {(showSizeSelect || !showColorSelect) && (
+                  {collectsSize && (
                     <div className="min-w-0">
                       <p className={mobileFieldLabelClass}>{sizeLabel}</p>
                       {renderSizeField(index)}
@@ -520,12 +494,10 @@ export function DemandVariantFields({
               <table className="min-w-full text-sm">
                 <thead className="bg-muted/40">
                   <tr>
-                    {(showColorSelect || !showSizeSelect) && (
+                    {collectsColor && (
                       <th className={cn(tableHeadClass, 'w-[30%] min-w-[140px]')}>Cor</th>
                     )}
-                    {(showSizeSelect || !showColorSelect) && (
-                      <th className={tableHeadClass}>{sizeLabel}</th>
-                    )}
+                    {collectsSize && <th className={tableHeadClass}>{sizeLabel}</th>}
                     <th className={cn(tableHeadClass, 'w-28 min-w-[96px]')}>Quantidade</th>
                     <th className={cn(tableHeadClass, 'w-12')} aria-hidden />
                   </tr>
@@ -533,7 +505,7 @@ export function DemandVariantFields({
                 <tbody className="divide-y divide-border/60">
                   {fields.map((field, index) => (
                     <tr key={field.id}>
-                      {(showColorSelect || !showSizeSelect) && (
+                      {collectsColor && (
                         <td className={tableCellClass}>
                           <FormField
                             control={form.control}
@@ -541,7 +513,7 @@ export function DemandVariantFields({
                             render={({ field: corField }) => (
                               <FormItem className="space-y-1">
                                 <FormControl>
-                                  {renderColorSelect(corField.value ?? '', corField.onChange)}
+                                  {renderColorInput(corField.value ?? '', corField.onChange)}
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -549,9 +521,7 @@ export function DemandVariantFields({
                           />
                         </td>
                       )}
-                      {(showSizeSelect || !showColorSelect) && (
-                        <td className={tableCellClass}>{renderSizeField(index)}</td>
-                      )}
+                      {collectsSize && <td className={tableCellClass}>{renderSizeField(index)}</td>}
                       <td className={tableCellClass}>{renderQuantityField(index)}</td>
                       <td className={cn(tableCellClass, 'w-12')}>
                         <Button

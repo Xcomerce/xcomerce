@@ -53,7 +53,7 @@ export default function OfferScreen() {
     defaultValues: {
       demand_id: demandId ?? '',
       valor: 0,
-      prazo_entrega_dias: 7,
+      prazo_entrega_em: demand?.prazo_desejado ?? '',
       validade_dias: 7,
       quantidade: 1,
       mensagem: '',
@@ -65,7 +65,10 @@ export default function OfferScreen() {
 
   useEffect(() => {
     if (demandId) setValue('demand_id', demandId)
-    if (demand) setValue('quantidade', demand.quantidade)
+    if (demand) {
+      setValue('quantidade', demand.quantidade)
+      if (demand.prazo_desejado) setValue('prazo_entrega_em', demand.prazo_desejado)
+    }
   }, [demandId, demand, setValue])
 
   useEffect(() => {
@@ -217,34 +220,20 @@ export default function OfferScreen() {
               <View className="flex-1">
                 <Controller
                   control={control}
-                  name="prazo_entrega_dias"
+                  name="prazo_entrega_em"
                   render={({ field: { onChange, onBlur, value } }) => (
                     <Input
-                      label="Prazo (dias)"
-                      value={String(value ?? '')}
-                      onChangeText={(v) => onChange(Number(v) || 0)}
+                      label="Prazo de entrega"
+                      value={value ?? ''}
+                      onChangeText={onChange}
                       onBlur={onBlur}
-                      keyboardType="number-pad"
-                      error={errors.prazo_entrega_dias?.message}
+                      placeholder="AAAA-MM-DDTHH:mm"
+                      error={errors.prazo_entrega_em?.message}
                     />
                   )}
                 />
               </View>
             </View>
-            <Controller
-              control={control}
-              name="validade_dias"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <Input
-                  label="Validade (dias)"
-                  value={String(value ?? '')}
-                  onChangeText={(v) => onChange(Number(v) || 0)}
-                  onBlur={onBlur}
-                  keyboardType="number-pad"
-                  error={errors.validade_dias?.message}
-                />
-              )}
-            />
             <Controller
               control={control}
               name="mensagem"

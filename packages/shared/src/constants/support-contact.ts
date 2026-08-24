@@ -47,7 +47,16 @@ export function buildWhatsAppUrl(value: string | null | undefined): string | nul
   return digits ? `https://wa.me/${digits}` : null
 }
 
-export function buildMailtoUrl(email: string | null | undefined): string | null {
+export function buildMailtoUrl(
+  email: string | null | undefined,
+  options?: { subject?: string; body?: string },
+): string | null {
   const trimmed = email?.trim()
-  return trimmed ? `mailto:${trimmed}` : null
+  if (!trimmed) return null
+
+  const params = new URLSearchParams()
+  if (options?.subject) params.set('subject', options.subject)
+  if (options?.body) params.set('body', options.body)
+  const query = params.toString()
+  return query ? `mailto:${trimmed}?${query}` : `mailto:${trimmed}`
 }

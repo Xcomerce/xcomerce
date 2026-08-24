@@ -14,7 +14,6 @@ import { AutocompleteSelect } from '@/components/ui/searchable-select'
 import { ScrollPageShell, SCROLL_PAGE_SECTION_CLASS } from '@/components/layout/ScrollPageShell'
 import { UnitPriceInput } from '@/components/supplier/UnitPriceInput'
 import { ProductVariantsSection } from '@/components/catalog/ProductVariantsSection'
-import { SupplierStoreNameField } from '@/components/supplier/SupplierStoreNameField'
 import { ProductFormSection } from '@/pages/supplier/product-form/ProductFormSection'
 import { ProductFormSidebar } from '@/pages/supplier/product-form/ProductFormSidebar'
 import { ProductFormActions } from '@/pages/supplier/product-form/ProductFormActions'
@@ -362,8 +361,6 @@ export function ProductFormPage() {
                   title="Informações básicas"
                   description="Dados principais do produto visíveis no anúncio."
                 >
-                  <SupplierStoreNameField />
-
                   <div className="grid gap-4 sm:grid-cols-2">
                     <FormField
                       control={form.control}

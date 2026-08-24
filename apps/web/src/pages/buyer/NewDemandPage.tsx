@@ -25,14 +25,13 @@ import {
 } from '@/hooks/use-demands'
 import { translateSupabaseError, formatSupabaseError, isQuotaExceededError } from '@/lib/errors'
 import { cn } from '@/lib/utils'
-import { AutocompleteSelect } from '@/components/ui/searchable-select'
+import { CategoryPicker } from '@/components/buyer/CategoryPicker'
 import { ScrollPageShell, SCROLL_PAGE_SECTION_CLASS } from '@/components/layout/ScrollPageShell'
 import {
   NATIVE_FIELD_CLASS,
 } from '@/pages/buyer/new-demand/constants'
 import { DemandFormActions } from '@/pages/buyer/new-demand/DemandFormActions'
-import { EligibleSuppliersPanel } from '@/pages/buyer/new-demand/EligibleSuppliersPanel'
-import { getEligibleSuppliers } from '@/pages/buyer/new-demand/utils'
+import { DemandLocationPanel } from '@/pages/buyer/new-demand/DemandLocationPanel'
 import { useDemandLocationDefaults } from '@/hooks/use-demand-location-defaults'
 import { demandSpecificationsFromRecord, syncDemandQuantidadeFromSpecifications } from '@/lib/demand-specifications'
 import { formatDateTimeLocalInput, parseDateTimeLocalInput } from '@/lib/datetime'
@@ -79,7 +78,6 @@ export function NewDemandPage() {
 
   const [paywallOpen, setPaywallOpen] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
-  const [isSearchingSuppliers, setIsSearchingSuppliers] = useState(false)
   const hasAppliedProductPrefillRef = useRef(false)
 
   const form = useForm<DemandInput>({
@@ -91,6 +89,7 @@ export function NewDemandPage() {
       unidade: 'un',
       cidade: '',
       uf: '',
+      cidades: [],
       raio_km: 50,
       prazo_desejado: '',
       observacoes: '',
@@ -99,20 +98,14 @@ export function NewDemandPage() {
   })
 
   const selectedCategoryId = form.watch('category_id')
+  const watchedCities = form.watch('cidades') ?? []
   const leafCategories = useMemo(() => getLeafCategories(categories ?? []), [categories])
-  const categoryOptions = useMemo(
-    () => leafCategories.map((category) => ({ value: category.id, label: category.name })),
-    [leafCategories],
-  )
   const selectedCategory = leafCategories.find((c) => c.id === selectedCategoryId)
   const descricaoPlaceholder = useMemo(() => {
     const names = leafCategories.slice(0, 5).map((category) => category.name)
     if (names.length === 0) return 'Ex> ...'
     return `Ex> ${names.join(', ')}`
   }, [leafCategories])
-  const eligible = getEligibleSuppliers(selectedCategory?.slug)
-  const isSearchingSidebar = isSearchingSuppliers
-
   const isSaving =
     createDemand.isPending ||
     updateDemand.isPending ||
@@ -127,8 +120,9 @@ export function NewDemandPage() {
     if (stateData.categoryId) form.setValue('category_id', stateData.categoryId)
     if (stateData.title) form.setValue('titulo', stateData.title)
     if (stateData.description) form.setValue('descricao', stateData.description)
-    if (stateData.city) form.setValue('cidade', stateData.city)
-    if (stateData.uf) form.setValue('uf', stateData.uf)
+    if (stateData.city && stateData.uf) {
+      form.setValue('cidades', [{ cidade: stateData.city, uf: stateData.uf }])
+    }
     if (stateData.precoReferencia != null && stateData.precoReferencia > 0) {
       form.setValue('preco_referencia_mercado', stateData.precoReferencia)
     }
@@ -145,10 +139,13 @@ export function NewDemandPage() {
 
   useEffect(() => {
     if (isEditing || !demandLocation.ready) return
+    if (watchedCities.length === 0 && demandLocation.cidade && demandLocation.uf) {
+      form.setValue('cidades', [{ cidade: demandLocation.cidade, uf: demandLocation.uf }])
+    }
     if (!form.getValues('cidade')) form.setValue('cidade', demandLocation.cidade)
     if (!form.getValues('uf')) form.setValue('uf', demandLocation.uf)
     if (!form.getValues('raio_km')) form.setValue('raio_km', demandLocation.raio_km)
-  }, [demandLocation, isEditing, form])
+  }, [demandLocation, isEditing, form, watchedCities.length])
 
   useEffect(() => {
     if (!existingDemand) return
@@ -159,6 +156,11 @@ export function NewDemandPage() {
       unidade: existingDemand.unidade,
       cidade: existingDemand.cidade,
       uf: existingDemand.uf,
+      cidades: Array.isArray(existingDemand.cidades)
+        ? existingDemand.cidades
+        : existingDemand.cidade && existingDemand.uf
+          ? [{ cidade: existingDemand.cidade, uf: existingDemand.uf }]
+          : [],
       raio_km: existingDemand.raio_km,
       prazo_desejado: existingDemand.prazo_desejado ?? '',
       observacoes: existingDemand.observacoes ?? '',
@@ -167,15 +169,14 @@ export function NewDemandPage() {
     })
   }, [existingDemand, form])
 
-  useEffect(() => {
-    if (!selectedCategoryId) {
-      setIsSearchingSuppliers(false)
-      return
+  function handleCitiesChange(nextCities: Array<{ cidade: string; uf: string }>) {
+    form.setValue('cidades', nextCities, { shouldDirty: true, shouldValidate: true })
+    const primary = nextCities[0]
+    if (primary) {
+      form.setValue('cidade', primary.cidade, { shouldDirty: true })
+      form.setValue('uf', primary.uf, { shouldDirty: true })
     }
-    setIsSearchingSuppliers(true)
-    const timer = window.setTimeout(() => setIsSearchingSuppliers(false), 700)
-    return () => window.clearTimeout(timer)
-  }, [selectedCategoryId, demandLocation.cidade, demandLocation.uf])
+  }
 
   async function saveDraft(values: DemandInput) {
     setFormError(null)
@@ -270,6 +271,7 @@ export function NewDemandPage() {
                   publishPending={publishDemand.isPending}
                   onPublish={() => void handlePublish()}
                   onCancel={() => navigate('/buyer/dashboard')}
+                  disablePublish={watchedCities.length === 0}
                 />
               </footer>
             }
@@ -305,12 +307,10 @@ export function NewDemandPage() {
                       <FormItem>
                         <FormLabel>Categoria</FormLabel>
                         <FormControl>
-                          <AutocompleteSelect
+                          <CategoryPicker
+                            categories={categories ?? []}
                             value={field.value}
                             onValueChange={field.onChange}
-                            options={categoryOptions}
-                            placeholder="Digite para buscar categoria..."
-                            emptyMessage="Nenhuma categoria encontrada"
                             disabled={loadingCategories}
                             loading={loadingCategories}
                           />
@@ -367,14 +367,12 @@ export function NewDemandPage() {
 
             {/* Painel lateral — altura fixa da viewport, sem empurrar a página */}
             <section className="flex min-h-0 w-full shrink-0 flex-col overflow-hidden border-t border-sidebar-border max-lg:flex-none lg:w-72 lg:border-l lg:border-t-0 xl:w-80">
-              <EligibleSuppliersPanel
-                eligible={eligible}
+              <DemandLocationPanel
+                cities={watchedCities}
+                onCitiesChange={handleCitiesChange}
                 selectedCategory={selectedCategory}
-                watchedCity={form.watch('cidade') || demandLocation.cidade}
-                watchedUf={form.watch('uf') || demandLocation.uf}
                 isSaving={isSaving}
                 selectedCategoryId={selectedCategoryId}
-                isSearching={isSearchingSidebar}
                 publishPending={publishDemand.isPending}
                 onPublish={() => void handlePublish()}
                 onCancel={() => navigate('/buyer/dashboard')}

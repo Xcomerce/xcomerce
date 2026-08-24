@@ -52,6 +52,7 @@ export async function createDemand(buyerId: string, input: DemandInput): Promise
       unidade: payload.unidade || 'un',
       cidade: payload.cidade,
       uf: payload.uf.toUpperCase(),
+      cidades: payload.cidades,
       raio_km: payload.raio_km,
       prazo_desejado: payload.prazo_desejado || null,
       observacoes: payload.observacoes || null,
@@ -77,6 +78,12 @@ export async function updateDemand(id: string, input: Partial<DemandInput>): Pro
   if (input.unidade !== undefined) payload.unidade = input.unidade
   if (input.cidade !== undefined) payload.cidade = input.cidade
   if (input.uf !== undefined) payload.uf = input.uf.toUpperCase()
+  if (input.cidades !== undefined) {
+    const prepared = prepareDemandPayload(input as DemandInput)
+    payload.cidades = prepared.cidades
+    payload.cidade = prepared.cidade
+    payload.uf = prepared.uf
+  }
   if (input.raio_km !== undefined) payload.raio_km = input.raio_km
   if (input.prazo_desejado !== undefined) payload.prazo_desejado = input.prazo_desejado || null
   if (input.observacoes !== undefined) payload.observacoes = input.observacoes || null

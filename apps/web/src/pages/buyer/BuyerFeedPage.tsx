@@ -1,6 +1,7 @@
-import { useState, useRef, useEffect, useMemo, type ReactNode } from 'react'
+import { useMemo, useState, useRef, useEffect, type ReactNode } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, Package } from 'lucide-react'
+import { ChevronLeft, ChevronRight, LayoutGrid, Package } from 'lucide-react'
+import { parseCityLocationsFromParams, formatCityLocationsLabel, serializeCityLocation } from '@keve/shared'
 import { useFeedProducts, useSearchSuggestions } from '@/hooks/use-products'
 import { useCategories, useRootCategories } from '@/hooks/use-categories'
 import { getDescendantCategoryIds } from '@keve/shared'
@@ -11,6 +12,7 @@ import {
   HORIZONTAL_CARD_CLASS,
 } from '@/components/buyer/FeedProductCard'
 import { FeedProductDetailDialog } from '@/components/buyer/FeedProductDetailDialog'
+import { CategoryPickerDialog } from '@/components/buyer/CategoryPickerDialog'
 
 const HORIZONTAL_ROW_CLASS =
   'flex overflow-x-auto gap-3 sm:gap-4 pb-3 snap-x snap-mandatory scroll-smooth no-scrollbar -mx-4 px-4 scroll-px-4 md:-mx-0 md:px-0 md:scroll-px-0'
@@ -139,8 +141,12 @@ export function BuyerFeedPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const searchQuery = searchParams.get('search') || ''
-  const selectedUf = searchParams.get('uf') || ''
+  const selectedCities = useMemo(
+    () => parseCityLocationsFromParams(searchParams.getAll('loc')),
+    [searchParams],
+  )
   const [selectedCategory, setSelectedCategory] = useState<string>('')
+  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<FeedProductSearchResult | null>(null)
   const categoriesRef = useRef<HTMLDivElement>(null)
   const [showLeftArrow, setShowLeftArrow] = useState(false)
@@ -157,26 +163,29 @@ export function BuyerFeedPage() {
   const { data: products = [], isLoading: loadingProducts } = useFeedProducts({
     categoryIds,
     search: searchQuery || undefined,
-    uf: selectedUf || undefined,
+    cidades: selectedCities.length > 0 ? selectedCities : undefined,
   })
 
   const hasOutsideUfResults = useMemo(
-    () => Boolean(selectedUf && products.some((product) => product.isOutsideUf)),
-    [products, selectedUf],
+    () => Boolean(selectedCities.length > 0 && products.some((product) => product.isOutsideUf)),
+    [products, selectedCities.length],
   )
 
   const { data: emptySuggestions = [] } = useSearchSuggestions(searchQuery, !loadingProducts && products.length === 0)
 
   const isFilteredView = Boolean(selectedCategory || searchQuery)
 
+  const selectedCategoryNode = allCategories.find((cat) => cat.id === selectedCategory)
+  const isLeafCategorySelection = Boolean(selectedCategoryNode?.parent_id)
+  const rootCategoryIds = useMemo(() => new Set(rootCategories.map((cat) => cat.id)), [rootCategories])
+
   const filteredTitle = useMemo(() => {
     if (searchQuery) return `Resultados para "${searchQuery}"`
     if (selectedCategory) {
-      const category = rootCategories.find((cat) => cat.id === selectedCategory)
-      return category?.name ?? 'Categoria'
+      return allCategories.find((cat) => cat.id === selectedCategory)?.name ?? 'Categoria'
     }
     return ''
-  }, [rootCategories, searchQuery, selectedCategory])
+  }, [allCategories, searchQuery, selectedCategory])
 
   const groupedProducts = useMemo(() => {
     if (isFilteredView) return []
@@ -252,6 +261,18 @@ export function BuyerFeedPage() {
           >
             <button
               type="button"
+              onClick={() => setCategoryDialogOpen(true)}
+              className={`flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-4 text-sm font-semibold transition-all duration-200 ${
+                isLeafCategorySelection
+                  ? 'border-primary bg-primary text-primary-foreground shadow-sm'
+                  : 'border-border/60 bg-secondary/40 text-foreground hover:bg-secondary/70'
+              }`}
+            >
+              <LayoutGrid size={14} />
+              Categorias
+            </button>
+            <button
+              type="button"
               onClick={() => setSelectedCategory('')}
               className={`flex h-9 shrink-0 items-center justify-center whitespace-nowrap rounded-full border px-4 text-sm font-semibold transition-all duration-200 ${
                 selectedCategory === ''
@@ -272,7 +293,7 @@ export function BuyerFeedPage() {
                   type="button"
                   onClick={() => setSelectedCategory(cat.id)}
                   className={`flex h-9 shrink-0 items-center justify-center whitespace-nowrap rounded-full border px-4 text-sm font-semibold transition-all duration-200 ${
-                    selectedCategory === cat.id
+                    selectedCategory === cat.id && rootCategoryIds.has(cat.id)
                       ? 'border-primary bg-primary text-primary-foreground shadow-sm'
                       : 'border-border/60 bg-secondary/40 text-foreground hover:bg-secondary/70'
                   }`}
@@ -303,7 +324,7 @@ export function BuyerFeedPage() {
 
         {hasOutsideUfResults ? (
           <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-foreground">
-            Nenhum produto em {selectedUf}. Exibindo resultados de outras regiões.
+            Nenhum produto em {formatCityLocationsLabel(selectedCities)}. Exibindo resultados de outras regiões.
           </div>
         ) : null}
 
@@ -325,11 +346,15 @@ export function BuyerFeedPage() {
                     <button
                       key={`${item.suggestionType}-${item.suggestion}`}
                       type="button"
-                      onClick={() =>
-                        navigate(`/buyer/feed?search=${encodeURIComponent(item.suggestion)}${selectedUf ? `&uf=${selectedUf}` : ''}`, {
-                          replace: true,
-                        })
-                      }
+                      onClick={() => {
+                        const locParams = selectedCities
+                          .map((city) => `loc=${encodeURIComponent(serializeCityLocation(city))}`)
+                          .join('&')
+                        navigate(
+                          `/buyer/feed?search=${encodeURIComponent(item.suggestion)}${locParams ? `&${locParams}` : ''}`,
+                          { replace: true },
+                        )
+                      }}
                       className="rounded-full border border-border bg-secondary/50 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-secondary"
                     >
                       {item.suggestion}
@@ -374,6 +399,15 @@ export function BuyerFeedPage() {
       </div>
 
       <FeedProductDetailDialog product={selectedProduct} onClose={() => setSelectedProduct(null)} />
+
+      <CategoryPickerDialog
+        open={categoryDialogOpen}
+        onClose={() => setCategoryDialogOpen(false)}
+        categories={allCategories}
+        value={selectedCategory}
+        onApply={setSelectedCategory}
+        loading={loadingCategories}
+      />
     </>
   )
 }

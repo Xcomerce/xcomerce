@@ -24,7 +24,7 @@ import { useCreateOffer, useOffersForDemand } from '@/hooks/use-offers'
 import { useChatMessages, useSendMessage, useChatSubscription } from '@/hooks/use-chat'
 import { useAuth } from '@/contexts/auth-context'
 import { translateSupabaseError } from '@/lib/errors'
-import { formatDemandDateTime } from '@/lib/datetime'
+import { formatDemandDateTime, formatDateTimeLocalInput, parseDateTimeLocalInput } from '@/lib/datetime'
 import {
   buildOfferLineItemsFromDemand,
   roundCurrency,
@@ -126,37 +126,43 @@ function OfferChatPanel({
   )
 }
 
-function OfferConditionsFields({ form }: { form: ReturnType<typeof useForm<OfferInput>> }) {
+function OfferConditionsFields({
+  form,
+  demandDeadline,
+}: {
+  form: ReturnType<typeof useForm<OfferInput>>
+  demandDeadline?: string | null
+}) {
   return (
     <div className="space-y-3">
-      <div className="grid gap-3 sm:grid-cols-2">
-        <FormField
-          control={form.control}
-          name="prazo_entrega_dias"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Prazo de entrega (dias)</FormLabel>
-              <FormControl>
-                <Input type="number" min={1} {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="validade_dias"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Validade da proposta (dias)</FormLabel>
-              <FormControl>
-                <Input type="number" min={1} max={30} {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </div>
+      <FormField
+        control={form.control}
+        name="prazo_entrega_em"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Prazo de entrega</FormLabel>
+            <FormControl>
+              <Input
+                type="datetime-local"
+                value={formatDateTimeLocalInput(field.value)}
+                onChange={(event) => field.onChange(parseDateTimeLocalInput(event.target.value))}
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      {demandDeadline ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="rounded-lg"
+          onClick={() => form.setValue('prazo_entrega_em', demandDeadline, { shouldValidate: true })}
+        >
+          Usar prazo solicitado pelo comprador
+        </Button>
+      ) : null}
       <FormField
         control={form.control}
         name="mensagem"
@@ -206,7 +212,7 @@ export function OfferDetailPage() {
     defaultValues: {
       demand_id: demandId ?? '',
       valor: 0,
-      prazo_entrega_dias: 7,
+      prazo_entrega_em: '',
       validade_dias: 7,
       quantidade: 1,
       mensagem: '',
@@ -238,6 +244,11 @@ export function OfferDetailPage() {
   useEffect(() => {
     if (demandId) form.setValue('demand_id', demandId)
   }, [demandId, form])
+
+  useEffect(() => {
+    if (!demand?.prazo_desejado || form.getValues('prazo_entrega_em')) return
+    form.setValue('prazo_entrega_em', demand.prazo_desejado)
+  }, [demand?.prazo_desejado, form])
 
   useEffect(() => {
     if (!demand || !user?.id || !demandId) return
@@ -463,7 +474,7 @@ export function OfferDetailPage() {
                 <p className="mt-1 text-sm">
                   Valor: {formatCurrency(myOffer.valor)}
                   {' · '}
-                  Prazo: {myOffer.prazo_entrega_dias} dias
+                  Prazo: {formatDemandDate((myOffer as { prazo_entrega_em?: string | null }).prazo_entrega_em) || `${myOffer.prazo_entrega_dias} dias`}
                 </p>
                 <StatusBadge status={myOffer.status} kind="offer" className="mt-2" />
               </Alert>
@@ -488,7 +499,7 @@ export function OfferDetailPage() {
 
                 <Form {...form}>
                   <form id="offer-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                    <OfferConditionsFields form={form} />
+                    <OfferConditionsFields form={form} demandDeadline={demand.prazo_desejado} />
                   </form>
                 </Form>
               </CardContent>

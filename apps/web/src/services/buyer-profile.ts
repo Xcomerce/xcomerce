@@ -64,3 +64,31 @@ export async function updateBuyerAddress(
   if (error) throw error
   return mapRow(data)
 }
+
+export async function fetchFavoriteCategoryIds(userId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('buyer_profiles')
+    .select('favorite_category_ids')
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  if (error) throw error
+  return (data?.favorite_category_ids ?? []) as string[]
+}
+
+export async function toggleFavoriteCategory(userId: string, categoryId: string): Promise<string[]> {
+  const current = await fetchFavoriteCategoryIds(userId)
+  const next = current.includes(categoryId)
+    ? current.filter((id) => id !== categoryId)
+    : [...current, categoryId]
+
+  const { data, error } = await supabase
+    .from('buyer_profiles')
+    .update({ favorite_category_ids: next })
+    .eq('user_id', userId)
+    .select('favorite_category_ids')
+    .single()
+
+  if (error) throw error
+  return (data.favorite_category_ids ?? []) as string[]
+}

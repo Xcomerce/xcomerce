@@ -24,7 +24,6 @@ import {
 import { BRAZILIAN_STATES } from '@/lib/brazil-locations'
 import { formatSupabaseError } from '@/lib/errors'
 import { cn } from '@/lib/utils'
-import { SupplierStoreNameField } from '@/components/supplier/SupplierStoreNameField'
 import { updateProductImages, uploadProductImageFiles } from '@/services/products'
 import { useAuth } from '@/contexts/auth-context'
 
@@ -297,7 +296,6 @@ export function ProductForm({ productId }: ProductFormProps) {
       </Card>
 
       <Card className="gap-4">
-        <SupplierStoreNameField />
         <Controller
           control={control}
           name="nome"

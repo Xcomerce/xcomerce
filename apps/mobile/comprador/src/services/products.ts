@@ -58,6 +58,7 @@ export async function fetchFeedProducts(filters?: {
   categoryIds?: string[]
   search?: string
   uf?: string
+  cidades?: Array<{ cidade: string; uf: string }>
 }): Promise<FeedProductSearchResult[]> {
   const categoryIds =
     filters?.categoryIds && filters.categoryIds.length > 0
@@ -69,7 +70,8 @@ export async function fetchFeedProducts(filters?: {
   const { data, error } = await supabase.rpc('search_feed_products', {
     p_query: filters?.search?.trim() || null,
     p_category_ids: categoryIds,
-    p_uf: filters?.uf?.toUpperCase() || null,
+    p_uf: filters?.cidades?.length ? null : filters?.uf?.toUpperCase() || null,
+    p_cidades: filters?.cidades?.length ? filters.cidades : null,
     p_limit: 50,
     p_offset: 0,
   })

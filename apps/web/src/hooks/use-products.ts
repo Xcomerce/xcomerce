@@ -106,6 +106,7 @@ export function useFeedProducts(filters?: {
   categoryIds?: string[]
   search?: string
   uf?: string
+  cidades?: Array<{ cidade: string; uf: string }>
 }) {
   return useQuery({
     queryKey: productKeys.feed(filters),

@@ -12,6 +12,7 @@ import {
   PRODUCT_SIZE_TYPE_LABELS,
   type ProductInput,
   type ProductSizeType,
+  normalizeVariantStockRows,
   type ProductVariantStockRow,
 } from '@keve/shared'
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
@@ -76,6 +77,7 @@ function ColorSizeStockTable({
           <thead>
             <tr className="border-b border-border/60 bg-muted/30 text-left text-xs text-muted-foreground">
               <th className="px-3 py-2 font-medium">Tamanho</th>
+              <th className="px-3 py-2 font-medium">Preço (R$)</th>
               <th className="px-3 py-2 font-medium">Estoque disponível</th>
               <th className="px-3 py-2 font-medium text-right" aria-label="Ações" />
             </tr>
@@ -87,6 +89,27 @@ function ColorSizeStockTable({
                 className="border-b border-border/40 last:border-0"
               >
                 <td className="px-3 py-2 font-medium text-foreground">{row.tamanho ?? '—'}</td>
+                <td className="px-3 py-2">
+                  <Input
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    inputMode="decimal"
+                    placeholder="0,00"
+                    value={row.preco ?? ''}
+                    onChange={(e) => {
+                      const raw = e.target.value
+                      if (raw === '') {
+                        updateRow(index, { preco: null })
+                        return
+                      }
+                      const parsed = Number.parseFloat(raw)
+                      if (Number.isNaN(parsed)) return
+                      updateRow(index, { preco: Math.max(0, parsed) })
+                    }}
+                    className="h-9 max-w-[120px]"
+                  />
+                </td>
                 <td className="px-3 py-2">
                   <div className="flex items-center gap-2">
                     <Input
@@ -171,12 +194,15 @@ export function ProductVariantsSection({
     pendingImages[0]?.preview ?? savedImageUrls[0] ?? null
 
   const colorStockRows = useMemo(() => {
-    if (!temCor || !activeColor) return estoqueVariacoes
-    return estoqueVariacoes.filter((row) => row.cor === activeColor)
+    const rows =
+      !temCor || !activeColor
+        ? estoqueVariacoes
+        : estoqueVariacoes.filter((row) => row.cor === activeColor)
+    return normalizeVariantStockRows(rows as ProductVariantStockRow[])
   }, [temCor, activeColor, estoqueVariacoes])
 
   useEffect(() => {
-    const next = syncVariantStockRows(temCor, temTamanho, cores, tamanhos, estoqueVariacoes)
+    const next = syncVariantStockRows(Boolean(temCor), Boolean(temTamanho), cores, tamanhos, estoqueVariacoes)
     const currentKeys = estoqueVariacoes.map((r) => `${r.cor ?? ''}|${r.tamanho ?? ''}`).join(',')
     const nextKeys = next.map((r) => `${r.cor ?? ''}|${r.tamanho ?? ''}`).join(',')
     if (currentKeys !== nextKeys) {
@@ -526,10 +552,14 @@ export function ProductVariantsSection({
                           rows={colorStockRows}
                           onChange={(nextRows) => {
                             if (temCor && activeColor) {
-                              const remapped = nextRows.map((row) => ({ ...row, cor: activeColor }))
+                              const remapped = normalizeVariantStockRows(
+                                nextRows.map((row) => ({ ...row, cor: activeColor })),
+                              )
                               updateColorStockRows(remapped)
                             } else {
-                              form.setValue('estoque_variacoes', nextRows, { shouldValidate: true })
+                              form.setValue('estoque_variacoes', normalizeVariantStockRows(nextRows), {
+                                shouldValidate: true,
+                              })
                             }
                           }}
                           onRemoveSize={removeSizeFromCatalog}

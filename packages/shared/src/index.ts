@@ -1,4 +1,5 @@
 export * from './types/roles'
+export * from './types/location'
 export * from './types/database'
 export * from './validators/auth'
 export * from './validators/demands'

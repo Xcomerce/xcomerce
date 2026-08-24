@@ -122,6 +122,7 @@ export type Database = {
           avg_rating: number
           total_ratings: number
           orders_completed: number
+          favorite_category_ids: string[]
         }
         Insert: Partial<Database['public']['Tables']['buyer_profiles']['Row']> & {
           user_id: string
@@ -203,6 +204,7 @@ export type Database = {
           unidade: string
           cidade: string
           uf: string
+          cidades: Array<{ cidade: string; uf: string }>
           raio_km: number
           status: 'RASCUNHO' | 'PUBLICADA' | 'OFERTAS_RECEBIDAS' | 'EM_NEGOCIACAO' | 'PROPOSTA_ACEITA' | 'CANCELADO' | 'EXPIRADO'
           prazo_desejado: string | null
@@ -242,6 +244,7 @@ export type Database = {
           supplier_id: string
           valor: number
           prazo_entrega_dias: number
+          prazo_entrega_em: string | null
           validade_dias: number
           validade_ate: string
           quantidade: number

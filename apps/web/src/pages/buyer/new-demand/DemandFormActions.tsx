@@ -9,6 +9,7 @@ type DemandFormActionsProps = {
   onPublish: () => void
   onCancel: () => void
   className?: string
+  disablePublish?: boolean
 }
 
 export function DemandFormActions({
@@ -18,12 +19,13 @@ export function DemandFormActions({
   onPublish,
   onCancel,
   className,
+  disablePublish = false,
 }: DemandFormActionsProps) {
   return (
     <div className={cn('space-y-2', className)}>
       <Button
         type="button"
-        disabled={isSaving || !selectedCategoryId}
+        disabled={isSaving || !selectedCategoryId || disablePublish}
         className="w-full rounded-lg bg-primary py-5 text-sm font-semibold uppercase tracking-wide text-primary-foreground shadow-sm hover:bg-brand-primary-dark"
         onClick={onPublish}
       >

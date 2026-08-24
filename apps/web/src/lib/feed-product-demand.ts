@@ -39,8 +39,8 @@ export function buildDemandStateFromProduct(
     temCor: product.tem_cor,
     temTamanho: product.tem_tamanho,
     tipoTamanho: product.tipo_tamanho,
-    cores: selectedCor ? [selectedCor] : (product.cores ?? []),
-    tamanhos: selectedTamanho ? [selectedTamanho] : (product.tamanhos ?? []),
+    cores: product.cores ?? [],
+    tamanhos: product.tamanhos ?? [],
     selectedCor,
     selectedTamanho,
   }

@@ -106,7 +106,7 @@ export function OfferItemsTable({
                           {itemIndex === 0 ? (
                             <td
                               rowSpan={group.items.length}
-                              className="px-3 py-3 align-top font-semibold uppercase text-foreground"
+                              className="px-3 py-3 align-middle font-semibold uppercase text-foreground"
                             >
                               {group.cor || '—'}
                             </td>

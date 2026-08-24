@@ -10,6 +10,7 @@ export type DemandRow = {
   titulo: string
   cidade: string
   uf: string
+  cidades?: Array<{ cidade: string; uf: string }> | null
   raio_km: number
   latitude: number | null
   longitude: number | null
@@ -69,7 +70,22 @@ function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): nu
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 }
 
-function geoEligible(
+function resolveDemandCities(
+  demand: Pick<DemandRow, 'cidade' | 'uf' | 'cidades'>,
+): Array<{ cidade: string; uf: string }> {
+  if (Array.isArray(demand.cidades) && demand.cidades.length > 0) {
+    return demand.cidades
+      .map((entry) => ({
+        cidade: String(entry?.cidade ?? '').trim(),
+        uf: String(entry?.uf ?? '').trim().toUpperCase(),
+      }))
+      .filter((entry) => entry.cidade.length >= 2 && entry.uf.length === 2)
+  }
+
+  return [{ cidade: demand.cidade, uf: demand.uf.toUpperCase() }]
+}
+
+function geoEligibleForCity(
   demand: Pick<DemandRow, 'cidade' | 'uf' | 'raio_km' | 'latitude' | 'longitude'>,
   supplier: Pick<
     SupplierRow,
@@ -101,6 +117,47 @@ function geoEligible(
   }
 
   return { eligible: false, sameCity: false, distanceKm: null }
+}
+
+function geoEligible(
+  demand: Pick<DemandRow, 'cidade' | 'uf' | 'cidades' | 'raio_km' | 'latitude' | 'longitude'>,
+  supplier: Pick<
+    SupplierRow,
+    'service_city' | 'service_uf' | 'service_radius_km' | 'latitude' | 'longitude'
+  >,
+): { eligible: boolean; sameCity: boolean; distanceKm: number | null } {
+  const cities = resolveDemandCities(demand)
+  let best: { eligible: boolean; sameCity: boolean; distanceKm: number | null } = {
+    eligible: false,
+    sameCity: false,
+    distanceKm: null,
+  }
+
+  for (const city of cities) {
+    const result = geoEligibleForCity(
+      {
+        cidade: city.cidade,
+        uf: city.uf,
+        raio_km: demand.raio_km,
+        latitude: demand.latitude,
+        longitude: demand.longitude,
+      },
+      supplier,
+    )
+
+    if (!result.eligible) continue
+    if (result.sameCity) return result
+
+    if (
+      !best.eligible ||
+      (result.distanceKm != null &&
+        (best.distanceKm == null || result.distanceKm < best.distanceKm))
+    ) {
+      best = result
+    }
+  }
+
+  return best
 }
 
 function computeScore(
@@ -167,7 +224,7 @@ export async function runDemandMatch(
   const { data: demand, error: demandErr } = await supabase
     .from('demands')
     .select(
-      'id, titulo, cidade, uf, raio_km, latitude, longitude, category_id, status, cor, tamanho',
+      'id, titulo, cidade, uf, cidades, raio_km, latitude, longitude, category_id, status, cor, tamanho',
     )
     .eq('id', demandId)
     .maybeSingle()

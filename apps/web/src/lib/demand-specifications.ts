@@ -93,9 +93,19 @@ export function demandSpecificationsFromRecord(
 export function prepareDemandPayload(input: DemandInput) {
   const synced = syncDemandQuantidadeFromSpecifications(input)
   const variantFields = demandSpecificationsToLegacyFields(synced.especificacoes ?? [])
+  const cidades =
+    synced.cidades && synced.cidades.length > 0
+      ? synced.cidades
+      : synced.cidade && synced.uf
+        ? [{ cidade: synced.cidade, uf: synced.uf.toUpperCase() }]
+        : []
+  const primaryCity = cidades[0]
 
   return {
     ...synced,
+    cidades,
+    cidade: primaryCity?.cidade ?? synced.cidade,
+    uf: primaryCity?.uf?.toUpperCase() ?? synced.uf?.toUpperCase(),
     quantidade: variantFields.quantidade,
     cor: variantFields.cor,
     tamanho: variantFields.tamanho,

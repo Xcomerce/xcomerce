@@ -1,4 +1,4 @@
-import { Headset, Mail, MessageCircle } from 'lucide-react'
+import { Headset, Lightbulb, Mail, MessageCircle } from 'lucide-react'
 import {
   buildMailtoUrl,
   buildWhatsAppUrl,
@@ -12,6 +12,7 @@ import { useAuth } from '@/contexts/auth-context'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import { SupportContactSettingsForm } from '@/components/support/SupportContactSettingsForm'
 import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 
 function canEditSupportContacts(roles: UserRole[]) {
   return roles.includes('admin') || roles.includes('commercial')
@@ -29,6 +30,10 @@ export function SupportPage() {
   const whatsappUrl = buildWhatsAppUrl(whatsapp)
   const horario = formatSupportHours(settings?.horario)
   const hasContacts = Boolean(email || whatsapp)
+  const suggestionMailto = buildMailtoUrl(email, {
+    subject: 'Sugestão para a plataforma X COMERCE',
+    body: 'Olá! Tenho uma sugestão para melhorar a plataforma:\n\n',
+  })
 
   return (
     <div className="flex-1 h-full overflow-y-auto p-4 lg:p-6">
@@ -95,6 +100,15 @@ export function SupportPage() {
                 )}
               </CardContent>
             </Card>
+
+            {email && suggestionMailto ? (
+              <Button asChild variant="outline" className="h-11 w-full rounded-xl">
+                <a href={suggestionMailto}>
+                  <Lightbulb className="mr-2 h-4 w-4" />
+                  Enviar sugestão
+                </a>
+              </Button>
+            ) : null}
 
             {canEdit && <SupportContactSettingsForm />}
           </>
