@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/Card'
 import { EmptyState } from '@/components/common/EmptyState'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import { QuotaBadge } from '@/components/common/QuotaBadge'
+import { CATALOG_LIMITS_ENABLED } from '@/config/features'
 import { useAuth } from '@/contexts/auth-context'
 import { useProducts, useProductCount } from '@/hooks/use-products'
 import { useSubscription } from '@/hooks/use-billing'
@@ -85,8 +86,8 @@ export default function CatalogScreen() {
   const { data: allCategoriesData } = useCategories()
   const allCategories: Category[] = allCategoriesData ?? []
 
-  const limit = subscription?.plan?.max_catalog_items ?? null
-  const atLimit = limit !== null && count >= limit
+  const limit = CATALOG_LIMITS_ENABLED ? (subscription?.plan?.max_catalog_items ?? null) : null
+  const atLimit = CATALOG_LIMITS_ENABLED && limit !== null && count >= limit
 
   const uniqueCategoryIds = useMemo(
     () => Array.from(new Set(products.map((p) => p.category_id))),

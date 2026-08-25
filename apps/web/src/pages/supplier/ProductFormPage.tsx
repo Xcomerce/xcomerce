@@ -34,6 +34,7 @@ import type { OnboardingState } from '@/services/onboarding'
 import { uploadFile, productImagePath } from '@/lib/storage'
 import { formatSupabaseError, translateSupabaseError } from '@/lib/errors'
 import { cn } from '@/lib/utils'
+import { CATALOG_LIMITS_ENABLED } from '@/config/features'
 
 const PRODUCT_IMAGE_ACCEPT = 'image/jpeg,image/png,image/webp'
 const PRODUCT_IMAGE_MAX_BYTES = 5 * 1024 * 1024
@@ -85,8 +86,8 @@ export function ProductFormPage() {
   const updateProduct = useUpdateProduct()
   const deleteProduct = useDeleteProduct()
 
-  const limit = subscription?.plan?.max_catalog_items ?? null
-  const atLimit = !isEdit && limit !== null && count >= limit
+  const limit = CATALOG_LIMITS_ENABLED ? (subscription?.plan?.max_catalog_items ?? null) : null
+  const atLimit = CATALOG_LIMITS_ENABLED && !isEdit && limit !== null && count >= limit
 
   const form = useForm<ProductInput>({
     resolver: zodResolver(productSchema),

@@ -26,6 +26,7 @@ import { formatSupabaseError } from '@/lib/errors'
 import { cn } from '@/lib/utils'
 import { updateProductImages, uploadProductImageFiles } from '@/services/products'
 import { useAuth } from '@/contexts/auth-context'
+import { CATALOG_LIMITS_ENABLED } from '@/config/features'
 
 const PRODUCT_IMAGE_MAX_COUNT = 8
 
@@ -59,8 +60,8 @@ export function ProductForm({ productId }: ProductFormProps) {
   const updateProduct = useUpdateProduct()
   const deleteProduct = useDeleteProduct()
 
-  const limit = subscription?.plan?.max_catalog_items ?? null
-  const atLimit = !isEdit && limit !== null && count >= limit
+  const limit = CATALOG_LIMITS_ENABLED ? (subscription?.plan?.max_catalog_items ?? null) : null
+  const atLimit = CATALOG_LIMITS_ENABLED && !isEdit && limit !== null && count >= limit
 
   const {
     control,

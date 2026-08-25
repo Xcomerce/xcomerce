@@ -6,6 +6,7 @@ import { EmptyState } from '@/components/common/EmptyState'
 import { GridSkeleton } from '@/components/common/LoadingSkeleton'
 import { QuotaBadge } from '@/components/common/QuotaBadge'
 import { PaywallModal } from '@/components/common/PaywallModal'
+import { CATALOG_LIMITS_ENABLED } from '@/config/features'
 import { useProducts, useProductCount } from '@/hooks/use-products'
 import { useSubscription } from '@/hooks/use-billing'
 import { useState, useMemo } from 'react'
@@ -20,8 +21,8 @@ export function CatalogPage() {
   const { data: subscription } = useSubscription()
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null)
 
-  const limit = subscription?.plan?.max_catalog_items ?? null
-  const atLimit = limit !== null && count >= limit
+  const limit = CATALOG_LIMITS_ENABLED ? (subscription?.plan?.max_catalog_items ?? null) : null
+  const atLimit = CATALOG_LIMITS_ENABLED && limit !== null && count >= limit
 
   const uniqueCategoryIds = useMemo(() => {
     return Array.from(new Set(products.map((p) => p.category_id)))
