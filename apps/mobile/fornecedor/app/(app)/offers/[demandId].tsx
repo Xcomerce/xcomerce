@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useQueryClient } from '@tanstack/react-query'
 import {
   createOfferSchema,
   type OfferInput,
@@ -16,10 +17,12 @@ import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import { StatusBadge } from '@/components/common/StatusBadge'
 import { ChatThread } from '@/components/chat/ChatThread'
 import { useAuth } from '@/contexts/auth-context'
+import { matchKeys } from '@/hooks/use-matches'
 import { useDemand } from '@/hooks/use-demands'
 import { useCategories, type Category } from '@/hooks/use-categories'
 import { useCreateOffer, useOffersForDemand } from '@/hooks/use-offers'
 import { fetchDemandMarketPrice } from '@/services/pricing'
+import { markViewedByDemand } from '@/services/matches'
 import type { PublicOffer } from '@/services/offers'
 import { cn, formatCurrency, formatDate, formatDateTime, formatExpiresAt } from '@/lib/utils'
 import { formatSupabaseError } from '@/lib/errors'
@@ -28,6 +31,7 @@ export default function OfferScreen() {
   const { demandId } = useLocalSearchParams<{ demandId: string }>()
   const router = useRouter()
   const { user } = useAuth()
+  const queryClient = useQueryClient()
   const [marketUnitPrice, setMarketUnitPrice] = useState<number | null>(null)
 
   const { data: demand, isLoading: demandLoading } = useDemand(demandId)
@@ -70,6 +74,13 @@ export default function OfferScreen() {
       if (demand.prazo_desejado) setValue('prazo_entrega_em', demand.prazo_desejado)
     }
   }, [demandId, demand, setValue])
+
+  useEffect(() => {
+    if (!demandId || !user?.id) return
+    void markViewedByDemand(user.id, demandId).then(() => {
+      queryClient.invalidateQueries({ queryKey: matchKeys.all })
+    })
+  }, [demandId, user?.id, queryClient])
 
   useEffect(() => {
     if (!demandId) return

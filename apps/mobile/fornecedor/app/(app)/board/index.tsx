@@ -11,7 +11,7 @@ import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import { StatsBar } from '@/components/common/StatsBar'
 import { StatusBadge } from '@/components/common/StatusBadge'
 import { useAuth } from '@/contexts/auth-context'
-import { useMatches, useMarkMatchViewed } from '@/hooks/use-matches'
+import { useMatches, useMarkMatchDismissed, useMarkMatchViewed } from '@/hooks/use-matches'
 import type { DemandMatchWithDemand } from '@/services/matches'
 import type { DemandMatch } from '@/services/matches'
 import { cn, formatDate, formatExpiresAt, formatReceivedAt } from '@/lib/utils'
@@ -36,11 +36,13 @@ function MatchCard({
   match,
   onPress,
   onMarkViewed,
+  onDismiss,
   marking,
 }: {
   match: DemandMatchWithDemand
   onPress: () => void
   onMarkViewed: () => void
+  onDismiss: () => void
   marking: boolean
 }) {
   const demand = match.demand
@@ -48,6 +50,7 @@ function MatchCard({
 
   const isProposalAccepted = demand.status === 'PROPOSTA_ACEITA'
   const hasOfferSent = match.status === 'offer_sent'
+  const canDismiss = match.status === 'notified' || match.status === 'viewed'
   const actionLabel = isProposalAccepted
     ? 'Ver pedido'
     : hasOfferSent
@@ -140,6 +143,9 @@ function MatchCard({
               <Eye size={18} color="#64748b" />
             </Pressable>
           ) : null}
+          {canDismiss ? (
+            <Button label="Dispensar" variant="outline" disabled={marking} onPress={onDismiss} />
+          ) : null}
           <View className="flex-1">
             <Button
               label={actionLabel}
@@ -155,6 +161,9 @@ function MatchCard({
 
 function countByStatus(matches: DemandMatchWithDemand[], status: StatusFilter) {
   if (status === 'all') return matches.length
+  if (status === 'notified') {
+    return matches.filter((m) => m.status === 'notified' && m.viewed_at === null).length
+  }
   return matches.filter((m) => m.status === status).length
 }
 
@@ -165,9 +174,15 @@ export default function BoardScreen() {
 
   const { data: allMatches = [], isLoading, isError, refetch, isRefetching } = useMatches()
   const markViewed = useMarkMatchViewed()
+  const markDismissed = useMarkMatchDismissed()
 
   const matches = useMemo(() => {
     if (statusFilter === 'all') return allMatches
+    if (statusFilter === 'notified') {
+      return allMatches.filter(
+        (m: DemandMatchWithDemand) => m.status === 'notified' && m.viewed_at === null,
+      )
+    }
     return allMatches.filter((m: DemandMatchWithDemand) => m.status === statusFilter)
   }, [allMatches, statusFilter])
 
@@ -191,6 +206,9 @@ export default function BoardScreen() {
     if (demand.status === 'PROPOSTA_ACEITA') {
       router.push('/(app)/orders')
       return
+    }
+    if (match.status === 'notified') {
+      markViewed.mutate(match.id)
     }
     router.push(`/(app)/offers/${demand.id}`)
   }
@@ -272,10 +290,15 @@ export default function BoardScreen() {
           renderItem={({ item }) => (
             <MatchCard
               match={item}
-              marking={markViewed.isPending}
+              marking={markViewed.isPending || markDismissed.isPending}
               onPress={() => handleMatchPress(item)}
               onMarkViewed={() => {
                 if (item.status === 'notified') markViewed.mutate(item.id)
+              }}
+              onDismiss={() => {
+                if (item.status === 'notified' || item.status === 'viewed') {
+                  markDismissed.mutate(item.id)
+                }
               }}
             />
           )}

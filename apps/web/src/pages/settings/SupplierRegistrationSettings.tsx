@@ -41,7 +41,7 @@ export function SupplierRegistrationSettings({ supplierStatus, joinDate, classNa
         </div>
         <div className="rounded-xl border border-border bg-card p-4">
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Status do cadastro</p>
-          <Badge variant="secondary" className="mt-2">
+          <Badge className="mt-2 border-transparent bg-secondary text-secondary-foreground">
             {statusLabel}
           </Badge>
         </div>

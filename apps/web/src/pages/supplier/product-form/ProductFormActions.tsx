@@ -12,6 +12,8 @@ type ProductFormActionsProps = {
   onDelete?: () => void
   onCancel?: () => void
   className?: string
+  missingFields?: string[]
+  isDraft?: boolean
 }
 
 export function ProductFormActions({
@@ -24,24 +26,35 @@ export function ProductFormActions({
   onDelete,
   onCancel,
   className,
+  missingFields = [],
+  isDraft = false,
 }: ProductFormActionsProps) {
+  const publishBlocked = !canSave || isSaving || missingFields.length > 0
+  const publishLabel =
+    missingFields.length > 0
+      ? `Falta: ${missingFields.join(', ')}`
+      : isEdit
+        ? 'Salvar alterações'
+        : 'Publicar produto'
+
   return (
     <div className={cn('space-y-2', className)}>
       <Button
         type="button"
-        disabled={!canSave || isSaving}
+        disabled={publishBlocked}
+        title={missingFields.length > 0 ? publishLabel : undefined}
         className="w-full rounded-xl py-5 text-sm font-semibold"
         onClick={onPublish}
       >
         {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-        {isEdit ? 'Salvar alterações' : 'Publicar produto'}
+        {publishLabel}
       </Button>
 
-      {!isEdit ? (
+      {!isEdit || isDraft ? (
         <Button
           type="button"
           variant="outline"
-          disabled={!canSave || isSaving}
+          disabled={isSaving}
           className="w-full rounded-xl border-sidebar-border py-4 text-sm font-semibold"
           onClick={onSaveDraft}
         >

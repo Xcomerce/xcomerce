@@ -1,24 +1,21 @@
 import { useMemo, useState, useRef, useEffect, type ReactNode } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, LayoutGrid, Package } from 'lucide-react'
+import { LayoutGrid, Package } from 'lucide-react'
 import { parseCityLocationsFromParams, formatCityLocationsLabel, serializeCityLocation } from '@keve/shared'
 import { useFeedProducts, useSearchSuggestions } from '@/hooks/use-products'
 import { useCategories, useRootCategories } from '@/hooks/use-categories'
 import { getDescendantCategoryIds } from '@keve/shared'
-import { cn } from '@/lib/utils'
-import type { FeedProductSearchResult } from '@/services/products'
+import type { FeedProductListing } from '@/services/products'
 import {
   FeedProductCard,
   HORIZONTAL_CARD_CLASS,
 } from '@/components/buyer/FeedProductCard'
 import { FeedProductDetailDialog } from '@/components/buyer/FeedProductDetailDialog'
 import { CategoryPickerDialog } from '@/components/buyer/CategoryPickerDialog'
+import { CarouselArrow } from '@/components/common/CarouselArrow'
 
 const HORIZONTAL_ROW_CLASS =
-  'flex overflow-x-auto gap-3 sm:gap-4 pb-3 snap-x snap-mandatory scroll-smooth no-scrollbar -mx-4 px-4 scroll-px-4 md:-mx-0 md:px-0 md:scroll-px-0'
-
-const SCROLL_CHEVRON_CLASS =
-  'absolute top-[38%] z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-background p-0 text-foreground shadow-md transition-all duration-200 hover:bg-secondary'
+  'flex overflow-x-auto touch-pan-x overscroll-x-contain gap-3 sm:gap-4 pb-3 snap-x snap-mandatory scroll-smooth no-scrollbar -mx-4 px-4 scroll-px-4 md:-mx-0 md:px-0 md:scroll-px-0'
 
 const VERTICAL_GRID_CLASS =
   'grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 md:gap-6 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6'
@@ -32,7 +29,7 @@ function ProductHorizontalRow({
 }) {
   const rowRef = useRef<HTMLDivElement>(null)
   const [showLeftArrow, setShowLeftArrow] = useState(false)
-  const [showRightArrow, setShowRightArrow] = useState(true)
+  const [showRightArrow, setShowRightArrow] = useState(false)
 
   function updateArrows() {
     if (!rowRef.current) return
@@ -69,14 +66,13 @@ function ProductHorizontalRow({
 
   return (
     <div className="relative min-w-0">
-      <button
-        type="button"
+      <CarouselArrow
+        side="left"
+        visible={showLeftArrow}
         onClick={() => scrollRow('left')}
-        className={cn(SCROLL_CHEVRON_CLASS, '-left-[18px]', showLeftArrow ? 'hidden md:flex' : 'hidden')}
-        aria-label="Rolar produtos para esquerda"
-      >
-        <ChevronLeft size={18} />
-      </button>
+        ariaLabel="Rolar produtos para esquerda"
+        className="top-[38%]"
+      />
 
       <div
         ref={rowRef}
@@ -88,14 +84,13 @@ function ProductHorizontalRow({
         {children}
       </div>
 
-      <button
-        type="button"
+      <CarouselArrow
+        side="right"
+        visible={showRightArrow}
         onClick={() => scrollRow('right')}
-        className={cn(SCROLL_CHEVRON_CLASS, '-right-[18px]', showRightArrow ? 'hidden md:flex' : 'hidden')}
-        aria-label="Rolar produtos para direita"
-      >
-        <ChevronRight size={18} />
-      </button>
+        ariaLabel="Rolar produtos para direita"
+        className="top-[38%]"
+      />
     </div>
   )
 }
@@ -147,10 +142,10 @@ export function BuyerFeedPage() {
   )
   const [selectedCategory, setSelectedCategory] = useState<string>('')
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false)
-  const [selectedProduct, setSelectedProduct] = useState<FeedProductSearchResult | null>(null)
+  const [selectedProduct, setSelectedProduct] = useState<FeedProductListing | null>(null)
   const categoriesRef = useRef<HTMLDivElement>(null)
   const [showLeftArrow, setShowLeftArrow] = useState(false)
-  const [showRightArrow, setShowRightArrow] = useState(true)
+  const [showRightArrow, setShowRightArrow] = useState(false)
 
   const { data: rootCategories = [], isLoading: loadingCategories } = useRootCategories()
   const { data: allCategories = [] } = useCategories()
@@ -242,22 +237,18 @@ export function BuyerFeedPage() {
     <>
       <div className="space-y-8 pb-12">
         <div className="relative min-w-0">
-          <button
-            type="button"
+          <CarouselArrow
+            side="left"
+            visible={showLeftArrow}
             onClick={() => scrollCategories('left')}
-            className={cn(
-              'absolute -left-[18px] top-1/2 z-10 -mt-0.5 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-background p-0 text-foreground shadow-md transition-all duration-200 hover:bg-secondary',
-              showLeftArrow ? 'hidden md:flex' : 'hidden',
-            )}
-            aria-label="Rolar para esquerda"
-          >
-            <ChevronLeft size={15} />
-          </button>
+            ariaLabel="Rolar para esquerda"
+            className="top-1/2"
+          />
 
           <div
             ref={categoriesRef}
             onScroll={handleScroll}
-            className="flex min-w-0 w-[calc(100%+2rem)] -mx-4 gap-2 overflow-x-auto scroll-smooth px-4 pb-2 scroll-px-4 no-scrollbar md:mx-0 md:w-full md:px-0 md:scroll-px-0"
+            className="flex min-w-0 w-[calc(100%+2rem)] -mx-4 gap-2 overflow-x-auto touch-pan-x overscroll-x-contain scroll-smooth px-4 pb-2 scroll-px-4 no-scrollbar md:mx-0 md:w-full md:px-0 md:scroll-px-0"
           >
             <button
               type="button"
@@ -305,17 +296,13 @@ export function BuyerFeedPage() {
             <div className="w-4 shrink-0 md:hidden" aria-hidden />
           </div>
 
-          <button
-            type="button"
+          <CarouselArrow
+            side="right"
+            visible={showRightArrow}
             onClick={() => scrollCategories('right')}
-            className={cn(
-              'absolute -right-[18px] top-1/2 z-10 -mt-0.5 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-background p-0 text-foreground shadow-md transition-all duration-200 hover:bg-secondary',
-              showRightArrow ? 'hidden md:flex' : 'hidden',
-            )}
-            aria-label="Rolar para direita"
-          >
-            <ChevronRight size={15} />
-          </button>
+            ariaLabel="Rolar para direita"
+            className="top-1/2"
+          />
         </div>
 
         {isFilteredView ? (
@@ -367,7 +354,7 @@ export function BuyerFeedPage() {
             <ProductVerticalGrid>
               {products.map((product) => (
                 <FeedProductCard
-                  key={product.id}
+                  key={product.feedListingKey}
                   product={product}
                   onSelect={setSelectedProduct}
                   layout="vertical"
@@ -384,7 +371,7 @@ export function BuyerFeedPage() {
                   <ProductHorizontalRow ariaLabel={`Produtos em ${group.categoryName}`}>
                     {group.products.map((product) => (
                       <FeedProductCard
-                        key={product.id}
+                        key={product.feedListingKey}
                         product={product}
                         onSelect={setSelectedProduct}
                         layout="horizontal"

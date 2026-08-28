@@ -149,8 +149,12 @@ export async function fetchSupplierApprovalDetails(userId: string): Promise<Supp
 
   const categories = (categoriesRes.data ?? [])
     .map((row) => {
-      const category = row.categories as { id: string; name: string; slug: string } | null
-      return category
+      const raw = row.categories as
+        | { id: string; name: string; slug: string }
+        | { id: string; name: string; slug: string }[]
+        | null
+      if (raw == null) return null
+      return Array.isArray(raw) ? raw[0] ?? null : raw
     })
     .filter((category): category is { id: string; name: string; slug: string } => category != null)
     .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))

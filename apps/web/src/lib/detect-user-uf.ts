@@ -1,12 +1,16 @@
 import { BRAZILIAN_STATES } from '@/lib/brazil-locations'
 
-const VALID_UFS = new Set(BRAZILIAN_STATES.map((state) => state.uf))
+export type BrazilianUf = (typeof BRAZILIAN_STATES)[number]['uf']
+
+const VALID_UFS = new Set<string>(BRAZILIAN_STATES.map((state) => state.uf))
 const DETECTED_UF_STORAGE_KEY = 'keve-detected-uf'
 const DETECTED_LOCATION_STORAGE_KEY = 'keve-detected-location'
 
 export type DetectedUserLocation = {
   cidade: string
   uf: string
+  latitude?: number
+  longitude?: number
 }
 
 export function normalizeGeocodedCityName(cidade: string): string {
@@ -33,8 +37,8 @@ function normalizeDetectedLocation(location: DetectedUserLocation): DetectedUser
   }
 }
 
-export function isBrazilianUf(value: string | null | undefined): value is string {
-  return Boolean(value && VALID_UFS.has(value))
+export function isBrazilianUf(value: string | null | undefined): value is BrazilianUf {
+  return Boolean(value && VALID_UFS.has(value.toUpperCase()))
 }
 
 export function getStoredDetectedUf(): string | null {
@@ -112,7 +116,21 @@ export function detectUserLocation(): Promise<DetectedUserLocation | null> {
   return new Promise((resolve) => {
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        void readLocationFromCoordinates(position.coords.latitude, position.coords.longitude).then(resolve)
+        void readLocationFromCoordinates(position.coords.latitude, position.coords.longitude).then(
+          (location) => {
+            if (!location) {
+              resolve(null)
+              return
+            }
+            const withCoords: DetectedUserLocation = {
+              ...location,
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+            }
+            storeDetectedLocation(withCoords)
+            resolve(withCoords)
+          },
+        )
       },
       () => resolve(null),
       { enableHighAccuracy: false, timeout: 12_000, maximumAge: 600_000 },

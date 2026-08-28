@@ -70,8 +70,8 @@ export function ProductGrid({
                     {product.nome}
                   </h4>
                 )}
-                {!product.is_active && (
-                  <p className="text-[10px] font-medium text-destructive">Inativo</p>
+                {!product.is_active && !(product as { is_draft?: boolean }).is_draft && (
+                  <p className="text-[10px] font-medium text-destructive">Pausado</p>
                 )}
                 {categoryName && (
                   <span

@@ -1,7 +1,11 @@
-import { Package } from 'lucide-react'
-import { getPrimaryProductImageUrl, getSupplierStoreDisplayName } from '@keve/shared'
+import { LayoutGrid, Package } from 'lucide-react'
+import {
+  formatVariationOptionLabel,
+  getPrimaryProductImageUrl,
+  getSupplierStoreDisplayName,
+} from '@keve/shared'
 import { cn } from '@/lib/utils'
-import type { FeedProduct, FeedProductSearchResult } from '@/services/products'
+import type { FeedProductListing } from '@/services/products'
 
 export const HORIZONTAL_CARD_CLASS =
   'w-[42%] min-w-[140px] max-w-[200px] flex-shrink-0 snap-start sm:w-[200px] md:w-[220px] lg:w-[240px]'
@@ -47,8 +51,8 @@ export function getFeedProductImage(nome: string, dbUrl: string | null): string 
 }
 
 type FeedProductCardProps = {
-  product: FeedProduct | FeedProductSearchResult
-  onSelect: (product: FeedProduct | FeedProductSearchResult) => void
+  product: FeedProductListing
+  onSelect: (product: FeedProductListing) => void
   layout: 'horizontal' | 'vertical'
 }
 
@@ -61,9 +65,16 @@ const MATCH_SOURCE_LABELS: Record<string, string> = {
 }
 
 export function FeedProductCard({ product, onSelect, layout }: FeedProductCardProps) {
-  const imageUrl = getFeedProductImage(product.nome, getPrimaryProductImageUrl(product))
+  const imageUrl = getFeedProductImage(
+    product.nome,
+    product.feedColorImageUrl ?? getPrimaryProductImageUrl(product),
+  )
   const matchSource = 'matchSource' in product ? product.matchSource : undefined
   const matchLabel = matchSource ? MATCH_SOURCE_LABELS[matchSource] : null
+  const supplierLine = product.supplier
+    ? `${getSupplierStoreDisplayName(product.supplier)}${product.category?.name ? ` · ${product.category.name}` : ''}`
+    : product.category?.name || ''
+  const variationCount = product.feedVariationCount ?? 0
 
   return (
     <div
@@ -99,10 +110,17 @@ export function FeedProductCard({ product, onSelect, layout }: FeedProductCardPr
             {product.nome}
           </h4>
           <p className="truncate text-xs text-muted-foreground">
-            {product.supplier
-              ? `${getSupplierStoreDisplayName(product.supplier)}${product.category?.name ? ` · ${product.category.name}` : ''}`
-              : product.category?.name || ''}
+            {product.feedColor ?? supplierLine}
           </p>
+          {product.feedColor && supplierLine ? (
+            <p className="truncate text-[11px] text-muted-foreground/80">{supplierLine}</p>
+          ) : null}
+          {variationCount > 1 ? (
+            <p className="flex items-center gap-1 truncate text-[11px] text-muted-foreground">
+              <LayoutGrid size={12} className="shrink-0 opacity-70" aria-hidden />
+              <span>{formatVariationOptionLabel(variationCount)}</span>
+            </p>
+          ) : null}
         </div>
 
         <div className="flex items-center justify-between gap-1.5 pt-0.5">

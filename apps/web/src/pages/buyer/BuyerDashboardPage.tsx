@@ -20,8 +20,10 @@ import { toast } from 'sonner'
 import { formatSupabaseError } from '@/lib/errors'
 import { getSupabaseProjectLabel, isSupabaseConfigured } from '@/lib/supabase'
 import type { Demand } from '@/services/demands'
+import type { PublicOffer } from '@/services/offers'
 import { cn } from '@/lib/utils'
 import { DemandVariantSummary } from '@/components/buyer/DemandVariantSummary'
+import { getBuyerOfferPartialStatus } from '@/lib/offer-variant-pricing'
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
@@ -43,12 +45,14 @@ function getProductImage(nome: string): string | null {
 
 function OfferCardMini({ 
   offer, 
+  demand,
   isLowest, 
   demandTitle, 
   canAccept,
   destination
 }: { 
-  offer: any
+  offer: PublicOffer
+  demand: Demand
   isLowest: boolean
   demandTitle: string
   canAccept: boolean 
@@ -58,6 +62,8 @@ function OfferCardMini({
   const acceptOffer = useAcceptOffer()
   const rejectOffer = useRejectOffer()
   const navigate = useNavigate()
+  const partialStatus = getBuyerOfferPartialStatus(demand, offer)
+  const { isPartial, requestedQty, offeredQty, uncoveredQty } = partialStatus
   
   const isAccepting = acceptOffer.isPending
   const isRejecting = rejectOffer.isPending
@@ -88,7 +94,7 @@ function OfferCardMini({
   }
 
   const handleCardClick = (e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest('button')) {
+    if ((e.target as HTMLElement).closest('button, a')) {
       return
     }
     navigate(destination)
@@ -97,7 +103,10 @@ function OfferCardMini({
   return (
     <div 
       onClick={handleCardClick}
-      className="group/card cursor-pointer bg-card border border-border/50 rounded-xl overflow-hidden hover:border-border/80 transition-all duration-300 flex flex-col min-h-[220px] w-[270px] shrink-0 snap-start md:w-full md:shrink"
+      className={cn(
+        'group/card cursor-pointer bg-card border border-border/50 rounded-xl overflow-hidden hover:border-border/80 transition-all duration-300 flex flex-col w-[270px] shrink-0 snap-start md:w-full md:shrink',
+        isPartial ? 'min-h-[260px]' : 'min-h-[220px]',
+      )}
     >
       {/* Imagem do Produto correspondente à categoria */}
       <div className="relative h-24 w-full bg-muted overflow-hidden">
@@ -115,7 +124,11 @@ function OfferCardMini({
         
         {/* Badge superior esquerdo */}
         <div className="absolute top-2 left-2 z-10">
-          {isLowest ? (
+          {isPartial ? (
+            <span className="inline-flex items-center rounded-md bg-amber-500 text-[9px] font-bold text-white px-1.5 py-0.5 uppercase tracking-wider shadow-sm">
+              Parcial
+            </span>
+          ) : isLowest ? (
             <span className="inline-flex items-center rounded-md bg-emerald-500 text-[9px] font-bold text-white px-1.5 py-0.5 uppercase tracking-wider shadow-sm">
               Melhor Preço
             </span>
@@ -153,10 +166,33 @@ function OfferCardMini({
             <span className="text-xs font-bold text-primary">
               {formatCurrency(offer.valor)}
             </span>
-            <span className="text-[10px] text-muted-foreground font-medium">
-              Qtd: {offer.quantidade}
-            </span>
+            {isPartial ? (
+              <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+                {offeredQty} de {requestedQty}
+              </span>
+            ) : (
+              <span className="text-[10px] text-muted-foreground font-medium">
+                Qtd: {offeredQty}
+              </span>
+            )}
           </div>
+
+          {isPartial && uncoveredQty > 0 ? (
+            <div className="space-y-1">
+              <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-2 py-1.5">
+                <p className="text-[10px] font-medium text-amber-700 dark:text-amber-300 leading-snug">
+                  Não cobre {uncoveredQty} un do que você pediu.
+                </p>
+              </div>
+              <Link
+                to={destination}
+                onClick={(e) => e.stopPropagation()}
+                className="inline-block text-[10px] font-semibold text-primary hover:underline"
+              >
+                Ver o que mudou
+              </Link>
+            </div>
+          ) : null}
 
           {/* Botões de Ações ou Status */}
           {offer.status === 'enviada' && canAccept ? (
@@ -322,6 +358,7 @@ function DemandItem({ demand }: { demand: Demand }) {
         <OfferCardMini
           key={offer.id}
           offer={offer}
+          demand={demand}
           isLowest={isLowest}
           demandTitle={demand.titulo}
           canAccept={canAccept}

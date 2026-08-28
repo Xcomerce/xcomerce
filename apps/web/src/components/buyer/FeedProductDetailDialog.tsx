@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { BadgeCheck, ChevronLeft, ChevronRight, MapPin, Package, Star, Store, X } from 'lucide-react'
 import {
   getProductImageUrls,
+  getProductColorOptions,
   getSupplierStoreDisplayName,
   parseVariantStockRows,
   buildVariantStockMatrix,
@@ -10,7 +11,7 @@ import {
 } from '@keve/shared'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import type { FeedProduct } from '@/services/products'
+import type { FeedProductListing } from '@/services/products'
 import {
   buildDemandStateFromProduct,
   type FeedProductVariantSelection,
@@ -18,7 +19,7 @@ import {
 import { formatFeedProductCurrency, getFeedProductImage } from '@/components/buyer/FeedProductCard'
 
 type FeedProductDetailDialogProps = {
-  product: FeedProduct | null
+  product: FeedProductListing | null
   onClose: () => void
 }
 
@@ -49,7 +50,7 @@ function orderVariantValues(preferred: string[], values: string[]): string[] {
 }
 
 type VariantPickersProps = {
-  product: FeedProduct
+  product: FeedProductListing
   variantRows: ProductVariantStockRow[]
   colorOptions: string[]
   sizeOptions: string[]
@@ -84,7 +85,7 @@ function VariantPickers({
 
   return (
     <div className={cn('space-y-3', isMobile ? 'sm:hidden' : 'hidden sm:block')}>
-      {product.tem_cor ? (
+      {colorOptions.length > 0 ? (
         <div>
           <p className="mb-1.5 text-xs font-medium text-muted-foreground">Cor</p>
           <div className={isMobile ? horizontalScrollClass : desktopWrapClass}>
@@ -114,15 +115,15 @@ function VariantPickers({
         </div>
       ) : null}
 
-      {product.tem_tamanho ? (
+      {sizeOptions.length > 0 ? (
         <div>
           <p className="mb-1.5 text-xs font-medium text-muted-foreground">Tamanho</p>
           <div className={isMobile ? horizontalScrollClass : desktopWrapClass}>
             {sizeOptions.map((tamanho) => {
-              const row = findRow(product.tem_cor ? selectedCor : null, tamanho)
+              const row = findRow(colorOptions.length > 0 ? selectedCor : null, tamanho)
               const available = row ? isVariantAvailable(row) : false
               const selected = selectedTamanho === tamanho
-              const needsColorFirst = product.tem_cor && !selectedCor
+              const needsColorFirst = colorOptions.length > 0 && !selectedCor
               const disabled = needsColorFirst || !available
               return (
                 <button
@@ -265,7 +266,7 @@ function ProductSummaryHeader({
   titleId,
   className,
 }: {
-  product: FeedProduct
+  product: FeedProductListing
   titleId?: string
   className?: string
 }) {
@@ -288,7 +289,7 @@ function VariantSelectionHint({
   product,
   canRequest,
 }: {
-  product: FeedProduct
+  product: FeedProductListing
   canRequest: boolean
 }) {
   if (canRequest) return null
@@ -314,23 +315,22 @@ export function FeedProductDetailDialog({ product, onClose }: FeedProductDetailD
   const [fichaTecnicaExpanded, setFichaTecnicaExpanded] = useState(false)
 
   useEffect(() => {
-    setSelectedCor(null)
+    setSelectedCor(product?.feedColor ?? null)
     setSelectedTamanho(null)
     setActiveImageIndex(0)
     setFichaTecnicaExpanded(false)
-  }, [product?.id])
+  }, [product?.id, product?.feedColor])
 
   const variantRows = useMemo(() => {
     if (!product) return []
-    if (product.tem_cor || product.tem_tamanho) {
-      const parsed = parseVariantStockRows(product.estoque_variacoes)
-      if (parsed.length > 0) return parsed
-      return buildVariantStockMatrix(
-        product.tem_cor,
-        product.tem_tamanho,
-        product.cores ?? [],
-        product.tamanhos ?? [],
-      )
+    const parsed = parseVariantStockRows(product.estoque_variacoes)
+    if (parsed.length > 0) return parsed
+
+    const colors = getProductColorOptions(product)
+    const hasColors = colors.length > 0
+    const hasSizes = product.tem_tamanho && (product.tamanhos?.length ?? 0) > 0
+    if (hasColors || hasSizes) {
+      return buildVariantStockMatrix(hasColors, hasSizes, colors, product.tamanhos ?? [])
     }
     return []
   }, [product])
@@ -345,39 +345,44 @@ export function FeedProductDetailDialog({ product, onClose }: FeedProductDetailD
     return fallback ? [fallback] : []
   }, [product])
 
-  const hasVariants = variantRows.length > 0
-
   const colorOptions = useMemo(() => {
-    if (!product?.tem_cor) return []
+    if (!product) return []
+    const preferred = getProductColorOptions(product)
+    if (preferred.length === 0) return []
     const fromRows = variantRows.map((row) => row.cor).filter(Boolean) as string[]
-    return orderVariantValues(product.cores ?? [], fromRows)
+    return orderVariantValues(preferred, fromRows)
   }, [product, variantRows])
 
   const sizeOptions = useMemo(() => {
     if (!product?.tem_tamanho) return []
-    const filteredRows = product.tem_cor && selectedCor
+    const filteredRows = colorOptions.length > 0 && selectedCor
       ? variantRows.filter((row) => row.cor === selectedCor)
       : variantRows
     const fromRows = filteredRows.map((row) => row.tamanho).filter(Boolean) as string[]
     return orderVariantValues(product.tamanhos ?? [], fromRows)
-  }, [product, variantRows, selectedCor])
+  }, [product, variantRows, selectedCor, colorOptions.length])
+
+  const hasColorOptions = colorOptions.length > 0
+  const hasSizeOptions = sizeOptions.length > 0
+  const hasVariants = variantRows.length > 0
 
   if (!product) return null
 
-  const storeName = getSupplierStoreDisplayName(product.supplier)
-  const rating = product.supplier?.avg_rating
-  const location = product.cidade && product.uf ? `${product.cidade}/${product.uf}` : null
-  const descricao = product.descricao?.trim() ?? ''
+  const activeProduct = product
+  const storeName = getSupplierStoreDisplayName(activeProduct.supplier)
+  const rating = activeProduct.supplier?.avg_rating
+  const location = activeProduct.cidade && activeProduct.uf ? `${activeProduct.cidade}/${activeProduct.uf}` : null
+  const descricao = activeProduct.descricao?.trim() ?? ''
   const fichaTecnicaExpandable = descricao.length > FICHA_TECNICA_PREVIEW_CHARS
 
   function getSelectedVariant(): FeedProductVariantSelection | null {
     if (!hasVariants) return null
 
-    const cor = product.tem_cor ? selectedCor : null
-    const tamanho = product.tem_tamanho ? selectedTamanho : null
+    const cor = hasColorOptions ? selectedCor : null
+    const tamanho = hasSizeOptions ? selectedTamanho : null
 
-    if (product.tem_cor && !cor) return null
-    if (product.tem_tamanho && !tamanho) return null
+    if (hasColorOptions && !cor) return null
+    if (hasSizeOptions && !tamanho) return null
 
     const row = variantRows.find(
       (item) => variantStockKey(item.cor, item.tamanho) === variantStockKey(cor, tamanho),
@@ -388,7 +393,7 @@ export function FeedProductDetailDialog({ product, onClose }: FeedProductDetailD
 
   function handleSelectCor(cor: string) {
     setSelectedCor(cor)
-    if (!product.tem_tamanho || !selectedTamanho) return
+    if (!hasSizeOptions || !selectedTamanho) return
 
     const row = variantRows.find((item) => item.cor === cor && item.tamanho === selectedTamanho)
     if (!row || !isVariantAvailable(row)) {
@@ -398,14 +403,14 @@ export function FeedProductDetailDialog({ product, onClose }: FeedProductDetailD
 
   function handleRequestOffer() {
     if (hasVariants && !getSelectedVariant()) return
-    const state = buildDemandStateFromProduct(product, getSelectedVariant())
+    const state = buildDemandStateFromProduct(activeProduct, getSelectedVariant())
     onClose()
     navigate('/buyer/demands/new', { state })
   }
 
   function handleOpenStore() {
     onClose()
-    navigate(`/buyer/stores/${product.supplier_id}`)
+    navigate(`/buyer/stores/${activeProduct.supplier_id}`)
   }
 
   function showPrevImage() {

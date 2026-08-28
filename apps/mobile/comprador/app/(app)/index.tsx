@@ -1,4 +1,4 @@
-import { Package } from 'lucide-react-native'
+import { LayoutGrid, Package } from 'lucide-react-native'
 import { useMemo, useState } from 'react'
 import { FlatList, Image, Pressable, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -9,13 +9,13 @@ import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import { FeedSearchBar } from '@/components/feed/FeedSearchBar'
 import { useCategories, useRootCategories } from '@/hooks/use-categories'
 import { useFeedProducts, useSearchSuggestions } from '@/hooks/use-products'
-import { getDescendantCategoryIds, getPrimaryProductImageUrl } from '@keve/shared'
+import { getDescendantCategoryIds, getPrimaryProductImageUrl, formatVariationOptionLabel } from '@keve/shared'
 import { getProductImageUri } from '@/lib/product-images'
 import { formatCurrency } from '@/lib/utils'
 import type { Category } from '@/services/categories'
-import type { FeedProduct } from '@/services/products'
+import type { FeedProductListing } from '@/services/products'
 
-function openNewDemandFromProduct(router: ReturnType<typeof useRouter>, product: FeedProduct) {
+function openNewDemandFromProduct(router: ReturnType<typeof useRouter>, product: FeedProductListing) {
   router.push({
     pathname: '/(app)/request-offer',
     params: {
@@ -67,7 +67,7 @@ export default function FeedScreen() {
       }
       return [{ title, data: products }]
     }
-    const grouped = new Map<string, FeedProduct[]>()
+    const grouped = new Map<string, FeedProductListing[]>()
     for (const p of products) {
       const key = p.category?.name ?? 'Outros'
       if (!grouped.has(key)) grouped.set(key, [])
@@ -147,11 +147,14 @@ export default function FeedScreen() {
             <View>
               <Text className="mb-3 text-lg font-bold text-brand-dark">{section.title}</Text>
               <View className="flex-row flex-wrap gap-3">
-                {section.data.map((product: FeedProduct) => {
-                  const imageUri = getProductImageUri(product.nome, getPrimaryProductImageUrl(product))
+                {section.data.map((product: FeedProductListing) => {
+                  const imageUri = getProductImageUri(
+                    product.nome,
+                    product.feedColorImageUrl ?? getPrimaryProductImageUrl(product),
+                  )
                   return (
                     <Pressable
-                      key={product.id}
+                      key={product.feedListingKey}
                       onPress={() => openNewDemandFromProduct(router, product)}
                       className="w-[47%] overflow-hidden rounded-2xl border border-slate-200 bg-white"
                     >
@@ -166,6 +169,19 @@ export default function FeedScreen() {
                         <Text className="font-semibold text-slate-800" numberOfLines={2}>
                           {product.nome}
                         </Text>
+                        {product.feedColor ? (
+                          <Text className="mt-0.5 text-xs text-slate-500" numberOfLines={1}>
+                            {product.feedColor}
+                          </Text>
+                        ) : null}
+                        {(product.feedVariationCount ?? 0) > 1 ? (
+                          <View className="mt-0.5 flex-row items-center gap-1">
+                            <LayoutGrid size={12} color="#64748b" />
+                            <Text className="text-xs text-slate-500">
+                              {formatVariationOptionLabel(product.feedVariationCount ?? 0)}
+                            </Text>
+                          </View>
+                        ) : null}
                         <Text className="mt-1 text-sm font-bold text-brand">{formatCurrency(product.preco_referencia)}</Text>
                         <Text className="mt-1 text-xs text-slate-500">
                           {product.cidade}/{product.uf}

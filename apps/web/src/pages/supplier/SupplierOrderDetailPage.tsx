@@ -20,7 +20,7 @@ import { useOfferDetail } from '@/hooks/use-offers'
 import { useCategories } from '@/hooks/use-categories'
 import type { OrderStatus } from '@/services/orders'
 import { translateSupabaseError } from '@/lib/errors'
-import { ORDER_STATUS_LABELS, canSupplierConfirmPayment } from '@keve/shared'
+import { ORDER_STATUS_LABELS } from '@keve/shared'
 import { printOrderDocument } from '@/lib/order-print'
 import { cn } from '@/lib/utils'
 

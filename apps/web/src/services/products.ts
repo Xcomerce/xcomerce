@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase'
-import type { ProductInput, ProductMatchSource, SearchSuggestion } from '@keve/shared'
-import { mapSearchSuggestionRow } from '@keve/shared'
+import type { ProductInput, ProductMatchSource, SearchSuggestion, FeedListingFields } from '@keve/shared'
+import { mapSearchSuggestionRow, expandProductsToFeedListings } from '@keve/shared'
 import type { Tables } from '@keve/shared'
 
 export type Product = Tables<'products'>
@@ -33,33 +33,42 @@ export async function countProducts(supplierId: string): Promise<number> {
     .select('*', { count: 'exact', head: true })
     .eq('supplier_id', supplierId)
     .eq('is_active', true)
+    .eq('is_draft', false)
 
   if (error) throw error
   return count ?? 0
 }
 
+function buildProductPayload(supplierId: string, input: ProductInput) {
+  const hasVariants = (input.variant_axes ?? []).some((a) => (a.options?.length ?? 0) > 0) || input.tem_cor || input.tem_tamanho
+
+  return {
+    supplier_id: supplierId,
+    category_id: input.category_id,
+    nome: input.nome,
+    sku: normalizeOptionalText(input.sku),
+    descricao: normalizeOptionalText(input.descricao),
+    marca: normalizeOptionalText(input.marca),
+    preco_referencia: input.preco_referencia ?? null,
+    cidade: input.cidade,
+    uf: input.uf.toUpperCase(),
+    is_active: input.is_active ?? true,
+    is_draft: input.is_draft ?? false,
+    draft_expires_at: input.draft_expires_at ?? null,
+    tem_cor: input.tem_cor ?? false,
+    tem_tamanho: input.tem_tamanho ?? false,
+    tipo_tamanho: input.tem_tamanho ? (input.tipo_tamanho ?? null) : null,
+    cores: input.tem_cor ? (input.cores ?? []) : [],
+    tamanhos: input.tem_tamanho ? (input.tamanhos ?? []) : [],
+    variant_axes: input.variant_axes ?? [],
+    estoque_variacoes: hasVariants ? (input.estoque_variacoes ?? []) : [],
+  }
+}
+
 export async function createProduct(supplierId: string, input: ProductInput): Promise<Product> {
   const { data, error } = await supabase
     .from('products')
-    .insert({
-      supplier_id: supplierId,
-      category_id: input.category_id,
-      nome: input.nome,
-      sku: normalizeOptionalText(input.sku),
-      descricao: normalizeOptionalText(input.descricao),
-      marca: normalizeOptionalText(input.marca),
-      preco_referencia: input.preco_referencia ?? null,
-      cidade: input.cidade,
-      uf: input.uf.toUpperCase(),
-      is_active: input.is_active ?? true,
-      tem_cor: input.tem_cor ?? false,
-      tem_tamanho: input.tem_tamanho ?? false,
-      tipo_tamanho: input.tem_tamanho ? (input.tipo_tamanho ?? null) : null,
-      cores: input.tem_cor ? (input.cores ?? []) : [],
-      tamanhos: input.tem_tamanho ? (input.tamanhos ?? []) : [],
-      estoque_variacoes:
-        input.tem_cor || input.tem_tamanho ? (input.estoque_variacoes ?? []) : [],
-    })
+    .insert(buildProductPayload(supplierId, input))
     .select()
     .single()
 
@@ -92,9 +101,12 @@ export async function updateProduct(id: string, input: Partial<ProductInput>): P
     if (input.tipo_tamanho !== undefined) payload.tipo_tamanho = input.tipo_tamanho
     if (input.tamanhos !== undefined) payload.tamanhos = input.tamanhos
   }
+  if (input.is_draft !== undefined) payload.is_draft = input.is_draft
+  if (input.draft_expires_at !== undefined) payload.draft_expires_at = input.draft_expires_at
+  if (input.variant_axes !== undefined) payload.variant_axes = input.variant_axes
   if (input.estoque_variacoes !== undefined) {
     payload.estoque_variacoes = input.estoque_variacoes
-  } else if (input.tem_cor === false && input.tem_tamanho === false) {
+  } else if (input.tem_cor === false && input.tem_tamanho === false && !input.variant_axes?.length) {
     payload.estoque_variacoes = []
   }
 
@@ -151,6 +163,8 @@ export type FeedProductSearchResult = FeedProduct & {
   isOutsideUf?: boolean
 }
 
+export type FeedProductListing = FeedProductSearchResult & FeedListingFields
+
 type SearchFeedProductRow = Product & {
   rank: number | null
   match_source: ProductMatchSource | null
@@ -185,7 +199,7 @@ export async function fetchFeedProducts(filters?: {
   search?: string
   uf?: string
   cidades?: Array<{ cidade: string; uf: string }>
-}): Promise<FeedProductSearchResult[]> {
+}): Promise<FeedProductListing[]> {
   const categoryIds =
     filters?.categoryIds && filters.categoryIds.length > 0
       ? filters.categoryIds
@@ -203,7 +217,9 @@ export async function fetchFeedProducts(filters?: {
   })
 
   if (error) throw error
-  return ((data ?? []) as SearchFeedProductRow[]).map(mapSearchFeedProductRow)
+  return expandProductsToFeedListings(
+    ((data ?? []) as SearchFeedProductRow[]).map(mapSearchFeedProductRow),
+  )
 }
 
 export async function fetchSearchSuggestions(query: string, limit = 8): Promise<SearchSuggestion[]> {
@@ -263,24 +279,27 @@ export async function fetchSupplierStore(supplierId: string): Promise<SupplierSt
   if (profileRes.error) throw profileRes.error
   if (!supplierRes.data) return null
 
-  const row = supplierRes.data as {
+  const raw = supplierRes.data as {
     user_id: string
     store_name: string | null
     status: string
     avg_rating: number
     total_ratings: number
     orders_completed: number
-    company: SupplierStoreProfile['company']
+    company: SupplierStoreProfile['company'] | NonNullable<SupplierStoreProfile['company']>[] | null
   }
 
+  const company =
+    raw.company == null ? null : Array.isArray(raw.company) ? raw.company[0] ?? null : raw.company
+
   return {
-    supplierId: row.user_id,
-    store_name: row.store_name,
-    status: row.status,
-    avg_rating: row.avg_rating ?? 0,
-    total_ratings: row.total_ratings ?? 0,
-    orders_completed: row.orders_completed ?? 0,
-    company: row.company,
+    supplierId: raw.user_id,
+    store_name: raw.store_name,
+    status: raw.status,
+    avg_rating: raw.avg_rating ?? 0,
+    total_ratings: raw.total_ratings ?? 0,
+    orders_completed: raw.orders_completed ?? 0,
+    company: company,
     profile: profileRes.data
       ? {
           full_name: profileRes.data.full_name,
@@ -290,7 +309,7 @@ export async function fetchSupplierStore(supplierId: string): Promise<SupplierSt
   }
 }
 
-export async function fetchSupplierCatalog(supplierId: string): Promise<FeedProduct[]> {
+export async function fetchSupplierCatalog(supplierId: string): Promise<FeedProductListing[]> {
   const { data, error } = await supabase
     .from('products')
     .select(
@@ -311,5 +330,5 @@ export async function fetchSupplierCatalog(supplierId: string): Promise<FeedProd
     .order('created_at', { ascending: false })
 
   if (error) throw error
-  return (data ?? []) as FeedProduct[]
+  return expandProductsToFeedListings((data ?? []) as FeedProduct[])
 }

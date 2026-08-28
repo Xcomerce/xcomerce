@@ -1,42 +1,69 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ChevronRight, Package, Phone, Printer, User } from 'lucide-react'
+import { Package, Phone, Printer, User } from 'lucide-react'
 import { toast } from 'sonner'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/common/EmptyState'
 import { GridSkeleton } from '@/components/common/LoadingSkeleton'
 import { StatusBadge } from '@/components/common/StatusBadge'
+import { OrderCardTimeline } from '@/components/supplier/OrderCardTimeline'
+import { OrderPickupPanel } from '@/components/supplier/OrderPickupPanel'
 import { useOrders, useUpdateOrderStatus } from '@/hooks/use-orders'
 import {
   ORDER_ACCEPTED_STATUSES,
   ORDER_COMPLETED_STATUSES,
   ORDER_PRODUCTION_STATUSES,
-  ORDER_STATUS_LABELS,
   canSupplierConfirmPayment,
 } from '@keve/shared'
 import type { SupplierOrderListItem } from '@/services/orders'
+import { buildOrderCardTimeline, getPickupTimestamp } from '@/lib/order-display'
 import { printOrderDocument } from '@/lib/order-print'
 import { translateSupabaseError } from '@/lib/errors'
 import { cn, formatPhone } from '@/lib/utils'
 
+type OrderSortBy = 'pickup_asc' | 'created_desc'
+
 function formatCurrency(value: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
+}
+
+function sortOrders(orders: SupplierOrderListItem[], sortBy: OrderSortBy): SupplierOrderListItem[] {
+  const sorted = [...orders]
+
+  if (sortBy === 'pickup_asc') {
+    sorted.sort((a, b) => {
+      const aPickup = getPickupTimestamp(a)
+      const bPickup = getPickupTimestamp(b)
+      if (!aPickup && !bPickup) return 0
+      if (!aPickup) return 1
+      if (!bPickup) return -1
+      return new Date(aPickup).getTime() - new Date(bPickup).getTime()
+    })
+    return sorted
+  }
+
+  sorted.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+  return sorted
 }
 
 export function SupplierOrdersPage() {
   const { data: orders = [], isLoading, isError } = useOrders('supplier')
   const updateStatus = useUpdateOrderStatus()
   const [activeTab, setActiveTab] = useState<'all' | 'accepted' | 'production' | 'completed'>('all')
+  const [sortBy, setSortBy] = useState<OrderSortBy>('pickup_asc')
 
   const supplierOrders = orders as SupplierOrderListItem[]
 
-  const filteredOrders = supplierOrders.filter((order) => {
-    if (activeTab === 'accepted') return ORDER_ACCEPTED_STATUSES.includes(order.status)
-    if (activeTab === 'production') return ORDER_PRODUCTION_STATUSES.includes(order.status)
-    if (activeTab === 'completed') return ORDER_COMPLETED_STATUSES.includes(order.status)
-    return true
-  })
+  const filteredOrders = useMemo(() => {
+    const filtered = supplierOrders.filter((order) => {
+      if (activeTab === 'accepted') return ORDER_ACCEPTED_STATUSES.includes(order.status)
+      if (activeTab === 'production') return ORDER_PRODUCTION_STATUSES.includes(order.status)
+      if (activeTab === 'completed') return ORDER_COMPLETED_STATUSES.includes(order.status)
+      return true
+    })
+    return sortOrders(filtered, sortBy)
+  }, [supplierOrders, activeTab, sortBy])
 
   async function handleConfirmPayment(order: SupplierOrderListItem) {
     try {
@@ -90,74 +117,101 @@ export function SupplierOrdersPage() {
             <EmptyTabState />
           ) : (
             <div className="space-y-4">
-              {filteredOrders.map((order) => (
-                <Card key={order.id} className="px-4 py-4 lg:px-5">
-                  <div className="space-y-3">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <div className="inline-flex h-6 shrink-0 items-center rounded-full border border-border bg-transparent px-2.5 font-mono text-xs font-semibold leading-none tracking-wider text-foreground">
-                        Pedido#{order.id.slice(0, 8).toUpperCase()}
-                      </div>
-                      <StatusBadge status={order.status} kind="order" className="h-6 shrink-0 py-0 text-xs" />
-                    </div>
+              <div className="flex items-center justify-end gap-2">
+                <label htmlFor="order-sort" className="text-sm text-muted-foreground">
+                  Ordenar por
+                </label>
+                <select
+                  id="order-sort"
+                  value={sortBy}
+                  onChange={(event) => setSortBy(event.target.value as OrderSortBy)}
+                  className="h-9 rounded-xl border border-border bg-background px-3 text-sm font-medium text-foreground"
+                >
+                  <option value="pickup_asc">Retirada mais próxima</option>
+                  <option value="created_desc">Mais recentes</option>
+                </select>
+              </div>
 
-                    <div className="min-w-0">
-                      <p className="text-base font-semibold text-foreground line-clamp-2">
-                        {order.demand?.titulo ?? `Pedido ${order.demand_id.slice(0, 8)}…`}
-                      </p>
-                      {order.demand ? (
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          {order.demand.cidade}/{order.demand.uf}
-                          {order.offer ? ` · ${formatCurrency(order.offer.valor)}` : ''}
-                        </p>
-                      ) : null}
-                    </div>
+              {filteredOrders.map((order) => {
+                const timeline = buildOrderCardTimeline(order, order.logs ?? [])
+                const pickupAt = getPickupTimestamp(order)
 
-                    {order.buyer ? (
-                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                        <span className="inline-flex items-center gap-1.5">
-                          <User className="h-3.5 w-3.5" />
-                          {order.buyer.full_name}
-                        </span>
-                        {order.buyer.phone ? (
-                          <span className="inline-flex items-center gap-1.5">
-                            <Phone className="h-3.5 w-3.5" />
-                            {formatPhone(order.buyer.phone)}
-                          </span>
+                return (
+                  <Card key={order.id} className="px-4 py-4 lg:px-5">
+                    <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                      <div className="min-w-0 flex-1 space-y-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <div className="inline-flex h-6 shrink-0 items-center rounded-full border border-border bg-transparent px-2.5 font-mono text-xs font-semibold leading-none tracking-wider text-foreground">
+                            Pedido#{order.id.slice(0, 8).toUpperCase()}
+                          </div>
+                          <StatusBadge status={order.status} kind="order" className="h-6 shrink-0 py-0 text-xs" />
+                        </div>
+
+                        <div className="min-w-0">
+                          <p className="text-base font-semibold text-foreground line-clamp-2">
+                            {order.demand?.titulo ?? `Pedido ${order.demand_id.slice(0, 8)}…`}
+                          </p>
+                          {order.demand ? (
+                            <p className="mt-1 text-sm text-muted-foreground">
+                              {order.demand.cidade}/{order.demand.uf}
+                              {order.offer ? ` · ${formatCurrency(order.offer.valor)}` : ''}
+                            </p>
+                          ) : null}
+                        </div>
+
+                        {order.buyer ? (
+                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                            <span className="inline-flex items-center gap-1.5">
+                              <User className="h-3.5 w-3.5" />
+                              {order.buyer.full_name}
+                            </span>
+                            {order.buyer.phone ? (
+                              <span className="inline-flex items-center gap-1.5">
+                                <Phone className="h-3.5 w-3.5" />
+                                {formatPhone(order.buyer.phone)}
+                              </span>
+                            ) : null}
+                          </div>
                         ) : null}
+
+                        <OrderCardTimeline events={timeline} />
+
+                        <div className="flex flex-wrap gap-2 pt-1">
+                          {canSupplierConfirmPayment(order.status) ? (
+                            <Button
+                              size="sm"
+                              className="rounded-xl"
+                              disabled={updateStatus.isPending}
+                              onClick={() => void handleConfirmPayment(order)}
+                            >
+                              Confirmar pagamento
+                            </Button>
+                          ) : null}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="rounded-xl"
+                            onClick={() => handlePrint(order)}
+                          >
+                            <Printer className="mr-1.5 h-4 w-4" />
+                            Imprimir pedido
+                          </Button>
+                          <Button size="sm" variant="secondary" className="rounded-xl" asChild>
+                            <Link to={`/supplier/orders/${order.id}`}>Ver detalhes</Link>
+                          </Button>
+                        </div>
                       </div>
-                    ) : null}
 
-                    <p className="text-xs text-muted-foreground">
-                      {ORDER_STATUS_LABELS[order.status] ?? order.status}
-                    </p>
-
-                    <div className="flex flex-wrap gap-2 pt-1">
-                      {canSupplierConfirmPayment(order.status) ? (
-                        <Button
-                          size="sm"
-                          className="rounded-xl"
-                          disabled={updateStatus.isPending}
-                          onClick={() => void handleConfirmPayment(order)}
-                        >
-                          Confirmar pagamento
-                        </Button>
-                      ) : null}
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="rounded-xl"
-                        onClick={() => handlePrint(order)}
-                      >
-                        <Printer className="mr-1.5 h-4 w-4" />
-                        Imprimir pedido
-                      </Button>
-                      <Button size="sm" variant="secondary" className="rounded-xl" asChild>
-                        <Link to={`/supplier/orders/${order.id}`}>Ver detalhes</Link>
-                      </Button>
+                      <OrderPickupPanel
+                        pickupAt={pickupAt}
+                        prazoEntregaDias={order.offer?.prazo_entrega_dias}
+                        orderStatus={order.status}
+                        className="w-full shrink-0 md:w-44"
+                      />
                     </div>
-                  </div>
-                </Card>
-              ))}
+                  </Card>
+                )
+              })}
             </div>
           )}
         </div>

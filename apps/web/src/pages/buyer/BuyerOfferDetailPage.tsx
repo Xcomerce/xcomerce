@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useQuery } from '@tanstack/react-query'
@@ -28,6 +28,10 @@ import { formatSupabaseError } from '@/lib/errors'
 import { demandHasVariantSpecs } from '@keve/shared'
 import { DemandVariantSummary } from '@/components/buyer/DemandVariantSummary'
 import { formatDemandDateTime } from '@/lib/datetime'
+import {
+  buildOfferVariantComparison,
+  getBuyerOfferPartialStatus,
+} from '@/lib/offer-variant-pricing'
 import { cn, getInitials } from '@/lib/utils'
 import { getSignedUrl } from '@/lib/storage'
 import { ScrollPageShell, SCROLL_PAGE_SECTION_CLASS } from '@/components/layout/ScrollPageShell'
@@ -190,6 +194,20 @@ export function BuyerOfferDetailPage() {
   const { data: offer, isLoading: loadingOffer, error: offerError } = useOfferDetail(offerId)
   const { data: demand, isLoading: loadingDemand } = useDemand(offer?.demand_id)
   const { data: allOffers = [] } = useOffersForDemand(offer?.demand_id)
+
+  const variantComparison = useMemo(() => {
+    if (!demand || !offer?.especificacoes?.length) return []
+    return buildOfferVariantComparison(demand, offer)
+  }, [demand, offer])
+
+  const partialStatus = useMemo(() => {
+    if (!demand || !offer) {
+      return { isPartial: false, requestedQty: 0, offeredQty: 0, uncoveredQty: 0 }
+    }
+    return getBuyerOfferPartialStatus(demand, offer)
+  }, [demand, offer])
+
+  const { isPartial: isPartialQuantity, requestedQty } = partialStatus
 
   const activeOffers = allOffers.filter(o => o.status !== 'rejeitada' && o.status !== 'cancelada')
   const isBestPrice = activeOffers.length > 0 && activeOffers[0].id === offer?.id
@@ -501,9 +519,22 @@ export function BuyerOfferDetailPage() {
           {/* Outras informações e especificações */}
           <div className="!mt-4">
             <div className="grid gap-3 grid-cols-2 sm:grid-cols-4">
-              <div className="bg-background/40 border border-border rounded-xl p-3 space-y-1">
+              <div className={cn(
+                'bg-background/40 border rounded-xl p-3 space-y-1',
+                isPartialQuantity ? 'border-amber-300 dark:border-amber-800' : 'border-border',
+              )}>
                 <span className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider">Quantidade</span>
-                <p className="text-base font-bold text-foreground">{offer.quantidade} {demand.unidade ?? 'un.'}</p>
+                <p className={cn(
+                  'text-base font-bold',
+                  isPartialQuantity ? 'text-amber-700 dark:text-amber-400' : 'text-foreground',
+                )}>
+                  {offer.quantidade} {demand.unidade ?? 'un.'}
+                </p>
+                {isPartialQuantity ? (
+                  <p className="text-[10px] text-amber-700 dark:text-amber-400">
+                    Atendimento parcial (solicitado: {requestedQty} {demand.unidade ?? 'un.'})
+                  </p>
+                ) : null}
               </div>
               <div className="bg-background/40 border border-border rounded-xl p-3 space-y-1">
                 <span className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider">Prazo Entrega</span>
@@ -543,7 +574,13 @@ export function BuyerOfferDetailPage() {
                   <tr>
                     <td className="py-2.5 font-medium text-muted-foreground">Quantidade</td>
                     <td className="py-2.5 text-foreground">{demand.quantidade} {demand.unidade ?? 'un.'}</td>
-                    <td className="py-2.5 font-semibold text-foreground">{offer.quantidade} {demand.unidade ?? 'un.'}</td>
+                    <td className={cn(
+                      'py-2.5 font-semibold',
+                      isPartialQuantity ? 'text-amber-700 dark:text-amber-400' : 'text-foreground',
+                    )}>
+                      {offer.quantidade} {demand.unidade ?? 'un.'}
+                      {isPartialQuantity ? ' (parcial)' : ''}
+                    </td>
                   </tr>
                   <tr>
                     <td className="py-2.5 font-medium text-muted-foreground">Prazo Limite</td>
@@ -565,7 +602,7 @@ export function BuyerOfferDetailPage() {
                       </td>
                     </tr>
                   )}
-                  {demandHasVariantSpecs(demand) && (
+                  {demandHasVariantSpecs(demand) && variantComparison.length === 0 && (
                     <tr>
                       <td className="py-2.5 font-medium text-muted-foreground">Variações</td>
                       <td className="py-2.5 text-foreground" colSpan={2}>
@@ -576,6 +613,49 @@ export function BuyerOfferDetailPage() {
                 </tbody>
               </table>
             </div>
+
+            {variantComparison.length > 0 ? (
+              <div className="space-y-2">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                  Variações — solicitado vs proposto
+                </p>
+                <div className="overflow-x-auto rounded-xl border border-border/40">
+                  <table className="w-full text-xs text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-border/30 bg-muted/30 text-muted-foreground font-bold">
+                        <th className="px-3 py-2">Cor</th>
+                        <th className="px-3 py-2">Tamanho</th>
+                        <th className="px-3 py-2">Solicitado</th>
+                        <th className="px-3 py-2">Proposto</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/10">
+                      {variantComparison.map((row) => (
+                        <tr key={row.key}>
+                          <td className="px-3 py-2 font-medium uppercase">{row.cor || '—'}</td>
+                          <td className="px-3 py-2 font-medium uppercase">{row.tamanho || '—'}</td>
+                          <td className="px-3 py-2">
+                            {row.quantidadeSolicitada} {demand.unidade ?? 'un.'}
+                          </td>
+                          <td className={cn(
+                            'px-3 py-2 font-semibold',
+                            row.quantidadeProposta == null
+                              ? 'text-destructive'
+                              : row.quantidadeProposta < row.quantidadeSolicitada
+                                ? 'text-amber-700 dark:text-amber-400'
+                                : 'text-foreground',
+                          )}>
+                            {row.quantidadeProposta == null
+                              ? 'Não atendido'
+                              : `${row.quantidadeProposta} ${demand.unidade ?? 'un.'}`}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : null}
           </div>
 
           {/* Mensagem customizada */}

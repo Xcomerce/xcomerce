@@ -31,3 +31,17 @@ export function useMarkMatchViewed() {
     },
   })
 }
+
+export function useMarkMatchDismissed() {
+  const queryClient = useQueryClient()
+  const { user } = useAuth()
+
+  return useMutation({
+    mutationFn: (matchId: string) => matches.markDismissed(matchId),
+    onSuccess: () => {
+      if (user?.id) {
+        queryClient.invalidateQueries({ queryKey: matchKeys.all })
+      }
+    },
+  })
+}

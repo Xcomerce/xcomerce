@@ -1,21 +1,38 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ChevronRight, Package, ShoppingBag } from 'lucide-react'
+import { Package, ShoppingBag } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Alert } from '@/components/ui/alert'
 import { EmptyState } from '@/components/common/EmptyState'
 import { StatusBadge } from '@/components/common/StatusBadge'
 import { GridSkeleton } from '@/components/common/LoadingSkeleton'
+import { OrderSupplierPickupInfo } from '@/components/buyer/OrderSupplierPickupInfo'
+import { OrderCardTimeline } from '@/components/supplier/OrderCardTimeline'
+import { OrderPickupPanel } from '@/components/supplier/OrderPickupPanel'
 import { usePageTitle } from '@/hooks/use-page-title'
 import { useOrders } from '@/hooks/use-orders'
+import { formatCompanyAddress } from '@/lib/address'
+import { buildOrderCardTimeline, getPickupTimestamp } from '@/lib/order-display'
+import type { BuyerOrderListItem } from '@/services/orders'
 import {
   ORDER_ACCEPTED_STATUSES,
   ORDER_COMPLETED_STATUSES,
   ORDER_PRODUCTION_STATUSES,
-  ORDER_STATUS_LABELS,
 } from '@keve/shared'
 import { cn } from '@/lib/utils'
+
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
+}
+
+function getSupplierDisplayName(order: BuyerOrderListItem): string {
+  return (
+    order.supplier?.store_name ??
+    order.supplier?.profile?.full_name ??
+    'Fornecedor'
+  )
+}
 
 export function BuyerOrdersPage() {
   usePageTitle()
@@ -25,8 +42,9 @@ export function BuyerOrdersPage() {
   const acceptedStatuses = ORDER_ACCEPTED_STATUSES
   const productionStatuses = ORDER_PRODUCTION_STATUSES
   const completedStatuses = ORDER_COMPLETED_STATUSES
+  const buyerOrders = (orders ?? []) as BuyerOrderListItem[]
 
-  const filteredOrders = (orders ?? []).filter((order) => {
+  const filteredOrders = buyerOrders.filter((order) => {
     if (activeTab === 'accepted') {
       return acceptedStatuses.includes(order.status)
     }
@@ -49,7 +67,7 @@ export function BuyerOrdersPage() {
 
       {isLoading ? (
         <GridSkeleton count={4} />
-      ) : (orders ?? []).length === 0 ? (
+      ) : buyerOrders.length === 0 ? (
         <EmptyState
           icon={ShoppingBag}
           title="Nenhum pedido ainda"
@@ -77,7 +95,7 @@ export function BuyerOrdersPage() {
                   ? "bg-primary-foreground/20 text-primary-foreground"
                   : "bg-muted text-muted-foreground"
               )}>
-                {(orders ?? []).length}
+                {buyerOrders.length}
               </span>
             </button>
             <button
@@ -96,7 +114,7 @@ export function BuyerOrdersPage() {
                   ? "bg-primary-foreground/20 text-primary-foreground"
                   : "bg-muted text-muted-foreground"
               )}>
-                {(orders ?? []).filter(o => acceptedStatuses.includes(o.status)).length}
+                {buyerOrders.filter(o => acceptedStatuses.includes(o.status)).length}
               </span>
             </button>
             <button
@@ -115,7 +133,7 @@ export function BuyerOrdersPage() {
                   ? "bg-primary-foreground/20 text-primary-foreground"
                   : "bg-muted text-muted-foreground"
               )}>
-                {(orders ?? []).filter(o => productionStatuses.includes(o.status)).length}
+                {buyerOrders.filter(o => productionStatuses.includes(o.status)).length}
               </span>
             </button>
             <button
@@ -134,7 +152,7 @@ export function BuyerOrdersPage() {
                   ? "bg-primary-foreground/20 text-primary-foreground"
                   : "bg-muted text-muted-foreground"
               )}>
-                {(orders ?? []).filter(o => completedStatuses.includes(o.status)).length}
+                {buyerOrders.filter(o => completedStatuses.includes(o.status)).length}
               </span>
             </button>
             </div>
@@ -150,63 +168,64 @@ export function BuyerOrdersPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {filteredOrders.map((order) => (
-                <Card key={order.id} className="px-4 py-4 lg:px-5">
-                  <div className="flex items-center justify-between gap-3 lg:hidden">
-                    <div className="min-w-0 flex-1 space-y-2">
-                      <div className="flex flex-nowrap items-center gap-2">
-                        <div className="inline-flex h-6 shrink-0 items-center rounded-full border border-border bg-transparent px-2 font-mono text-[10px] font-semibold leading-none tracking-wider text-foreground sm:px-2.5 sm:text-xs">
-                          Pedido#{order.id.slice(0, 8).toUpperCase()}
-                        </div>
-                        <StatusBadge
-                          status={order.status}
-                          kind="order"
-                          className="h-6 shrink-0 whitespace-nowrap py-0 text-[10px] leading-none sm:text-xs"
-                        />
-                      </div>
-                      <p className="truncate text-sm text-muted-foreground">
-                        {ORDER_STATUS_LABELS[order.status] ?? order.status}
-                      </p>
-                      {order.completed_at && (
-                        <p className="text-xs text-muted-foreground/80">
-                          Concluído em {new Date(order.completed_at).toLocaleDateString('pt-BR')}
-                        </p>
-                      )}
-                    </div>
-                    <Button size="icon" variant="secondary" className="h-9 w-9 shrink-0" asChild>
-                      <Link to={`/buyer/orders/${order.id}`} aria-label="Ver detalhes">
-                        <ChevronRight className="h-4 w-4" />
-                      </Link>
-                    </Button>
-                  </div>
+              {filteredOrders.map((order) => {
+                const timeline = buildOrderCardTimeline(order, order.logs ?? [])
+                const pickupAt = getPickupTimestamp(order)
+                const supplierAddress = formatCompanyAddress(order.supplier?.company ?? null)
 
-                  <div className="hidden items-center justify-between gap-4 lg:flex">
-                    <div className="min-w-0 flex-1 space-y-2">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <div className="inline-flex h-6 shrink-0 items-center rounded-full border border-border bg-transparent px-2.5 font-mono text-xs font-semibold leading-none tracking-wider text-foreground">
-                          Pedido#{order.id.slice(0, 8).toUpperCase()}
+                return (
+                  <Card key={order.id} className="px-4 py-4 lg:px-5">
+                    <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                      <div className="min-w-0 flex-1 space-y-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <div className="inline-flex h-6 shrink-0 items-center rounded-full border border-border bg-transparent px-2.5 font-mono text-xs font-semibold leading-none tracking-wider text-foreground">
+                            Pedido#{order.id.slice(0, 8).toUpperCase()}
+                          </div>
+                          <StatusBadge status={order.status} kind="order" className="h-6 shrink-0 py-0 text-xs" />
                         </div>
-                        <StatusBadge
-                          status={order.status}
-                          kind="order"
-                          className="h-6 shrink-0 items-center py-0 leading-none"
-                        />
+
+                        <div className="min-w-0">
+                          <p className="text-base font-semibold text-foreground line-clamp-2">
+                            {order.demand?.titulo ?? `Pedido ${order.demand_id.slice(0, 8)}…`}
+                          </p>
+                          {order.offer ? (
+                            <p className="mt-1 text-sm text-muted-foreground">
+                              {formatCurrency(order.offer.valor)}
+                              {order.offer.quantidade ? ` (${order.offer.quantidade} un)` : ''}
+                            </p>
+                          ) : null}
+                        </div>
+
+                        <OrderCardTimeline events={timeline} />
+
+                        {order.supplier ? (
+                          <OrderSupplierPickupInfo
+                            displayName={getSupplierDisplayName(order)}
+                            avgRating={order.supplier.avg_rating}
+                            totalRatings={order.supplier.total_ratings}
+                            address={supplierAddress}
+                            phone={order.supplier.profile?.phone ?? null}
+                          />
+                        ) : null}
+
+                        <div className="flex flex-wrap gap-2 pt-1">
+                          <Button size="sm" variant="secondary" className="rounded-xl" asChild>
+                            <Link to={`/buyer/orders/${order.id}`}>Ver detalhes</Link>
+                          </Button>
+                        </div>
                       </div>
-                      <p className="text-sm text-muted-foreground">
-                        {ORDER_STATUS_LABELS[order.status] ?? order.status}
-                      </p>
-                      {order.completed_at && (
-                        <p className="text-xs text-muted-foreground/80">
-                          Concluído em {new Date(order.completed_at).toLocaleDateString('pt-BR')}
-                        </p>
-                      )}
+
+                      <OrderPickupPanel
+                        pickupAt={pickupAt}
+                        prazoEntregaDias={order.offer?.prazo_entrega_dias}
+                        orderStatus={order.status}
+                        overdueLabel="Deveria estar pronto"
+                        className="w-full shrink-0 md:w-44"
+                      />
                     </div>
-                    <Button size="sm" variant="secondary" className="shrink-0" asChild>
-                      <Link to={`/buyer/orders/${order.id}`}>Ver detalhes</Link>
-                    </Button>
-                  </div>
-                </Card>
-              ))}
+                  </Card>
+                )
+              })}
             </div>
           )}
         </div>

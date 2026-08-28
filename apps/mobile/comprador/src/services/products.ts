@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase'
-import type { ProductMatchSource, SearchSuggestion, Tables } from '@keve/shared'
-import { mapSearchSuggestionRow } from '@keve/shared'
+import type { ProductMatchSource, SearchSuggestion, Tables, FeedListingFields } from '@keve/shared'
+import { mapSearchSuggestionRow, expandProductsToFeedListings } from '@keve/shared'
 
 export type Product = Tables<'products'>
 
@@ -24,6 +24,8 @@ export type FeedProductSearchResult = FeedProduct & {
   matchSource?: ProductMatchSource | null
   isOutsideUf?: boolean
 }
+
+export type FeedProductListing = FeedProductSearchResult & FeedListingFields
 
 type SearchFeedProductRow = Product & {
   rank: number | null
@@ -59,7 +61,7 @@ export async function fetchFeedProducts(filters?: {
   search?: string
   uf?: string
   cidades?: Array<{ cidade: string; uf: string }>
-}): Promise<FeedProductSearchResult[]> {
+}): Promise<FeedProductListing[]> {
   const categoryIds =
     filters?.categoryIds && filters.categoryIds.length > 0
       ? filters.categoryIds
@@ -77,7 +79,9 @@ export async function fetchFeedProducts(filters?: {
   })
 
   if (error) throw error
-  return ((data ?? []) as SearchFeedProductRow[]).map(mapSearchFeedProductRow)
+  return expandProductsToFeedListings(
+    ((data ?? []) as SearchFeedProductRow[]).map(mapSearchFeedProductRow),
+  )
 }
 
 export async function fetchSearchSuggestions(query: string, limit = 8): Promise<SearchSuggestion[]> {

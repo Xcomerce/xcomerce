@@ -9,6 +9,7 @@ export type OrderSlaDeadline = Tables<'order_sla_deadlines'>
 export type OrderRole = 'buyer' | 'supplier'
 
 export type SupplierOrderListItem = Order & {
+  created_at: string
   demand: {
     titulo: string
     descricao: string | null
@@ -20,6 +21,7 @@ export type SupplierOrderListItem = Order & {
   offer: {
     valor: number
     prazo_entrega_dias: number
+    prazo_entrega_em: string | null
     quantidade: number
     mensagem: string | null
   } | null
@@ -28,6 +30,19 @@ export type SupplierOrderListItem = Order & {
     phone: string | null
     email: string | null
   } | null
+  logs: Array<{
+    to_status: OrderStatus
+    created_at: string
+  }>
+}
+
+export type BuyerOrderCompany = {
+  logradouro: string | null
+  numero: string | null
+  bairro: string | null
+  cep: string | null
+  cidade: string
+  uf: string
 }
 
 export type BuyerOrderListItem = Order & {
@@ -39,10 +54,23 @@ export type BuyerOrderListItem = Order & {
   offer: {
     valor: number
     prazo_entrega_dias: number
+    prazo_entrega_em: string | null
+    quantidade: number
   } | null
   supplier: {
-    full_name: string
+    store_name: string | null
+    avg_rating: number
+    total_ratings: number
+    profile: {
+      full_name: string
+      phone: string | null
+    } | null
+    company: BuyerOrderCompany | null
   } | null
+  logs: Array<{
+    to_status: OrderStatus
+    created_at: string
+  }>
 }
 
 type NestedOrderProfile = {
@@ -55,9 +83,21 @@ function unwrapOrderProfile(row: NestedOrderProfile) {
   return row.profile ?? row.profiles ?? null
 }
 
+type NestedSupplierRow = {
+  store_name?: string | null
+  avg_rating?: number
+  total_ratings?: number
+  profile?: { full_name: string; phone?: string | null } | null
+  profiles?: { full_name: string; phone?: string | null } | null
+  company?: BuyerOrderCompany | null
+} | null
+
 function mapSupplierOrderRow(row: Record<string, unknown>): SupplierOrderListItem {
-  const { buyer: buyerRow, ...rest } = row
+  const { buyer: buyerRow, logs: rawLogs, ...rest } = row
   const profile = unwrapOrderProfile(buyerRow as NestedOrderProfile)
+  const logs = (Array.isArray(rawLogs) ? rawLogs : []) as SupplierOrderListItem['logs']
+  logs.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+
   return {
     ...(rest as SupplierOrderListItem),
     buyer: profile
@@ -65,6 +105,35 @@ function mapSupplierOrderRow(row: Record<string, unknown>): SupplierOrderListIte
           full_name: profile.full_name,
           phone: profile.phone ?? null,
           email: profile.email ?? null,
+        }
+      : null,
+    logs,
+  }
+}
+
+function mapBuyerOrderRow(row: Record<string, unknown>): BuyerOrderListItem {
+  const { supplier: supplierRow, logs: rawLogs, ...rest } = row
+  const logs = (Array.isArray(rawLogs) ? rawLogs : []) as BuyerOrderListItem['logs']
+  logs.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+
+  const supplier = supplierRow as NestedSupplierRow
+  const profile = supplier ? unwrapOrderProfile(supplier as NestedOrderProfile) : null
+
+  return {
+    ...(rest as BuyerOrderListItem),
+    logs,
+    supplier: supplier
+      ? {
+          store_name: supplier.store_name ?? null,
+          avg_rating: supplier.avg_rating ?? 0,
+          total_ratings: supplier.total_ratings ?? 0,
+          profile: profile
+            ? {
+                full_name: profile.full_name,
+                phone: profile.phone ?? null,
+              }
+            : null,
+          company: supplier.company ?? null,
         }
       : null,
   }
@@ -87,10 +156,11 @@ export async function fetchSupplierOrdersWithDetails(userId: string): Promise<Su
       `
       *,
       demand:demands(titulo, descricao, cidade, uf, unidade, quantidade),
-      offer:offers(valor, prazo_entrega_dias, quantidade, mensagem),
+      offer:offers(valor, prazo_entrega_dias, prazo_entrega_em, quantidade, mensagem),
       buyer:buyer_profiles!orders_buyer_id_fkey(
         profiles(full_name, phone, email)
-      )
+      ),
+      logs:order_status_logs(to_status, created_at)
     `,
     )
     .eq('supplier_id', userId)
@@ -107,17 +177,22 @@ export async function fetchBuyerOrdersWithDetails(userId: string): Promise<Buyer
       `
       *,
       demand:demands(titulo, cidade, uf),
-      offer:offers(valor, prazo_entrega_dias)
+      offer:offers(valor, prazo_entrega_dias, prazo_entrega_em, quantidade),
+      supplier:supplier_profiles!orders_supplier_id_fkey(
+        store_name,
+        avg_rating,
+        total_ratings,
+        profiles(full_name, phone),
+        company:companies(logradouro, numero, bairro, cep, cidade, uf)
+      ),
+      logs:order_status_logs(to_status, created_at)
     `,
     )
     .eq('buyer_id', userId)
     .order('created_at', { ascending: false })
 
   if (error) throw error
-  return (data ?? []).map((row) => ({
-    ...(row as BuyerOrderListItem),
-    supplier: null,
-  }))
+  return (data ?? []).map((row) => mapBuyerOrderRow(row as Record<string, unknown>))
 }
 
 export async function fetchOrder(id: string): Promise<Order | null> {

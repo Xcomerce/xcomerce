@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { demandSpecificationSchema } from './demands'
 
 function computeDeliveryDaysFromDateTime(value: string): number {
   const target = new Date(value)
@@ -6,6 +7,12 @@ function computeDeliveryDaysFromDateTime(value: string): number {
   const diffMs = target.getTime() - Date.now()
   return Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24)))
 }
+
+export const offerSpecificationSchema = demandSpecificationSchema.extend({
+  preco_unitario: z.coerce.number().min(0, 'Preço unitário inválido'),
+})
+
+export type OfferSpecification = z.infer<typeof offerSpecificationSchema>
 
 export const offerSchema = z
   .object({
@@ -16,6 +23,7 @@ export const offerSchema = z
     validade_dias: z.coerce.number().int().min(1).max(30).default(7),
     quantidade: z.coerce.number().int().min(1),
     mensagem: z.string().max(1000).optional(),
+    especificacoes: z.array(offerSpecificationSchema).optional(),
   })
   .transform((value) => ({
     ...value,

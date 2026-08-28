@@ -1,4 +1,5 @@
-import { Package } from 'lucide-react'
+import { LayoutGrid, Package } from 'lucide-react'
+import { formatVariationOptionLabel } from '@keve/shared'
 import { cn } from '@/lib/utils'
 import { formatFeedProductCurrency } from './utils'
 
@@ -12,10 +13,17 @@ type ProductPreviewGridProps = {
   productName: string
   price: number | null | undefined
   items: PreviewItem[]
+  variationCount?: number
   className?: string
 }
 
-export function ProductPreviewGrid({ productName, price, items, className }: ProductPreviewGridProps) {
+export function ProductPreviewGrid({
+  productName,
+  price,
+  items,
+  variationCount = 0,
+  className,
+}: ProductPreviewGridProps) {
   if (items.length === 0) {
     return (
       <div
@@ -50,6 +58,12 @@ export function ProductPreviewGrid({ productName, price, items, className }: Pro
               {productName || 'Nome do produto'}
             </p>
             <p className="truncate text-[10px] text-muted-foreground">{item.label}</p>
+            {variationCount > 1 ? (
+              <p className="flex items-center gap-1 truncate text-[10px] text-muted-foreground">
+                <LayoutGrid size={10} className="shrink-0 opacity-70" aria-hidden />
+                <span>{formatVariationOptionLabel(variationCount)}</span>
+              </p>
+            ) : null}
             <p className="font-display text-xs font-bold text-foreground">
               {formatFeedProductCurrency(price ?? null)}
             </p>

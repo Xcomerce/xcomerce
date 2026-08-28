@@ -33,8 +33,9 @@ import {
 import { DemandFormActions } from '@/pages/buyer/new-demand/DemandFormActions'
 import { DemandLocationPanel } from '@/pages/buyer/new-demand/DemandLocationPanel'
 import { useDemandLocationDefaults } from '@/hooks/use-demand-location-defaults'
-import { demandSpecificationsFromRecord, syncDemandQuantidadeFromSpecifications } from '@/lib/demand-specifications'
+import { demandSpecificationsFromRecord, syncDemandQuantidadeFromSpecifications, getDemandPublishMissingFields } from '@/lib/demand-specifications'
 import { formatDateTimeLocalInput, parseDateTimeLocalInput } from '@/lib/datetime'
+import { useCategorySuggestion } from '@/hooks/use-category-suggestion'
 
 export function NewDemandPage() {
   usePageTitle()
@@ -59,16 +60,6 @@ export function NewDemandPage() {
     selectedTamanho?: string
   } | null
 
-  const productVariantSource = !isEditing && stateData
-    ? {
-        temCor: stateData.temCor,
-        temTamanho: stateData.temTamanho,
-        tipoTamanho: stateData.tipoTamanho,
-        cores: stateData.cores,
-        tamanhos: stateData.tamanhos,
-      }
-    : null
-
   const { data: existingDemand, isLoading: loadingDemand, error: demandError } = useDemand(editId)
   const { data: categories, isLoading: loadingCategories, error: categoriesError } = useCategories()
   const createDemand = useCreateDemand()
@@ -77,6 +68,7 @@ export function NewDemandPage() {
   const demandLocation = useDemandLocationDefaults()
 
   const [paywallOpen, setPaywallOpen] = useState(false)
+  const [categoryManuallySet, setCategoryManuallySet] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const hasAppliedProductPrefillRef = useRef(false)
 
@@ -94,23 +86,39 @@ export function NewDemandPage() {
       prazo_desejado: '',
       observacoes: '',
       especificacoes: [],
+      variant_axes: [{ name: 'Cor' }, { name: 'Tamanho' }],
+      use_variations: true,
     },
   })
 
+  const leafCategories = useMemo(() => getLeafCategories(categories ?? []), [categories])
+
+  const watchedTitle = form.watch('titulo')
+  const { suggestedCategoryId, suggestedCategory, hasSuggestion } = useCategorySuggestion(
+    watchedTitle,
+    leafCategories,
+    categoryManuallySet,
+  )
+
   const selectedCategoryId = form.watch('category_id')
   const watchedCities = form.watch('cidades') ?? []
-  const leafCategories = useMemo(() => getLeafCategories(categories ?? []), [categories])
+  const formValues = form.watch()
+  const missingFields = useMemo(() => getDemandPublishMissingFields(formValues), [formValues])
   const selectedCategory = leafCategories.find((c) => c.id === selectedCategoryId)
-  const descricaoPlaceholder = useMemo(() => {
-    const names = leafCategories.slice(0, 5).map((category) => category.name)
-    if (names.length === 0) return 'Ex> ...'
-    return `Ex> ${names.join(', ')}`
-  }, [leafCategories])
+  const descricaoPlaceholder =
+    'Ex.: Camiseta 100% algodão, gola redonda, manga curta. Preciso de 50 unidades para evento corporativo em setembro.'
   const isSaving =
     createDemand.isPending ||
     updateDemand.isPending ||
     publishDemand.isPending ||
     form.formState.isSubmitting
+
+  useEffect(() => {
+    if (categoryManuallySet || !hasSuggestion || !suggestedCategoryId) return
+    if (!form.getValues('category_id')) {
+      form.setValue('category_id', suggestedCategoryId, { shouldDirty: true })
+    }
+  }, [hasSuggestion, suggestedCategoryId, categoryManuallySet, form])
 
   useEffect(() => {
     if (isEditing || hasAppliedProductPrefillRef.current) return
@@ -131,7 +139,11 @@ export function NewDemandPage() {
         {
           cor: stateData.selectedCor ?? '',
           tamanho: stateData.selectedTamanho ?? '',
-          quantidade: 1,
+          values: {
+            ...(stateData.selectedCor ? { Cor: stateData.selectedCor } : {}),
+            ...(stateData.selectedTamanho ? { Tamanho: stateData.selectedTamanho } : {}),
+          },
+          quantidade: undefined,
         },
       ])
     }
@@ -272,6 +284,7 @@ export function NewDemandPage() {
                   onPublish={() => void handlePublish()}
                   onCancel={() => navigate('/buyer/dashboard')}
                   disablePublish={watchedCities.length === 0}
+                  missingFields={missingFields}
                 />
               </footer>
             }
@@ -310,11 +323,26 @@ export function NewDemandPage() {
                           <CategoryPicker
                             categories={categories ?? []}
                             value={field.value}
-                            onValueChange={field.onChange}
+                            onValueChange={(value) => {
+                              setCategoryManuallySet(true)
+                              field.onChange(value)
+                            }}
                             disabled={loadingCategories}
                             loading={loadingCategories}
                           />
                         </FormControl>
+                        {hasSuggestion && suggestedCategory && !categoryManuallySet ? (
+                          <p className="text-xs text-primary">
+                            Categoria sugerida: {suggestedCategory.name} —{' '}
+                            <button
+                              type="button"
+                              className="underline"
+                              onClick={() => setCategoryManuallySet(true)}
+                            >
+                              trocar
+                            </button>
+                          </p>
+                        ) : null}
                         <FormMessage />
                       </FormItem>
                     )}
@@ -328,6 +356,7 @@ export function NewDemandPage() {
                         <FormControl>
                           <Input
                             type="datetime-local"
+                            min={formatDateTimeLocalInput(new Date().toISOString())}
                             value={formatDateTimeLocalInput(field.value)}
                             onChange={(event) =>
                               field.onChange(parseDateTimeLocalInput(event.target.value))
@@ -358,10 +387,7 @@ export function NewDemandPage() {
                   )}
                 />
 
-                <DemandVariantFields
-                  optionSource={productVariantSource}
-                  nativeFieldClass={NATIVE_FIELD_CLASS}
-                />
+                <DemandVariantFields categoryId={selectedCategoryId} nativeFieldClass={NATIVE_FIELD_CLASS} />
               </div>
             </section>
 
@@ -376,6 +402,7 @@ export function NewDemandPage() {
                 publishPending={publishDemand.isPending}
                 onPublish={() => void handlePublish()}
                 onCancel={() => navigate('/buyer/dashboard')}
+                missingFields={missingFields}
               />
             </section>
           </ScrollPageShell>

@@ -142,6 +142,9 @@ export type Database = {
           verified_at: string | null
           avg_rating: number
           total_ratings: number
+          orders_completed: number
+          created_at: string
+          updated_at: string
         }
         Insert: Partial<Database['public']['Tables']['supplier_profiles']['Row']> & {
           user_id: string
@@ -189,6 +192,9 @@ export type Database = {
           cores: string[]
           tamanhos: string[]
           estoque_variacoes: import('../constants/product-variant-stock').ProductVariantStockRow[]
+          variant_axes: import('../utils/variant-axes').VariantAxis[]
+          is_draft: boolean
+          draft_expires_at: string | null
         }
         Insert: Omit<Database['public']['Tables']['products']['Row'], 'id'> & { id?: string }
         Update: Partial<Database['public']['Tables']['products']['Row']>
@@ -248,6 +254,13 @@ export type Database = {
           validade_dias: number
           validade_ate: string
           quantidade: number
+          especificacoes: Array<{
+            cor?: string | null
+            tamanho?: string | null
+            values?: Record<string, string>
+            quantidade: number
+            preco_unitario: number
+          }>
           mensagem: string | null
           status: 'enviada' | 'aceita' | 'rejeitada' | 'expirada' | 'cancelada'
           source: 'manual' | 'auto'
@@ -327,6 +340,8 @@ export type Database = {
           status: 'PROPOSTA_ACEITA' | 'AGUARDANDO_CONFIRMACAO_EXTERNA' | 'COMPROVANTE_ENVIADO' | 'PAGAMENTO_CONFIRMADO' | 'PAGAMENTO_INFORMADO' | 'ENVIO_INFORMADO' | 'ENTREGUE' | 'CONCLUIDO' | 'CANCELADO' | 'EXPIRADO'
           cancel_reason: string | null
           completed_at: string | null
+          created_at: string
+          updated_at: string
         }
         Insert: Omit<Database['public']['Tables']['orders']['Row'], 'id' | 'status'> & {
           id?: string
@@ -374,6 +389,7 @@ export type Database = {
           body: string
           data: Json
           group_key: string | null
+          group_count: number
           read_at: string | null
           created_at: string
         }

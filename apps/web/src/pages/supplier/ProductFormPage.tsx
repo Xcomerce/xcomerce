@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -18,6 +18,7 @@ import { ProductFormSection } from '@/pages/supplier/product-form/ProductFormSec
 import { ProductFormSidebar } from '@/pages/supplier/product-form/ProductFormSidebar'
 import { ProductFormActions } from '@/pages/supplier/product-form/ProductFormActions'
 import { computeProductFormSummary } from '@/pages/supplier/product-form/utils'
+import { getProductPublishMissingFields } from '@/pages/supplier/product-form/validation'
 import {
   useCreateProduct,
   useDeleteProduct,
@@ -75,6 +76,9 @@ export function ProductFormPage() {
   const [paywallOpen, setPaywallOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [savedImageUrls, setSavedImageUrls] = useState<string[]>([])
+  const [draftId, setDraftId] = useState<string | undefined>(id)
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [draftSavedAt, setDraftSavedAt] = useState<Date | null>(null)
   const [pendingImages, setPendingImages] = useState<PendingProductImage[]>([])
 
   const { data: product, isLoading: productLoading } = useProduct(isEdit ? id : undefined)
@@ -100,11 +104,13 @@ export function ProductFormPage() {
       cidade: '',
       uf: '',
       is_active: true,
+      is_draft: false,
       tem_cor: false,
       tem_tamanho: false,
       tipo_tamanho: null,
       cores: [],
       tamanhos: [],
+      variant_axes: [],
       estoque_variacoes: [],
     },
   })
@@ -123,6 +129,7 @@ export function ProductFormPage() {
 
   const formValues = form.watch()
   const canSave = isProductFormReady(formValues)
+  const missingFields = useMemo(() => getProductPublishMissingFields(formValues), [formValues])
   const isSaving = form.formState.isSubmitting || createProduct.isPending || updateProduct.isPending
   const summary = useMemo(() => computeProductFormSummary(formValues), [formValues])
 
@@ -153,13 +160,16 @@ export function ProductFormPage() {
         cidade: supplierLocation?.cidade ?? '',
         uf: supplierLocation?.uf ?? '',
         is_active: product.is_active,
+        is_draft: (product as { is_draft?: boolean }).is_draft ?? false,
         tem_cor: product.tem_cor ?? false,
         tem_tamanho: product.tem_tamanho ?? false,
         tipo_tamanho: product.tipo_tamanho ?? null,
         cores: product.cores ?? [],
         tamanhos: product.tamanhos ?? [],
+        variant_axes: (product as { variant_axes?: ProductInput['variant_axes'] }).variant_axes ?? [],
         estoque_variacoes: parseVariantStockRows(product.estoque_variacoes),
       })
+      setDraftId(product.id)
       setSavedImageUrls(getProductImageUrls(product))
       setPendingImages([])
     }
@@ -200,8 +210,8 @@ export function ProductFormPage() {
     }
   }
 
-  async function persistProduct(values: ProductInput, publish: boolean) {
-    if (!isEdit && atLimit) {
+  async function persistProduct(values: ProductInput, publish: boolean, silent = false) {
+    if (!isEdit && !values.is_draft && atLimit && publish) {
       setPaywallOpen(true)
       return false
     }
@@ -211,28 +221,38 @@ export function ProductFormPage() {
       return false
     }
 
+    const expiresAt = new Date()
+    expiresAt.setDate(expiresAt.getDate() + 30)
+
     const payload: ProductInput = {
       ...values,
       cidade: supplierLocation.cidade,
       uf: supplierLocation.uf,
       is_active: publish,
+      is_draft: !publish,
+      draft_expires_at: publish ? null : expiresAt.toISOString(),
     }
 
     try {
-      if (isEdit && id) {
-        await updateProduct.mutateAsync({ id, input: payload })
-        const uploaded = await uploadProductImages(id, pendingImages.map((item) => item.file))
-        await updateProductImages(id, [...savedImageUrls, ...uploaded])
-        toast.success(publish ? 'Produto publicado' : 'Rascunho salvo')
+      const targetId = draftId ?? id
+      if (targetId) {
+        await updateProduct.mutateAsync({ id: targetId, input: payload })
+        const uploaded = await uploadProductImages(targetId, pendingImages.map((item) => item.file))
+        if (uploaded.length > 0) {
+          await updateProductImages(targetId, [...savedImageUrls, ...uploaded])
+        }
+        if (!silent) toast.success(publish ? 'Produto publicado' : 'Rascunho salvo')
       } else {
         const created = await createProduct.mutateAsync(payload)
+        setDraftId(created.id)
         const uploaded = await uploadProductImages(created.id, pendingImages.map((item) => item.file))
         if (uploaded.length > 0) {
           await updateProductImages(created.id, uploaded)
         }
-        toast.success(publish ? 'Produto publicado' : 'Rascunho salvo')
+        if (!silent) toast.success(publish ? 'Produto publicado' : 'Rascunho salvo')
       }
-      navigate('/supplier/catalog')
+      if (publish) navigate('/supplier/catalog')
+      else setDraftSavedAt(new Date())
       return true
     } catch (err) {
       const msg = formatSupabaseError(err)
@@ -254,6 +274,30 @@ export function ProductFormPage() {
   async function handleSaveDraft() {
     await persistProduct(form.getValues(), false)
   }
+
+  useEffect(() => {
+    if (isEdit && product && !product.is_active && !(product as { is_draft?: boolean }).is_draft) return
+    const nome = formValues.nome?.trim()
+    if (!nome || nome.length < 2) return
+
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current)
+    autoSaveTimerRef.current = setTimeout(() => {
+      void persistProduct({ ...form.getValues(), is_draft: true, is_active: false }, false, true)
+    }, 2000)
+
+    return () => {
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current)
+    }
+  }, [formValues, isEdit, product])
+
+  useEffect(() => {
+    const expiresAt = (product as { draft_expires_at?: string | null })?.draft_expires_at
+    if (!expiresAt) return
+    const daysLeft = Math.ceil((new Date(expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+    if (daysLeft === 7 || daysLeft === 1) {
+      toast.warning(`Este rascunho expira em ${daysLeft} dia${daysLeft > 1 ? 's' : ''}.`)
+    }
+  }, [product])
 
   async function onSubmit(values: ProductInput) {
     await persistProduct(values, true)
@@ -334,14 +378,21 @@ export function ProductFormPage() {
               <footer className="shrink-0 border-t border-border bg-background/95 px-4 py-3 pb-safe-bottom backdrop-blur-sm lg:hidden">
                 <ProductFormActions
                   isSaving={isSaving}
-                  canSave={canSave}
-                  isEdit={isEdit}
-                  isDeleting={deleteProduct.isPending}
-                  onPublish={() => void handlePublish()}
-                  onSaveDraft={() => void handleSaveDraft()}
-                  onDelete={isEdit ? () => setDeleteDialogOpen(true) : undefined}
-                  onCancel={() => navigate('/supplier/catalog')}
-                />
+                canSave={canSave}
+                isEdit={isEdit}
+                isDeleting={deleteProduct.isPending}
+                missingFields={missingFields}
+                isDraft={(product as { is_draft?: boolean })?.is_draft ?? !isEdit}
+                onPublish={() => void handlePublish()}
+                onSaveDraft={() => void handleSaveDraft()}
+                onDelete={isEdit ? () => setDeleteDialogOpen(true) : undefined}
+                onCancel={() => navigate('/supplier/catalog')}
+              />
+              {draftSavedAt ? (
+                <p className="px-3 pb-2 text-center text-[11px] text-muted-foreground">
+                  Rascunho salvo às {draftSavedAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                </p>
+              ) : null}
               </footer>
             }
           >
@@ -413,7 +464,10 @@ export function ProductFormPage() {
                       name="sku"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>SKU (código interno)</FormLabel>
+                          <FormLabel>Código do produto</FormLabel>
+                          <p className="text-xs text-muted-foreground">
+                            Identificador geral do item no seu catálogo (ex.: CAM-BAS-001).
+                          </p>
                           <FormControl>
                             <Input placeholder="Opcional" {...field} />
                           </FormControl>
@@ -450,10 +504,11 @@ export function ProductFormPage() {
 
                 <ProductFormSection
                   step={2}
-                  title="Variações (cores) e estoque por tamanho"
-                  description="Configure cores, imagens e quantidades disponíveis por tamanho."
+                  title="Variações e estoque"
+                  description="Configure eixos de variação, imagens e estoque por combinação."
                 >
                   <ProductVariantsSection
+                    categoryId={formValues.category_id}
                     savedImageUrls={savedImageUrls}
                     pendingImages={pendingImages}
                     totalImages={totalImages}
@@ -503,6 +558,8 @@ export function ProductFormPage() {
                 canSave={canSave}
                 isEdit={isEdit}
                 isDeleting={deleteProduct.isPending}
+                missingFields={missingFields}
+                isDraft={(product as { is_draft?: boolean })?.is_draft ?? !isEdit}
                 showQuota={!isEdit}
                 quotaUsed={count}
                 quotaLimit={limit}

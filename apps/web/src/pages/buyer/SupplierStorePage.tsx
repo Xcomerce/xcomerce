@@ -12,14 +12,14 @@ import { FeedProductDetailDialog } from '@/components/buyer/FeedProductDetailDia
 import { useSupplierCatalog, useSupplierStore } from '@/hooks/use-products'
 import { usePageTitle } from '@/hooks/use-page-title'
 import { getInitials } from '@/lib/utils'
-import type { FeedProduct } from '@/services/products'
+import type { FeedProductListing } from '@/services/products'
 
 export function SupplierStorePage() {
   usePageTitle()
   const { supplierId } = useParams<{ supplierId: string }>()
   const { data: store, isLoading: loadingStore, isError: storeError } = useSupplierStore(supplierId)
   const { data: catalog = [], isLoading: loadingCatalog } = useSupplierCatalog(supplierId)
-  const [selectedProduct, setSelectedProduct] = useState<FeedProduct | null>(null)
+  const [selectedProduct, setSelectedProduct] = useState<FeedProductListing | null>(null)
 
   const isLoading = loadingStore || loadingCatalog
   const storeName = store ? getSupplierStoreDisplayName(store) : 'Loja'
@@ -117,7 +117,7 @@ export function SupplierStorePage() {
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 md:gap-6 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
               {catalog.map((product) => (
                 <FeedProductCard
-                  key={product.id}
+                  key={product.feedListingKey}
                   product={product}
                   onSelect={setSelectedProduct}
                   layout="vertical"

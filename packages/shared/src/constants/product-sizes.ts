@@ -1,4 +1,9 @@
 import type { DemandSpecification } from '../validators/demands'
+import {
+  dedupeVariantValues,
+  normalizeVariantValue,
+  variantArrayContains,
+} from '../utils/variant-normalize'
 
 export type ProductSizeType = 'roupa' | 'calcado' | 'numerico' | 'livre'
 
@@ -37,29 +42,12 @@ export const SHOE_SIZES_BR = Array.from({ length: 16 }, (_, i) => String(33 + i)
 /** Meios números BR (33.5–47.5). */
 export const SHOE_HALF_SIZES_BR = Array.from({ length: 15 }, (_, i) => `${33 + i}.5`)
 
-export function normalizeVariantValue(value: string): string {
-  return value.trim().toLowerCase()
-}
-
-export function variantArrayContains(values: string[], needle: string): boolean {
-  const normalized = normalizeVariantValue(needle)
-  if (!normalized) return false
-  return values.some((v) => normalizeVariantValue(v) === normalized)
-}
-
-export function dedupeVariantValues(values: string[]): string[] {
-  const seen = new Set<string>()
-  const result: string[] = []
-  for (const raw of values) {
-    const trimmed = raw.trim()
-    if (!trimmed) continue
-    const key = normalizeVariantValue(trimmed)
-    if (seen.has(key)) continue
-    seen.add(key)
-    result.push(trimmed)
-  }
-  return result
-}
+export {
+  dedupeVariantValues,
+  normalizeVariantValue,
+  variantArrayContains,
+  variantValuesEqual,
+} from '../utils/variant-normalize'
 
 export function resolveColorOptions(catalogColors: string[] | undefined, currentValue?: string): string[] {
   const base = catalogColors?.length ? dedupeVariantValues(catalogColors) : [...DEFAULT_PRODUCT_COLORS]
@@ -98,7 +86,12 @@ export type ProductVariantFields = {
 export type DemandVariantFields = {
   cor?: string | null
   tamanho?: string | null
-  especificacoes?: DemandSpecification[] | null
+  especificacoes?: Array<{
+    cor?: string | null
+    tamanho?: string | null
+    values?: Record<string, string>
+    quantidade?: number | null
+  }> | null
 }
 
 export type DemandSpecificationGroup = {
@@ -134,18 +127,32 @@ export function groupDemandSpecificationsByColor(
   return groups
 }
 
-export function normalizeDemandSpecifications(demand: DemandVariantFields): DemandSpecification[] {
+export function normalizeDemandSpecifications(demand: DemandVariantFields): Array<{
+  cor: string
+  tamanho: string
+  values: Record<string, string>
+  quantidade?: number
+}> {
   if (Array.isArray(demand.especificacoes) && demand.especificacoes.length > 0) {
     return demand.especificacoes.map((spec) => ({
-      cor: spec.cor?.trim() ?? '',
-      tamanho: spec.tamanho?.trim() ?? '',
-      quantidade: spec.quantidade ?? 1,
+      cor: spec.cor?.trim() ?? spec.values?.Cor?.trim() ?? '',
+      tamanho: spec.tamanho?.trim() ?? spec.values?.Tamanho?.trim() ?? '',
+      values: spec.values ?? {},
+      quantidade:
+        typeof spec.quantidade === 'number' && spec.quantidade > 0 ? spec.quantidade : undefined,
     }))
   }
 
   const cor = demand.cor?.trim() ?? ''
   const tamanho = demand.tamanho?.trim() ?? ''
-  if (cor || tamanho) return [{ cor, tamanho, quantidade: 1 }]
+  if (cor || tamanho) {
+    return [{
+      cor,
+      tamanho,
+      values: { ...(cor ? { Cor: cor } : {}), ...(tamanho ? { Tamanho: tamanho } : {}) },
+      quantidade: undefined,
+    }]
+  }
 
   return []
 }

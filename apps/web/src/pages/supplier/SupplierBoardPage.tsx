@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { EmptyState } from '@/components/common/EmptyState'
 import { GridSkeleton } from '@/components/common/LoadingSkeleton'
-import { useMatches, useMarkMatchViewed } from '@/hooks/use-matches'
+import { useMatches, useMarkMatchDismissed, useMarkMatchViewed } from '@/hooks/use-matches'
 import type { MatchFilters, DemandMatchWithDemand } from '@/services/matches'
 import type { DemandMatch } from '@/services/matches'
 import { DEMAND_STATUS_LABELS } from '@keve/shared'
@@ -39,12 +39,26 @@ export function SupplierBoardPage() {
 
   const { data: matches = [], isLoading, isError } = useMatches(filters)
   const markViewed = useMarkMatchViewed()
+  const markDismissed = useMarkMatchDismissed()
 
   function handleMarkViewed(match: DemandMatchWithDemand, e: React.MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
     if (match.status !== 'notified') return
     markViewed.mutate(match.id)
+  }
+
+  function handleDismiss(match: DemandMatchWithDemand, e: React.MouseEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    if (match.status !== 'notified' && match.status !== 'viewed') return
+    markDismissed.mutate(match.id)
+  }
+
+  function handleOpenProposal(match: DemandMatchWithDemand) {
+    if (match.status === 'notified') {
+      markViewed.mutate(match.id)
+    }
   }
 
   return (
@@ -85,7 +99,9 @@ export function SupplierBoardPage() {
             key={match.id}
             match={match}
             onMarkViewed={(e) => handleMarkViewed(match, e)}
-            marking={markViewed.isPending}
+            onDismiss={(e) => handleDismiss(match, e)}
+            onOpenProposal={() => handleOpenProposal(match)}
+            marking={markViewed.isPending || markDismissed.isPending}
           />
         ))}
       </div>
@@ -96,10 +112,14 @@ export function SupplierBoardPage() {
 function MatchCard({
   match,
   onMarkViewed,
+  onDismiss,
+  onOpenProposal,
   marking,
 }: {
   match: DemandMatchWithDemand
   onMarkViewed: (e: React.MouseEvent) => void
+  onDismiss: (e: React.MouseEvent) => void
+  onOpenProposal: () => void
   marking: boolean
 }) {
   const demand = match.demand
@@ -108,6 +128,7 @@ function MatchCard({
   const demandStatusLabel = DEMAND_STATUS_LABELS[demand.status] ?? demand.status
   const isProposalAccepted = demand.status === 'PROPOSTA_ACEITA'
   const hasOfferSent = match.status === 'offer_sent'
+  const canDismiss = match.status === 'notified' || match.status === 'viewed'
 
   const actionLabel = isProposalAccepted
     ? 'Ver pedido'
@@ -198,12 +219,25 @@ function MatchCard({
               <Eye className="h-4 w-4" />
             </Button>
           )}
+          {canDismiss && (
+            <Button
+              type="button"
+              variant="outline"
+              className="h-10 shrink-0"
+              disabled={marking}
+              onClick={onDismiss}
+            >
+              Dispensar
+            </Button>
+          )}
           <Button
             className="h-10 min-w-0 flex-1"
             variant={isProposalAccepted || hasOfferSent ? 'secondary' : 'default'}
             asChild
           >
-            <Link to={actionHref}>{actionLabel}</Link>
+            <Link to={actionHref} onClick={onOpenProposal}>
+              {actionLabel}
+            </Link>
           </Button>
         </div>
       </CardContent>

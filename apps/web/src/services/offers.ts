@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import type { OfferInput } from '@keve/shared'
-import type { Tables } from '@keve/shared'
+import type { Tables, OfferSpecification } from '@keve/shared'
 
 export type Offer = Tables<'offers'>
 export type Order = Tables<'orders'>
@@ -14,6 +14,7 @@ export type PublicOffer = {
   validade_dias: number
   validade_ate: string
   quantidade: number
+  especificacoes: OfferSpecification[]
   mensagem: string | null
   status: string
   contact_revealed: boolean
@@ -39,6 +40,7 @@ export async function createOffer(supplierId: string, input: OfferInput): Promis
       prazo_entrega_em: input.prazo_entrega_em,
       validade_dias: input.validade_dias,
       quantidade: input.quantidade,
+      especificacoes: input.especificacoes ?? [],
       mensagem: input.mensagem ?? null,
     })
     .select()

@@ -35,16 +35,29 @@ function formatCep(value: string | null | undefined) {
 }
 
 function formatAddress(
-  company: Pick<Tables<'companies'>, 'logradouro' | 'numero' | 'bairro' | 'cidade' | 'uf' | 'cep'> | null,
+  company:
+    | Pick<Tables<'companies'>, 'logradouro' | 'numero' | 'bairro' | 'cidade' | 'uf' | 'cep'>
+    | Pick<Tables<'companies'>, 'cidade' | 'uf'>
+    | null
+    | undefined,
 ) {
   if (!company) return '—'
   const parts = [
-    [company.logradouro, company.numero].filter(Boolean).join(', '),
-    company.bairro,
+    'logradouro' in company
+      ? [company.logradouro, company.numero].filter(Boolean).join(', ')
+      : null,
+    'bairro' in company ? company.bairro : null,
     [company.cidade, company.uf].filter(Boolean).join('/'),
-    company.cep ? `CEP ${formatCep(company.cep)}` : null,
+    'cep' in company && company.cep ? `CEP ${formatCep(company.cep)}` : null,
   ].filter(Boolean)
   return parts.length > 0 ? parts.join(' · ') : '—'
+}
+
+function getCompanySituacao(
+  company: Tables<'companies'> | PendingSupplier['companies'] | null | undefined,
+): string {
+  if (!company || !('situacao' in company)) return '—'
+  return company.situacao ?? '—'
 }
 
 function DetailSection({ title, children }: { title: string; children: ReactNode }) {
@@ -233,7 +246,7 @@ export function SupplierApprovalDetailDialog({
                   <DetailItem label="Nome fantasia" value={company?.nome_fantasia ?? '—'} />
                   <DetailItem label="Nome da loja" value={data.profile.store_name ?? '—'} />
                   <DetailItem label="CNPJ" value={company?.cnpj ? formatCnpj(company.cnpj) : '—'} />
-                  <DetailItem label="Situação cadastral" value={company?.situacao ?? '—'} />
+                  <DetailItem label="Situação cadastral" value={getCompanySituacao(company)} />
                   <DetailItem label="Endereço" value={formatAddress(company)} />
                 </DetailGrid>
               </DetailSection>
@@ -257,7 +270,7 @@ export function SupplierApprovalDetailDialog({
                 {data.categories.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
                     {data.categories.map((category) => (
-                      <Badge key={category.id} variant="secondary">
+                      <Badge key={category.id} className="border-transparent bg-secondary text-secondary-foreground">
                         {category.name}
                       </Badge>
                     ))}

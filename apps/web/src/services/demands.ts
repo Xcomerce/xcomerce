@@ -60,6 +60,7 @@ export async function createDemand(buyerId: string, input: DemandInput): Promise
       cor: payload.cor,
       tamanho: payload.tamanho,
       especificacoes: payload.especificacoes,
+      variant_axes: payload.variant_axes ?? [],
       status: 'RASCUNHO',
     })
     .select()
@@ -93,15 +94,20 @@ export async function updateDemand(id: string, input: Partial<DemandInput>): Pro
   if (
     input.especificacoes !== undefined ||
     input.cor !== undefined ||
-    input.tamanho !== undefined
+    input.tamanho !== undefined ||
+    input.use_variations !== undefined
   ) {
-    const synced = syncDemandQuantidadeFromSpecifications(input)
-    const variantFields = demandSpecificationsToLegacyFields(synced.especificacoes ?? [])
+    const synced = syncDemandQuantidadeFromSpecifications(input as DemandInput)
+    const variantFields = demandSpecificationsToLegacyFields(
+      synced.especificacoes ?? [],
+      synced.use_variations !== false,
+    )
     payload.quantidade = variantFields.quantidade
     payload.cor = variantFields.cor
     payload.tamanho = variantFields.tamanho
     payload.especificacoes = variantFields.especificacoes
   }
+  if (input.variant_axes !== undefined) payload.variant_axes = input.variant_axes
 
   const { data, error } = await supabase.from('demands').update(payload).eq('id', id).select().single()
   if (error) throw error

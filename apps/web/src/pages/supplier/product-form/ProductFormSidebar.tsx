@@ -30,6 +30,8 @@ type ProductFormSidebarProps = {
   onDelete?: () => void
   onCancel?: () => void
   className?: string
+  missingFields?: string[]
+  isDraft?: boolean
 }
 
 function SummaryRow({ label, value }: { label: string; value: string }) {
@@ -58,6 +60,8 @@ export function ProductFormSidebar({
   onDelete,
   onCancel,
   className,
+  missingFields = [],
+  isDraft = false,
 }: ProductFormSidebarProps) {
   const stockLabel = summary.hasUnlimitedStock
     ? 'Ilimitado'
@@ -77,7 +81,12 @@ export function ProductFormSidebar({
             <CardTitle className="text-sm font-semibold">Preview do anúncio</CardTitle>
           </CardHeader>
           <CardContent>
-            <ProductPreviewGrid productName={productName} price={price} items={previewItems} />
+            <ProductPreviewGrid
+              productName={productName}
+              price={price}
+              items={previewItems}
+              variationCount={summary.totalVariations}
+            />
           </CardContent>
         </Card>
 
@@ -122,6 +131,8 @@ export function ProductFormSidebar({
           canSave={canSave}
           isEdit={isEdit}
           isDeleting={isDeleting}
+          missingFields={missingFields}
+          isDraft={isDraft}
           onPublish={onPublish}
           onSaveDraft={onSaveDraft}
           onDelete={onDelete}

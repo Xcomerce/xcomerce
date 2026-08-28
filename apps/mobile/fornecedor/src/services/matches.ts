@@ -60,6 +60,9 @@ export async function fetchMatches(
   if (filters?.status) {
     const statuses = Array.isArray(filters.status) ? filters.status : [filters.status]
     query = query.in('status', statuses)
+    if (statuses.length === 1 && statuses[0] === 'notified') {
+      query = query.is('viewed_at', null)
+    }
   }
 
   const { data, error } = await query
@@ -80,4 +83,33 @@ export async function markViewed(matchId: string): Promise<DemandMatch> {
 
   if (error) throw error
   return data as DemandMatch
+}
+
+export async function markDismissed(matchId: string): Promise<DemandMatch> {
+  const { data, error } = await supabase
+    .from('demand_matches')
+    .update({ status: 'dismissed' })
+    .eq('id', matchId)
+    .select()
+    .single()
+
+  if (error) throw error
+  return data as DemandMatch
+}
+
+export async function markViewedByDemand(
+  supplierId: string,
+  demandId: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from('demand_matches')
+    .update({
+      status: 'viewed',
+      viewed_at: new Date().toISOString(),
+    })
+    .eq('supplier_id', supplierId)
+    .eq('demand_id', demandId)
+    .eq('status', 'notified')
+
+  if (error) throw error
 }

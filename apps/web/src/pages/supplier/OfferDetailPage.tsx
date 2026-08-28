@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { ArrowLeft, ChevronRight, MessageSquare, Send, X } from 'lucide-react'
 import {
@@ -23,16 +24,20 @@ import { useCategories } from '@/hooks/use-categories'
 import { useCreateOffer, useOffersForDemand } from '@/hooks/use-offers'
 import { useChatMessages, useSendMessage, useChatSubscription } from '@/hooks/use-chat'
 import { useAuth } from '@/contexts/auth-context'
+import { matchKeys } from '@/hooks/use-matches'
 import { translateSupabaseError } from '@/lib/errors'
 import { formatDemandDateTime, formatDateTimeLocalInput, parseDateTimeLocalInput } from '@/lib/datetime'
 import {
   buildOfferLineItemsFromDemand,
+  buildOfferLineItemsFromOffer,
+  offerLineItemsToEspecificacoes,
   roundCurrency,
   sumOfferLineQuantity,
   sumOfferLineTotal,
   type OfferLineItem,
 } from '@/lib/offer-variant-pricing'
 import { fetchSupplierCatalogUnitPriceForDemand } from '@/services/pricing'
+import { markViewedByDemand } from '@/services/matches'
 import { cn, formatExpiresAt } from '@/lib/utils'
 import { ScrollPageShell, SCROLL_PAGE_SECTION_CLASS } from '@/components/layout/ScrollPageShell'
 
@@ -187,6 +192,7 @@ function OfferConditionsFields({
 export function OfferDetailPage() {
   const { demandId } = useParams<{ demandId: string }>()
   const { user } = useAuth()
+  const queryClient = useQueryClient()
   const [chatBody, setChatBody] = useState('')
   const [mobileChatOpen, setMobileChatOpen] = useState(false)
   const [catalogUnitPrice, setCatalogUnitPrice] = useState<number | null>(null)
@@ -201,6 +207,13 @@ export function OfferDetailPage() {
   const sendMessage = useSendMessage()
 
   useChatSubscription(demandId, user?.id)
+
+  useEffect(() => {
+    if (!demandId || !user?.id) return
+    void markViewedByDemand(user.id, demandId).then(() => {
+      queryClient.invalidateQueries({ queryKey: matchKeys.all })
+    })
+  }, [demandId, user?.id, queryClient])
 
   const myOffer = offers.find((o) => o.supplier_id === user?.id)
   const showOfferForm = !myOffer
@@ -234,11 +247,7 @@ export function OfferDetailPage() {
 
   const submittedLineItems = useMemo(() => {
     if (!demand || !myOffer) return []
-
-    const unitPrice =
-      myOffer.quantidade > 0 ? roundCurrency(myOffer.valor / myOffer.quantidade) : myOffer.valor
-
-    return buildOfferLineItemsFromDemand(demand, unitPrice)
+    return buildOfferLineItemsFromOffer(myOffer, demand)
   }, [demand, myOffer])
 
   useEffect(() => {
@@ -306,11 +315,17 @@ export function OfferDetailPage() {
   }, [mobileChatOpen])
 
   async function onSubmit(values: OfferInput) {
+    if (lineItems.length === 0) {
+      toast.error('Inclua ao menos um item na proposta')
+      return
+    }
+
     try {
       await createOffer.mutateAsync({
         ...values,
         valor: totalValue,
         quantidade: totalQuantity,
+        especificacoes: offerLineItemsToEspecificacoes(lineItems),
       })
       toast.success('Proposta enviada')
       form.reset({
@@ -563,7 +578,7 @@ export function OfferDetailPage() {
                 type="submit"
                 form="offer-form"
                 className="w-full rounded-xl font-semibold"
-                disabled={createOffer.isPending || totalValue <= 0}
+                disabled={createOffer.isPending || totalValue <= 0 || lineItems.length === 0}
               >
                 {createOffer.isPending ? 'Enviando...' : 'Enviar proposta'}
               </Button>
@@ -623,7 +638,7 @@ export function OfferDetailPage() {
             type="submit"
             form="offer-form"
             className="w-full rounded-xl font-semibold"
-            disabled={createOffer.isPending || totalValue <= 0}
+            disabled={createOffer.isPending || totalValue <= 0 || lineItems.length === 0}
           >
             {createOffer.isPending ? 'Enviando...' : 'Enviar proposta'}
           </Button>
