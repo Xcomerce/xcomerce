@@ -509,6 +509,124 @@ export type Database = {
         }
         Update: Partial<Database['public']['Tables']['email_sends']['Insert']>
       }
+      profile_change_logs: {
+        Row: {
+          id: string
+          target_user_id: string
+          actor_id: string
+          entity_type: string
+          entity_id: string
+          field_name: string
+          old_value: string | null
+          new_value: string | null
+          reason: string
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['profile_change_logs']['Row'], 'id' | 'created_at'> & {
+          id?: string
+          created_at?: string
+        }
+        Update: never
+      }
+      profile_access_logs: {
+        Row: {
+          id: string
+          target_user_id: string
+          actor_id: string
+          access_type: string
+          justification: string | null
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['profile_access_logs']['Row'], 'id' | 'created_at'> & {
+          id?: string
+          created_at?: string
+        }
+        Update: never
+      }
+      admin_deletion_tokens: {
+        Row: {
+          id: string
+          target_user_id: string
+          actor_id: string
+          token: string
+          reason: string
+          expires_at: string
+          used_at: string | null
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['admin_deletion_tokens']['Row'], 'id' | 'created_at'> & {
+          id?: string
+          created_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['admin_deletion_tokens']['Row']>
+      }
+    }
+    Functions: {
+      search_admin_users: {
+        Args: { p_query?: string; p_limit?: number; p_offset?: number }
+        Returns: {
+          id: string
+          full_name: string
+          email: string | null
+          phone: string | null
+          roles: ('buyer' | 'supplier' | 'commercial' | 'admin')[]
+          has_buyer_profile: boolean
+          supplier_status: 'pendente' | 'em_revisao' | 'aprovado' | 'recusado' | null
+          is_active: boolean
+          created_at: string
+          cnpj: string | null
+          razao_social: string | null
+          total_count: number
+        }[]
+      }
+      log_profile_access: {
+        Args: {
+          p_target_user_id: string
+          p_access_type: string
+          p_justification?: string | null
+        }
+        Returns: string
+      }
+      admin_update_user_profile: {
+        Args: {
+          p_target_user_id: string
+          p_changes: Json
+          p_reason: string
+        }
+        Returns: Json
+      }
+      admin_log_company_cnpj_refresh: {
+        Args: {
+          p_target_user_id: string
+          p_company_id: string
+          p_changes: Json
+          p_reason: string
+        }
+        Returns: Json
+      }
+      admin_request_account_deletion: {
+        Args: { p_user_id: string; p_reason: string }
+        Returns: Json
+      }
+      admin_confirm_account_deletion: {
+        Args: { p_token: string; p_confirmation_phrase: string }
+        Returns: undefined
+      }
+      fetch_profile_history: {
+        Args: { p_target_user_id: string; p_limit?: number; p_offset?: number }
+        Returns: {
+          id: string
+          kind: string
+          actor_id: string | null
+          actor_name: string
+          detail: string
+          field_name: string | null
+          old_value: string | null
+          new_value: string | null
+          reason: string | null
+          created_at: string
+        }[]
+      }
     }
     Views: {
       v_offers_public: {

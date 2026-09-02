@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import * as admin from '@/services/admin'
+import * as adminUserProfile from '@/services/admin-user-profile'
 import type { AuditLogFilters, CategoryInput, MetricsPeriod, PlanInput, SubscriptionFilters, UpdateSubscriptionInput } from '@/services/admin'
+import type { AdminUserProfileChanges } from '@/services/admin-user-profile'
 import { categoryKeys } from '@/hooks/use-categories'
 
 export const adminKeys = {
@@ -15,6 +17,10 @@ export const adminKeys = {
     [...adminKeys.all, 'subscriptions', filters ?? {}] as const,
   auditLogs: (filters?: AuditLogFilters) => [...adminKeys.all, 'audit', filters ?? {}] as const,
   users: () => [...adminKeys.all, 'users'] as const,
+  userSearch: (query: string, page: number) => [...adminKeys.all, 'user-search', query, page] as const,
+  userDetail: (userId: string) => [...adminKeys.all, 'user-detail', userId] as const,
+  userActivity: (userId: string) => [...adminKeys.all, 'user-activity', userId] as const,
+  userHistory: (userId: string) => [...adminKeys.all, 'user-history', userId] as const,
 }
 
 export function usePendingSuppliers() {
@@ -191,6 +197,119 @@ export function useUpdateAdminSubscription() {
       queryClient.invalidateQueries({ queryKey: [...adminKeys.all, 'metrics'] })
       queryClient.invalidateQueries({ queryKey: adminKeys.financialReports() })
       queryClient.invalidateQueries({ queryKey: adminKeys.auditLogs() })
+    },
+  })
+}
+
+const USER_SEARCH_PAGE_SIZE = 20
+
+export function useAdminUserSearch(query: string, page: number) {
+  return useQuery({
+    queryKey: adminKeys.userSearch(query, page),
+    queryFn: () => adminUserProfile.searchAdminUsers(query, page, USER_SEARCH_PAGE_SIZE),
+    placeholderData: (previous) => previous,
+  })
+}
+
+export function useAdminUserDetail(userId: string | null, enabled: boolean) {
+  return useQuery({
+    queryKey: adminKeys.userDetail(userId ?? ''),
+    queryFn: () => adminUserProfile.fetchAdminUserDetail(userId!),
+    enabled: !!userId && enabled,
+  })
+}
+
+export function useAdminUserActivity(userId: string | null, enabled: boolean) {
+  return useQuery({
+    queryKey: adminKeys.userActivity(userId ?? ''),
+    queryFn: () => adminUserProfile.fetchUserActivity(userId!),
+    enabled: !!userId && enabled,
+  })
+}
+
+export function useAdminUserHistory(userId: string | null, enabled: boolean) {
+  return useQuery({
+    queryKey: adminKeys.userHistory(userId ?? ''),
+    queryFn: () => adminUserProfile.fetchProfileHistory(userId!),
+    enabled: !!userId && enabled,
+  })
+}
+
+export function useLogProfileAccess() {
+  return useMutation({
+    mutationFn: ({
+      userId,
+      accessType,
+      justification,
+    }: {
+      userId: string
+      accessType: 'search_result' | 'profile_view' | 'tab_activity' | 'tab_history'
+      justification?: string
+    }) => adminUserProfile.logProfileAccess(userId, accessType, justification),
+  })
+}
+
+export function useUpdateAdminUserProfile() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      userId,
+      changes,
+      reason,
+    }: {
+      userId: string
+      changes: AdminUserProfileChanges
+      reason: string
+    }) => adminUserProfile.updateAdminUserProfile(userId, changes, reason),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: adminKeys.userDetail(variables.userId) })
+      queryClient.invalidateQueries({ queryKey: adminKeys.userHistory(variables.userId) })
+      queryClient.invalidateQueries({ queryKey: [...adminKeys.all, 'user-search'] })
+    },
+  })
+}
+
+export function useRefreshCompanyCnpj() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      companyId,
+      targetUserId,
+      reason,
+    }: {
+      companyId: string
+      targetUserId: string
+      reason: string
+    }) => adminUserProfile.refreshCompanyCnpj(companyId, targetUserId, reason),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: adminKeys.userDetail(variables.targetUserId) })
+      queryClient.invalidateQueries({ queryKey: adminKeys.userHistory(variables.targetUserId) })
+    },
+  })
+}
+
+export function useRequestAccountDeletion() {
+  return useMutation({
+    mutationFn: ({ userId, reason }: { userId: string; reason: string }) =>
+      adminUserProfile.requestAccountDeletion(userId, reason),
+  })
+}
+
+export function useConfirmAccountDeletion() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      token,
+      confirmationPhrase,
+    }: {
+      token: string
+      confirmationPhrase: string
+    }) => adminUserProfile.confirmAccountDeletion(token, confirmationPhrase),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...adminKeys.all, 'user-search'] })
     },
   })
 }

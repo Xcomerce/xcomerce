@@ -25,6 +25,7 @@ export const PAGE_TITLES: Record<string, string> = {
   '/admin/plans': 'Planos',
   '/admin/subscriptions': 'Assinaturas',
   '/admin/users': 'Usuários',
+  '/admin/users/:userId': 'Ficha do usuário',
   '/admin/leads': 'Leads',
   '/admin/email-templates': 'E-mails',
   '/admin/email-providers': 'Provedores',

@@ -143,9 +143,20 @@ export const router = createBrowserRouter([
               { path: 'admin/financial-reports', element: adminPages.financialReports },
               { path: 'admin/plans', element: adminPages.plans },
               { path: 'admin/subscriptions', element: adminPages.subscriptions },
-              { path: 'admin/users', element: adminPages.users },
               { path: 'admin/categories', element: adminPages.categories },
               { path: 'admin/audit', element: adminPages.audit },
+            ],
+          },
+        ],
+      },
+      {
+        element: <RoleRoute role="admin" />,
+        children: [
+          {
+            element: <AdminAppLayout />,
+            children: [
+              { path: 'admin/users', element: adminPages.users },
+              { path: 'admin/users/:userId', element: adminPages.userDetail },
             ],
           },
         ],

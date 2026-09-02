@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Package, Printer, ShoppingBag } from 'lucide-react'
+import { Package, Printer, ShoppingBag, MessageSquare } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Alert } from '@/components/ui/alert'
@@ -17,7 +17,6 @@ import { formatCompanyAddress } from '@/lib/address'
 import { buildOrderCardTimeline, getPickupTimestamp } from '@/lib/order-display'
 import {
   buildBuyerOrderPrintData,
-  canShowBuyerPickupReceipt,
   type OrderPrintPreviewState,
 } from '@/lib/order-print'
 import type { BuyerOrderListItem } from '@/services/orders'
@@ -216,25 +215,29 @@ export function BuyerOrdersPage() {
                           />
                         ) : null}
 
-                        <div className="flex flex-wrap gap-2 pt-1">
-                          {canShowBuyerPickupReceipt(order.status) ? (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="rounded-xl"
-                              onClick={() =>
-                                setPrintPreview({
-                                  variant: 'buyer',
-                                  data: buildBuyerOrderPrintData(order),
-                                })
-                              }
-                            >
-                              <Printer className="mr-1.5 h-4 w-4" />
-                              Comprovante de retirada
-                            </Button>
-                          ) : null}
+                        <div className="flex flex-wrap gap-2 border-t border-border/60 pt-3">
                           <Button size="sm" variant="secondary" className="rounded-xl" asChild>
                             <Link to={`/buyer/orders/${order.id}`}>Ver detalhes</Link>
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="rounded-xl"
+                            onClick={() =>
+                              setPrintPreview({
+                                variant: 'buyer',
+                                data: buildBuyerOrderPrintData(order),
+                              })
+                            }
+                          >
+                            <Printer className="mr-1.5 h-4 w-4" />
+                            Imprimir pedido
+                          </Button>
+                          <Button size="sm" variant="outline" className="rounded-xl" asChild>
+                            <Link to={`/buyer/offers/${order.offer_id}`}>
+                              <MessageSquare className="mr-1.5 h-4 w-4" />
+                              Falar com fornecedor
+                            </Link>
                           </Button>
                         </div>
                       </div>

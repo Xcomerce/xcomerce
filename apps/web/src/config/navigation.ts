@@ -198,11 +198,19 @@ export const adminNav: RoleNavConfig = {
   },
 }
 
+const commercialNav: RoleNavConfig = {
+  sections: adminNav.sections.map((section) => ({
+    ...section,
+    items: section.items.filter((item) => item.to !== '/admin/users'),
+  })),
+  bottomNav: adminNav.bottomNav,
+}
+
 export const NAV_BY_ROLE: Record<UserRole, RoleNavConfig> = {
   buyer: buyerNav,
   supplier: supplierNav,
   admin: adminNav,
-  commercial: adminNav,
+  commercial: commercialNav,
 }
 
 export const ROLE_LABELS: Record<UserRole, string> = {

@@ -23,6 +23,7 @@ import { PlansAdminPage } from '@/pages/admin/PlansAdminPage'
 import { FinancialReportsPage } from '@/pages/admin/FinancialReportsPage'
 import { SubscriptionsAdminPage } from '@/pages/admin/SubscriptionsAdminPage'
 import { UsersAdminPage } from '@/pages/admin/UsersAdminPage'
+import { AdminUserDetailPage } from '@/pages/admin/AdminUserDetailPage'
 import { LeadsAdminPage } from '@/pages/admin/LeadsAdminPage'
 import { LeadDetailPage } from '@/pages/admin/LeadDetailPage'
 import { EmailTemplatesAdminPage } from '@/pages/admin/EmailTemplatesAdminPage'
@@ -62,6 +63,7 @@ export const adminPages = {
   plans: <PlansAdminPage />,
   subscriptions: <SubscriptionsAdminPage />,
   users: <UsersAdminPage />,
+  userDetail: <AdminUserDetailPage />,
   categories: <CategoriesAdminPage />,
   audit: <AuditPage />,
   leads: <LeadsAdminPage />,

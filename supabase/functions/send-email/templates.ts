@@ -10,6 +10,7 @@ export type EmailTemplate =
   | 'admin_supplier_pending'
   | 'subscription_activated'
   | 'subscription_past_due'
+  | 'profile_updated_by_admin'
 
 export const EMAIL_TEMPLATES: EmailTemplate[] = [
   'demand_matched',
@@ -23,6 +24,7 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
   'admin_supplier_pending',
   'subscription_activated',
   'subscription_past_due',
+  'profile_updated_by_admin',
 ]
 
 const TEMPLATE_TO_NOTIFICATION_TYPE: Partial<Record<EmailTemplate, string>> = {
@@ -37,6 +39,43 @@ const TEMPLATE_TO_NOTIFICATION_TYPE: Partial<Record<EmailTemplate, string>> = {
   admin_supplier_pending: 'admin.supplier_pending',
   subscription_activated: 'subscription.activated',
   subscription_past_due: 'subscription.past_due',
+  profile_updated_by_admin: 'profile.updated_by_admin',
+}
+
+const PROFILE_FIELD_LABELS: Record<string, string> = {
+  full_name: 'Nome',
+  phone: 'Telefone',
+  email: 'E-mail',
+  city: 'Cidade',
+  uf: 'UF',
+  cep: 'CEP',
+  logradouro: 'Logradouro',
+  numero: 'Número',
+  bairro: 'Bairro',
+  complemento: 'Complemento',
+  store_name: 'Nome da loja',
+  service_city: 'Cidade de atendimento',
+  service_uf: 'UF de atendimento',
+  service_radius_km: 'Raio de atendimento (km)',
+  razao_social: 'Razão social',
+  nome_fantasia: 'Nome fantasia',
+  situacao: 'Situação cadastral',
+  cnpj: 'CNPJ',
+}
+
+function renderProfileChangesList(changes: unknown): string {
+  if (!Array.isArray(changes) || changes.length === 0) {
+    return '<p>Alguns dados da sua conta foram atualizados.</p>'
+  }
+  const items = changes
+    .map((item) => {
+      const row = item as Record<string, unknown>
+      const field = String(row.field ?? '')
+      const label = PROFILE_FIELD_LABELS[field] ?? field
+      return `<li><strong>${esc(label)}</strong> foi atualizado</li>`
+    })
+    .join('')
+  return `<p>Os seguintes dados foram alterados por nossa equipe de suporte:</p><ul>${items}</ul>`
 }
 
 export function notificationTypeForTemplate(template: EmailTemplate): string | null {
@@ -170,6 +209,18 @@ export function renderEmail(
           'Assinatura em atraso',
           `<p>O pagamento do plano <strong>${esc(data.plan_name)}</strong> está em atraso. Regularize para evitar interrupção.</p>`,
           actionUrl,
+        ),
+      }
+    case 'profile_updated_by_admin':
+      return {
+        subject: 'Seus dados foram atualizados',
+        html: layout(
+          'Atualização de cadastro',
+          `<p>Olá ${esc(data.user_name)},</p>
+           ${renderProfileChangesList(data.changes)}
+           <p>Se você não solicitou esta alteração ou não reconhece esta ação, entre em contato conosco imediatamente pelo canal de suporte.</p>`,
+          actionUrl,
+          'Ver meu perfil',
         ),
       }
     default:
