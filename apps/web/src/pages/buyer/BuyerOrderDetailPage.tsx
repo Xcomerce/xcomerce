@@ -4,6 +4,7 @@ import {
   Clock,
   FileUp,
   Loader2,
+  Printer,
   Upload,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -16,11 +17,13 @@ import { Separator } from '@/components/ui/separator'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import { usePageTitle } from '@/hooks/use-page-title'
 import { useAuth } from '@/contexts/auth-context'
+import { OrderPrintPreviewDialog } from '@/components/supplier/OrderPrintPreviewDialog'
 import {
   useOrder,
   useOrderLogs,
   useOrderSlaDeadlines,
   useUpdateOrderStatus,
+  useBuyerOrderDetail,
 } from '@/hooks/use-orders'
 import {
   createOrderAttachment,
@@ -29,6 +32,11 @@ import {
 } from '@/services/orders'
 import { orderAttachmentPath, uploadFile } from '@/lib/storage'
 import { translateSupabaseError } from '@/lib/errors'
+import {
+  buildBuyerOrderPrintData,
+  canShowBuyerPickupReceipt,
+  type OrderPrintPreviewState,
+} from '@/lib/order-print'
 import { cn } from '@/lib/utils'
 
 const SLA_ACTION_LABELS: Record<string, string> = {
@@ -90,6 +98,7 @@ export function BuyerOrderDetailPage() {
   const { id } = useParams<{ id: string }>()
   const { user } = useAuth()
   const { data: order, isLoading: loadingOrder, error: orderError } = useOrder(id)
+  const { data: buyerOrder } = useBuyerOrderDetail(id)
   const { data: logs, isLoading: loadingLogs } = useOrderLogs(id)
   const { data: slas, isLoading: loadingSlas } = useOrderSlaDeadlines(id)
   const updateStatus = useUpdateOrderStatus()
@@ -99,6 +108,7 @@ export function BuyerOrderDetailPage() {
   const [uploading, setUploading] = useState(false)
   const [cancelReason, setCancelReason] = useState('')
   const [showCancelForm, setShowCancelForm] = useState(false)
+  const [printPreview, setPrintPreview] = useState<OrderPrintPreviewState>(null)
 
   useEffect(() => {
     if (!id) return
@@ -206,6 +216,7 @@ export function BuyerOrderDetailPage() {
 
   return (
     <div className="space-y-6">
+      <OrderPrintPreviewDialog preview={printPreview} onClose={() => setPrintPreview(null)} />
       {pendingBuyerSla && (
         <Alert className="border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
@@ -224,6 +235,22 @@ export function BuyerOrderDetailPage() {
             <CardDescription>Acompanhe o andamento do seu pedido.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {buyerOrder && canShowBuyerPickupReceipt(order.status) ? (
+              <Button
+                variant="outline"
+                className="w-full rounded-xl font-semibold sm:w-auto"
+                onClick={() =>
+                  setPrintPreview({
+                    variant: 'buyer',
+                    data: buildBuyerOrderPrintData(buyerOrder),
+                  })
+                }
+              >
+                <Printer className="mr-2 h-4 w-4" />
+                Comprovante de retirada
+              </Button>
+            ) : null}
+
             {order.status === 'AGUARDANDO_CONFIRMACAO_EXTERNA' && (
               <div className="space-y-3">
                 <p className="text-sm text-muted-foreground">

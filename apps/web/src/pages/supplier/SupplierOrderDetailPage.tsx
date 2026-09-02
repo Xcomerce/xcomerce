@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import { StatusBadge } from '@/components/common/StatusBadge'
+import { OrderPrintPreviewDialog } from '@/components/supplier/OrderPrintPreviewDialog'
 import {
   useOrder,
   useOrderLogs,
@@ -18,10 +19,15 @@ import {
 import { useDemand } from '@/hooks/use-demands'
 import { useOfferDetail } from '@/hooks/use-offers'
 import { useCategories } from '@/hooks/use-categories'
+import { useOnboardingState } from '@/hooks/use-onboarding'
+import { useAuth } from '@/contexts/auth-context'
 import type { OrderStatus } from '@/services/orders'
 import { translateSupabaseError } from '@/lib/errors'
 import { ORDER_STATUS_LABELS } from '@keve/shared'
-import { printOrderDocument } from '@/lib/order-print'
+import {
+  buildSupplierPrintContext,
+  type OrderPrintPreviewState,
+} from '@/lib/order-print'
 import { cn } from '@/lib/utils'
 
 function formatCurrency(value: number): string {
@@ -46,6 +52,10 @@ export function SupplierOrderDetailPage() {
   const { id } = useParams<{ id: string }>()
   const [cancelReason, setCancelReason] = useState('')
   const [showCancel, setShowCancel] = useState(false)
+  const [printPreview, setPrintPreview] = useState<OrderPrintPreviewState>(null)
+
+  const { profile } = useAuth()
+  const { data: onboarding } = useOnboardingState()
 
   const { data: order, isLoading } = useOrder(id)
   const { data: logs = [] } = useOrderLogs(id)
@@ -125,6 +135,7 @@ export function SupplierOrderDetailPage() {
 
   return (
     <div className="flex h-full max-h-full min-h-0 flex-col overflow-hidden">
+      <OrderPrintPreviewDialog preview={printPreview} onClose={() => setPrintPreview(null)} />
       <div className="scrollbar-custom min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 lg:p-6">
         <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
           <Card>
@@ -253,15 +264,40 @@ export function SupplierOrderDetailPage() {
               variant="outline"
               className="w-full rounded-xl font-semibold lg:w-auto"
               onClick={() => {
-                const ok = printOrderDocument({
+                setPrintPreview({
+                  variant: 'supplier',
+                  data: {
                   order,
-                  demand,
-                  offer,
-                  buyer: buyerProfile,
+                  pickupAt: offer?.prazo_entrega_em ?? null,
+                  demand: demand
+                    ? {
+                        titulo: demand.titulo,
+                        descricao: demand.descricao,
+                        cidade: demand.cidade,
+                        uf: demand.uf,
+                        unidade: demand.unidade,
+                        quantidade: demand.quantidade,
+                      }
+                    : null,
+                  offer: offer
+                    ? {
+                        valor: offer.valor,
+                        quantidade: offer.quantidade,
+                        prazo_entrega_dias: offer.prazo_entrega_dias,
+                        prazo_entrega_em: offer.prazo_entrega_em,
+                        mensagem: offer.mensagem,
+                      }
+                    : null,
+                  buyer: buyerProfile
+                    ? {
+                        full_name: buyerProfile.full_name,
+                        phone: buyerProfile.phone,
+                        email: buyerProfile.email,
+                      }
+                    : null,
+                  supplier: buildSupplierPrintContext(profile, onboarding ?? null),
+                  },
                 })
-                if (!ok) {
-                  toast.error('Não foi possível abrir a impressão. Tente novamente.')
-                }
               }}
             >
               <Printer className="mr-2 h-4 w-4" />

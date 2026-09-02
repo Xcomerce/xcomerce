@@ -195,6 +195,32 @@ export async function fetchBuyerOrdersWithDetails(userId: string): Promise<Buyer
   return (data ?? []).map((row) => mapBuyerOrderRow(row as Record<string, unknown>))
 }
 
+export async function fetchBuyerOrderById(orderId: string): Promise<BuyerOrderListItem | null> {
+  const { data, error } = await supabase
+    .from('orders')
+    .select(
+      `
+      *,
+      demand:demands(titulo, cidade, uf),
+      offer:offers(valor, prazo_entrega_dias, prazo_entrega_em, quantidade),
+      supplier:supplier_profiles!orders_supplier_id_fkey(
+        store_name,
+        avg_rating,
+        total_ratings,
+        profiles(full_name, phone),
+        company:companies(logradouro, numero, bairro, cep, cidade, uf)
+      ),
+      logs:order_status_logs(to_status, created_at)
+    `,
+    )
+    .eq('id', orderId)
+    .maybeSingle()
+
+  if (error) throw error
+  if (!data) return null
+  return mapBuyerOrderRow(data as Record<string, unknown>)
+}
+
 export async function fetchOrder(id: string): Promise<Order | null> {
   const { data, error } = await supabase.from('orders').select('*').eq('id', id).maybeSingle()
   if (error) throw error

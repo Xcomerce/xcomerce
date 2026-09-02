@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Package, ShoppingBag } from 'lucide-react'
+import { Package, Printer, ShoppingBag } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Alert } from '@/components/ui/alert'
@@ -10,10 +10,16 @@ import { GridSkeleton } from '@/components/common/LoadingSkeleton'
 import { OrderSupplierPickupInfo } from '@/components/buyer/OrderSupplierPickupInfo'
 import { OrderCardTimeline } from '@/components/supplier/OrderCardTimeline'
 import { OrderPickupPanel } from '@/components/supplier/OrderPickupPanel'
+import { OrderPrintPreviewDialog } from '@/components/supplier/OrderPrintPreviewDialog'
 import { usePageTitle } from '@/hooks/use-page-title'
 import { useOrders } from '@/hooks/use-orders'
 import { formatCompanyAddress } from '@/lib/address'
 import { buildOrderCardTimeline, getPickupTimestamp } from '@/lib/order-display'
+import {
+  buildBuyerOrderPrintData,
+  canShowBuyerPickupReceipt,
+  type OrderPrintPreviewState,
+} from '@/lib/order-print'
 import type { BuyerOrderListItem } from '@/services/orders'
 import {
   ORDER_ACCEPTED_STATUSES,
@@ -38,6 +44,7 @@ export function BuyerOrdersPage() {
   usePageTitle()
   const { data: orders, isLoading, error } = useOrders('buyer')
   const [activeTab, setActiveTab] = useState<'all' | 'accepted' | 'production' | 'completed'>('all')
+  const [printPreview, setPrintPreview] = useState<OrderPrintPreviewState>(null)
 
   const acceptedStatuses = ORDER_ACCEPTED_STATUSES
   const productionStatuses = ORDER_PRODUCTION_STATUSES
@@ -59,6 +66,7 @@ export function BuyerOrdersPage() {
 
   return (
     <div className="space-y-6">
+      <OrderPrintPreviewDialog preview={printPreview} onClose={() => setPrintPreview(null)} />
       {error && (
         <Alert className="border-destructive/50 text-destructive">
           Não foi possível carregar seus pedidos.
@@ -209,6 +217,22 @@ export function BuyerOrdersPage() {
                         ) : null}
 
                         <div className="flex flex-wrap gap-2 pt-1">
+                          {canShowBuyerPickupReceipt(order.status) ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="rounded-xl"
+                              onClick={() =>
+                                setPrintPreview({
+                                  variant: 'buyer',
+                                  data: buildBuyerOrderPrintData(order),
+                                })
+                              }
+                            >
+                              <Printer className="mr-1.5 h-4 w-4" />
+                              Comprovante de retirada
+                            </Button>
+                          ) : null}
                           <Button size="sm" variant="secondary" className="rounded-xl" asChild>
                             <Link to={`/buyer/orders/${order.id}`}>Ver detalhes</Link>
                           </Button>

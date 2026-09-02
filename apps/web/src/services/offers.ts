@@ -11,6 +11,7 @@ export type PublicOffer = {
   supplier_id: string
   valor: number
   prazo_entrega_dias: number
+  prazo_entrega_em: string | null
   validade_dias: number
   validade_ate: string
   quantidade: number

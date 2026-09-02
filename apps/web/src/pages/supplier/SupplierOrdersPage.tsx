@@ -9,6 +9,9 @@ import { GridSkeleton } from '@/components/common/LoadingSkeleton'
 import { StatusBadge } from '@/components/common/StatusBadge'
 import { OrderCardTimeline } from '@/components/supplier/OrderCardTimeline'
 import { OrderPickupPanel } from '@/components/supplier/OrderPickupPanel'
+import { OrderPrintPreviewDialog } from '@/components/supplier/OrderPrintPreviewDialog'
+import { useAuth } from '@/contexts/auth-context'
+import { useOnboardingState } from '@/hooks/use-onboarding'
 import { useOrders, useUpdateOrderStatus } from '@/hooks/use-orders'
 import {
   ORDER_ACCEPTED_STATUSES,
@@ -18,7 +21,11 @@ import {
 } from '@keve/shared'
 import type { SupplierOrderListItem } from '@/services/orders'
 import { buildOrderCardTimeline, getPickupTimestamp } from '@/lib/order-display'
-import { printOrderDocument } from '@/lib/order-print'
+import {
+  buildSupplierOrderPrintData,
+  buildSupplierPrintContext,
+  type OrderPrintPreviewState,
+} from '@/lib/order-print'
 import { translateSupabaseError } from '@/lib/errors'
 import { cn, formatPhone } from '@/lib/utils'
 
@@ -50,8 +57,11 @@ function sortOrders(orders: SupplierOrderListItem[], sortBy: OrderSortBy): Suppl
 export function SupplierOrdersPage() {
   const { data: orders = [], isLoading, isError } = useOrders('supplier')
   const updateStatus = useUpdateOrderStatus()
+  const { profile } = useAuth()
+  const { data: onboarding } = useOnboardingState()
   const [activeTab, setActiveTab] = useState<'all' | 'accepted' | 'production' | 'completed'>('all')
   const [sortBy, setSortBy] = useState<OrderSortBy>('pickup_asc')
+  const [printPreview, setPrintPreview] = useState<OrderPrintPreviewState>(null)
 
   const supplierOrders = orders as SupplierOrderListItem[]
 
@@ -75,19 +85,15 @@ export function SupplierOrdersPage() {
   }
 
   function handlePrint(order: SupplierOrderListItem) {
-    const ok = printOrderDocument({
-      order,
-      demand: order.demand,
-      offer: order.offer,
-      buyer: order.buyer,
+    setPrintPreview({
+      variant: 'supplier',
+      data: buildSupplierOrderPrintData(order, buildSupplierPrintContext(profile, onboarding ?? null)),
     })
-    if (!ok) {
-      toast.error('Não foi possível abrir a impressão. Tente novamente.')
-    }
   }
 
   return (
     <div className="space-y-6">
+      <OrderPrintPreviewDialog preview={printPreview} onClose={() => setPrintPreview(null)} />
       {isLoading && <GridSkeleton count={3} />}
 
       {isError && (

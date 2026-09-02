@@ -20,6 +20,14 @@ export function useOrders(role: OrderRole) {
   })
 }
 
+export function useBuyerOrderDetail(id: string | undefined) {
+  return useQuery({
+    queryKey: [...orderKeys.detail(id ?? ''), 'buyer'] as const,
+    queryFn: () => orders.fetchBuyerOrderById(id!),
+    enabled: !!id,
+  })
+}
+
 export function useOrder(id: string | undefined) {
   return useQuery({
     queryKey: orderKeys.detail(id ?? ''),
