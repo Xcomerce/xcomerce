@@ -25,7 +25,7 @@ import { useOfferDetail, useAcceptOffer, useRejectOffer, useOffersForDemand } fr
 import { useChatMessages, useSendMessage, useChatSubscription } from '@/hooks/use-chat'
 import { useAuth } from '@/contexts/auth-context'
 import { formatSupabaseError } from '@/lib/errors'
-import { demandHasVariantSpecs } from '@keve/shared'
+import { demandHasVariantSpecs, getSupplierStoreDisplayName } from '@keve/shared'
 import { DemandVariantSummary } from '@/components/buyer/DemandVariantSummary'
 import { formatDemandDateTime } from '@/lib/datetime'
 import {
@@ -229,7 +229,7 @@ export function BuyerOfferDetailPage() {
         supabase.from('profiles').select('avatar_url, full_name').eq('id', supplierId).maybeSingle(),
         supabase
           .from('supplier_profiles')
-          .select('response_rate, company:companies(cnpj, nome_fantasia, cidade, uf)')
+          .select('store_name, response_rate, company:companies(cnpj, nome_fantasia, cidade, uf)')
           .eq('user_id', supplierId)
           .maybeSingle(),
         supabase
@@ -250,7 +250,13 @@ export function BuyerOfferDetailPage() {
 
       return {
         avatarUrl,
-        displayName: profileRes.data?.full_name ?? offer.supplier_name,
+        displayName: getSupplierStoreDisplayName({
+          store_name: supplierRes.data?.store_name,
+          company: supplierRes.data?.company as {
+            nome_fantasia?: string | null
+            razao_social?: string | null
+          } | null,
+        }),
         responseRate: supplierRes.data?.response_rate ?? 0,
         catalogCount: countRes.count ?? 0,
         company: supplierRes.data?.company as {
@@ -380,7 +386,8 @@ export function BuyerOfferDetailPage() {
 
   return (
     <>
-      <ScrollPageShell>
+      <div className="flex h-full min-h-0 flex-col">
+      <ScrollPageShell className="min-h-0 flex-1">
         <section
           className={cn(SCROLL_PAGE_SECTION_CLASS, 'space-y-6', showFooter && 'lg:pb-20')}
         >
@@ -734,6 +741,41 @@ export function BuyerOfferDetailPage() {
       </aside>
       </ScrollPageShell>
 
+      {showFooter && (
+        <footer className="shrink-0 border-t border-border bg-background/95 px-4 py-3 pb-safe-bottom backdrop-blur-sm lg:fixed lg:bottom-0 lg:left-60 lg:right-72 lg:z-30 lg:px-6 lg:shadow-[0_-4px_12px_rgba(0,0,0,0.03)] xl:right-80">
+          <div className="mx-auto flex max-w-7xl flex-row items-center gap-2 sm:justify-end sm:gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleReject}
+              disabled={rejectOffer.isPending || acceptOffer.isPending}
+              className="flex h-[42px] min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl border border-destructive/20 bg-destructive/10 px-2 text-xs font-bold text-destructive hover:bg-destructive/15 hover:text-destructive dark:border-destructive/30 dark:bg-destructive/15 dark:hover:bg-destructive/20 sm:flex-none sm:w-auto sm:min-w-[150px] sm:gap-2 sm:px-4 sm:text-sm"
+            >
+              {rejectOffer.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <X className="h-4 w-4" />
+              )}
+              Recusar Proposta
+            </Button>
+            <Button
+              type="button"
+              onClick={handleAccept}
+              disabled={rejectOffer.isPending || acceptOffer.isPending}
+              className="flex h-[42px] min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 sm:flex-none sm:w-auto sm:min-w-[150px] sm:gap-2 sm:px-4 sm:text-sm"
+            >
+              {acceptOffer.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Check className="h-4 w-4" />
+              )}
+              Aceitar Proposta
+            </Button>
+          </div>
+        </footer>
+      )}
+      </div>
+
       {mobileChatOpen && (
         <div className="fixed inset-0 z-50 flex flex-col bg-background lg:hidden">
           <header className="flex shrink-0 items-center gap-2 border-b border-border px-2 py-2">
@@ -780,40 +822,6 @@ export function BuyerOfferDetailPage() {
         </div>
       )}
 
-      {/* Botões de Decisão Fixos no Footer */}
-      {showFooter && (
-        <footer className="shrink-0 border-t border-border bg-background/95 px-4 py-3 pb-safe-bottom backdrop-blur-sm lg:fixed lg:bottom-0 lg:left-60 lg:right-0 lg:z-30 lg:px-6 lg:shadow-[0_-4px_12px_rgba(0,0,0,0.03)]">
-          <div className="mx-auto flex max-w-7xl flex-row items-center gap-2 sm:justify-end sm:gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleReject}
-              disabled={rejectOffer.isPending || acceptOffer.isPending}
-              className="flex h-[42px] min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl border border-destructive/20 bg-destructive/10 px-2 text-xs font-bold text-destructive hover:bg-destructive/15 hover:text-destructive dark:border-destructive/30 dark:bg-destructive/15 dark:hover:bg-destructive/20 sm:flex-none sm:w-auto sm:min-w-[150px] sm:gap-2 sm:px-4 sm:text-sm"
-            >
-              {rejectOffer.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <X className="h-4 w-4" />
-              )}
-              Recusar Proposta
-            </Button>
-            <Button
-              type="button"
-              onClick={handleAccept}
-              disabled={rejectOffer.isPending || acceptOffer.isPending}
-              className="flex h-[42px] min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 sm:flex-none sm:w-auto sm:min-w-[150px] sm:gap-2 sm:px-4 sm:text-sm"
-            >
-              {acceptOffer.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Check className="h-4 w-4" />
-              )}
-              Aceitar Proposta
-            </Button>
-          </div>
-        </footer>
-      )}
       {/* Modal de Confirmação - Aceitar */}
       {showAcceptModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">

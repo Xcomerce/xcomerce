@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { EmptyState } from '@/components/common/EmptyState'
 import { GridSkeleton } from '@/components/common/LoadingSkeleton'
 import { useMatches, useMarkMatchDismissed, useMarkMatchViewed } from '@/hooks/use-matches'
-import type { MatchFilters, DemandMatchWithDemand } from '@/services/matches'
+import type { DemandMatchWithDemand } from '@/services/matches'
 import type { DemandMatch } from '@/services/matches'
 import { DEMAND_STATUS_LABELS } from '@keve/shared'
 import { DemandVariantSummary } from '@/components/buyer/DemandVariantSummary'
@@ -32,12 +32,17 @@ function scoreColor(score: number): string {
 export function SupplierBoardPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
 
-  const filters: MatchFilters | undefined = useMemo(() => {
-    if (statusFilter === 'all') return undefined
-    return { status: statusFilter }
-  }, [statusFilter])
+  const { data: allMatches = [], isLoading, isError } = useMatches()
 
-  const { data: matches = [], isLoading, isError } = useMatches(filters)
+  const matches = useMemo(() => {
+    if (statusFilter === 'all') return allMatches
+    if (statusFilter === 'notified') {
+      return allMatches.filter(
+        (match) => match.status === 'notified' && match.viewed_at == null,
+      )
+    }
+    return allMatches.filter((match) => match.status === statusFilter)
+  }, [allMatches, statusFilter])
   const markViewed = useMarkMatchViewed()
   const markDismissed = useMarkMatchDismissed()
 
@@ -128,6 +133,7 @@ function MatchCard({
   const demandStatusLabel = DEMAND_STATUS_LABELS[demand.status] ?? demand.status
   const isProposalAccepted = demand.status === 'PROPOSTA_ACEITA'
   const hasOfferSent = match.status === 'offer_sent'
+  const isNew = match.status === 'notified' && match.viewed_at == null && !isProposalAccepted
   const canDismiss = match.status === 'notified' || match.status === 'viewed'
 
   const actionLabel = isProposalAccepted
@@ -152,7 +158,7 @@ function MatchCard({
     <Card
       className={cn(
         'flex h-full flex-col overflow-visible',
-        match.status === 'notified' && 'border-primary/30',
+        match.status === 'notified' && isNew && 'border-primary/30',
       )}
     >
       <CardHeader className="flex shrink-0 flex-col gap-1.5 space-y-0 pb-2">
@@ -194,7 +200,7 @@ function MatchCard({
           <Badge className="shrink-0 whitespace-nowrap border border-border bg-transparent text-xs">
             {demandStatusLabel}
           </Badge>
-          {match.status === 'notified' && (
+          {isNew && (
             <Badge className="shrink-0 whitespace-nowrap border-0 bg-primary/15 text-primary">
               Nova
             </Badge>
@@ -206,7 +212,7 @@ function MatchCard({
           )}
         </div>
         <div className="mt-auto flex gap-2 pt-3">
-          {match.status === 'notified' && (
+          {isNew && (
             <Button
               type="button"
               size="icon"

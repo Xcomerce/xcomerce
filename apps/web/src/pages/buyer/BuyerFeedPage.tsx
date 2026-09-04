@@ -7,6 +7,10 @@ import { useCategories, useRootCategories } from '@/hooks/use-categories'
 import { getDescendantCategoryIds } from '@keve/shared'
 import type { FeedProductListing } from '@/services/products'
 import {
+  buildSearchNoResultKey,
+  trackDiagnosticEvent,
+} from '@/lib/diagnostics'
+import {
   FeedProductCard,
   HORIZONTAL_CARD_CLASS,
 } from '@/components/buyer/FeedProductCard'
@@ -15,7 +19,7 @@ import { CategoryPickerDialog } from '@/components/buyer/CategoryPickerDialog'
 import { CarouselArrow } from '@/components/common/CarouselArrow'
 
 const HORIZONTAL_ROW_CLASS =
-  'flex overflow-x-auto touch-pan-x overscroll-x-contain gap-3 sm:gap-4 pb-3 snap-x snap-mandatory scroll-smooth no-scrollbar -mx-4 px-4 scroll-px-4 md:-mx-0 md:px-0 md:scroll-px-0'
+  'flex overflow-x-auto overscroll-x-contain gap-3 sm:gap-4 pb-3 snap-x snap-proximity scroll-smooth no-scrollbar -mx-4 px-4 scroll-px-4 md:-mx-0 md:px-0 md:scroll-px-0 md:snap-mandatory'
 
 const VERTICAL_GRID_CLASS =
   'grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 md:gap-6 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6'
@@ -168,6 +172,18 @@ export function BuyerFeedPage() {
 
   const { data: emptySuggestions = [] } = useSearchSuggestions(searchQuery, !loadingProducts && products.length === 0)
 
+  useEffect(() => {
+    const query = searchQuery.trim()
+    if (loadingProducts || products.length > 0 || query.length < 2) return
+
+    void trackDiagnosticEvent(
+      'search_no_result',
+      buildSearchNoResultKey(query),
+      { query, category_id: selectedCategory || null },
+      { userRole: 'buyer', dedupeKey: `search:${query}` },
+    )
+  }, [loadingProducts, products.length, searchQuery, selectedCategory])
+
   const isFilteredView = Boolean(selectedCategory || searchQuery)
 
   const selectedCategoryNode = allCategories.find((cat) => cat.id === selectedCategory)
@@ -248,7 +264,7 @@ export function BuyerFeedPage() {
           <div
             ref={categoriesRef}
             onScroll={handleScroll}
-            className="flex min-w-0 w-[calc(100%+2rem)] -mx-4 gap-2 overflow-x-auto touch-pan-x overscroll-x-contain scroll-smooth px-4 pb-2 scroll-px-4 no-scrollbar md:mx-0 md:w-full md:px-0 md:scroll-px-0"
+            className="flex min-w-0 w-[calc(100%+2rem)] -mx-4 gap-2 overflow-x-auto overscroll-x-contain scroll-smooth px-4 pb-2 scroll-px-4 no-scrollbar md:mx-0 md:w-full md:px-0 md:scroll-px-0"
           >
             <button
               type="button"

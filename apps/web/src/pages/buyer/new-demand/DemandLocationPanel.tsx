@@ -13,6 +13,7 @@ type DemandLocationPanelProps = {
   onPublish: () => void
   onCancel: () => void
   missingFields?: string[]
+  fieldClassName?: string
 }
 
 export function DemandLocationPanel({
@@ -25,6 +26,7 @@ export function DemandLocationPanel({
   onPublish,
   onCancel,
   missingFields = [],
+  fieldClassName,
 }: DemandLocationPanelProps) {
   const primaryCity = cities[0] ?? null
 
@@ -57,7 +59,7 @@ export function DemandLocationPanel({
             </div>
           </div>
 
-          <CityProximityPicker value={primaryCity} onChange={handleCityChange} />
+          <CityProximityPicker value={primaryCity} onChange={handleCityChange} inputClassName={fieldClassName} />
         </div>
       </div>
 

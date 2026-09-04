@@ -1,8 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { X } from 'lucide-react'
 import type { CategoryNode } from '@keve/shared'
 import { Button } from '@/components/ui/button'
-import { CategoryPicker } from '@/components/buyer/CategoryPicker'
+import { CategoryPicker, type CategoryPickerHandle } from '@/components/buyer/CategoryPicker'
+import {
+  buildCategoryNotFoundKey,
+  trackDiagnosticEvent,
+} from '@/lib/diagnostics'
 
 type CategoryPickerDialogProps = {
   open: boolean
@@ -11,6 +15,7 @@ type CategoryPickerDialogProps = {
   value: string
   onApply: (value: string) => void
   loading?: boolean
+  userRole?: 'buyer' | 'supplier'
 }
 
 export function CategoryPickerDialog({
@@ -20,12 +25,30 @@ export function CategoryPickerDialog({
   value,
   onApply,
   loading = false,
+  userRole = 'buyer',
 }: CategoryPickerDialogProps) {
   const [draft, setDraft] = useState(value)
+  const pickerRef = useRef<CategoryPickerHandle>(null)
 
   useEffect(() => {
     if (open) setDraft(value)
   }, [open, value])
+
+  function trackAbandonIfNeeded() {
+    const abandon = pickerRef.current?.getAbandonState()
+    if (!abandon?.query) return
+    void trackDiagnosticEvent(
+      'category_not_found',
+      buildCategoryNotFoundKey(abandon.query),
+      { query: abandon.query, context: 'feed_dialog' },
+      { userRole, dedupeKey: `category:${abandon.query}` },
+    )
+  }
+
+  function handleClose() {
+    trackAbandonIfNeeded()
+    onClose()
+  }
 
   if (!open) return null
 
@@ -43,7 +66,7 @@ export function CategoryPickerDialog({
   return (
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 backdrop-blur-sm animate-in fade-in duration-200 sm:items-center sm:p-4"
-      onClick={onClose}
+      onClick={handleClose}
     >
       <div
         role="dialog"
@@ -63,7 +86,7 @@ export function CategoryPickerDialog({
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleClose}
             className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             aria-label="Fechar"
           >
@@ -73,6 +96,7 @@ export function CategoryPickerDialog({
 
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-5">
           <CategoryPicker
+            ref={pickerRef}
             categories={categories}
             value={draft}
             onValueChange={setDraft}
@@ -86,7 +110,7 @@ export function CategoryPickerDialog({
           <Button type="button" variant="ghost" onClick={handleClear} disabled={loading} className="rounded-xl">
             Limpar filtro
           </Button>
-          <Button type="button" variant="outline" onClick={onClose} disabled={loading} className="rounded-xl">
+          <Button type="button" variant="outline" onClick={handleClose} disabled={loading} className="rounded-xl">
             Cancelar
           </Button>
           <Button type="button" onClick={handleApply} disabled={loading || !draft} className="rounded-xl">

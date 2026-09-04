@@ -112,11 +112,24 @@ export async function markViewedByDemand(
   if (error) throw error
 }
 
-export async function requestDemandMatch(demandId: string): Promise<void> {
-  const { error } = await supabase.functions.invoke('request-demand-match', {
+export type MatchRunResult = {
+  demand_id: string
+  matches_created: number
+  suppliers_notified: number
+  skipped: {
+    already_matched: number
+    not_approved: number
+    out_of_region: number
+    variant_mismatch: number
+  }
+}
+
+export async function requestDemandMatch(demandId: string): Promise<MatchRunResult | null> {
+  const { data, error } = await supabase.functions.invoke('request-demand-match', {
     body: { demand_id: demandId },
   })
   if (error) throw error
+  return (data as MatchRunResult | null) ?? null
 }
 
 export async function syncSupplierMatches(): Promise<void> {

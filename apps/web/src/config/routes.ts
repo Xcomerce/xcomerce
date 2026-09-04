@@ -32,6 +32,7 @@ export const PAGE_TITLES: Record<string, string> = {
   '/admin/categories': 'Categorias',
   '/admin/support-settings': 'Contatos de suporte',
   '/admin/audit': 'Auditoria',
+  '/admin/diagnostics': 'Diagnóstico',
   '/email/unsubscribe': 'Cancelar e-mails',
   '/settings/profile': 'Configurações',
   '/settings/billing': 'Plano e billing',

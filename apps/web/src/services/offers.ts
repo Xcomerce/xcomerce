@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import type { OfferInput } from '@keve/shared'
-import type { Tables, OfferSpecification } from '@keve/shared'
+import { getSupplierStoreDisplayName, type Tables, type OfferSpecification } from '@keve/shared'
 
 export type Offer = Tables<'offers'>
 export type Order = Tables<'orders'>
@@ -28,6 +28,43 @@ export type PublicOffer = {
   supplier_status: string | null
   supplier_phone: string | null
   supplier_email: string | null
+}
+
+type SupplierStoreRow = {
+  user_id: string
+  store_name: string | null
+  company: {
+    nome_fantasia: string | null
+    razao_social: string | null
+  } | null
+}
+
+async function enrichOffersWithStoreName(offers: PublicOffer[]): Promise<PublicOffer[]> {
+  if (offers.length === 0) return offers
+
+  const supplierIds = [...new Set(offers.map((offer) => offer.supplier_id))]
+  const { data: suppliers, error } = await supabase
+    .from('supplier_profiles')
+    .select('user_id, store_name, company:companies(nome_fantasia, razao_social)')
+    .in('user_id', supplierIds)
+
+  if (error) throw error
+
+  const storeNameBySupplier = new Map(
+    ((suppliers ?? []) as unknown as SupplierStoreRow[]).map((supplier) => [
+      supplier.user_id,
+      getSupplierStoreDisplayName({
+        store_name: supplier.store_name,
+        company: supplier.company,
+      }),
+    ]),
+  )
+
+  return offers.map((offer) => {
+    const storeName = storeNameBySupplier.get(offer.supplier_id)
+    if (!storeName || storeName === 'Fornecedor') return offer
+    return { ...offer, supplier_name: storeName }
+  })
 }
 
 export async function createOffer(supplierId: string, input: OfferInput): Promise<Offer> {
@@ -61,7 +98,7 @@ export async function fetchOffersForDemand(demandId: string): Promise<PublicOffe
     .order('supplier_avg_rating', { ascending: false, nullsFirst: false })
 
   if (error) throw error
-  return (data ?? []) as PublicOffer[]
+  return enrichOffersWithStoreName((data ?? []) as PublicOffer[])
 }
 
 export async function revealContact(offerId: string): Promise<Offer> {
@@ -125,5 +162,6 @@ export async function fetchOfferById(offerId: string): Promise<PublicOffer> {
     .single()
 
   if (error) throw error
-  return data as PublicOffer
+  const [offer] = await enrichOffersWithStoreName([data as PublicOffer])
+  return offer
 }

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import * as admin from '@/services/admin'
 import * as adminUserProfile from '@/services/admin-user-profile'
+import * as diagnostics from '@/services/diagnostics'
 import type { AuditLogFilters, CategoryInput, MetricsPeriod, PlanInput, SubscriptionFilters, UpdateSubscriptionInput } from '@/services/admin'
 import type { AdminUserProfileChanges } from '@/services/admin-user-profile'
 import { categoryKeys } from '@/hooks/use-categories'
@@ -21,6 +22,9 @@ export const adminKeys = {
   userDetail: (userId: string) => [...adminKeys.all, 'user-detail', userId] as const,
   userActivity: (userId: string) => [...adminKeys.all, 'user-activity', userId] as const,
   userHistory: (userId: string) => [...adminKeys.all, 'user-history', userId] as const,
+  diagnostics: (filters: diagnostics.DiagnosticGroupFilters) =>
+    [...adminKeys.all, 'diagnostics', filters] as const,
+  demandNearMiss: (demandId: string) => [...adminKeys.all, 'demand-near-miss', demandId] as const,
 }
 
 export function usePendingSuppliers() {
@@ -310,6 +314,47 @@ export function useConfirmAccountDeletion() {
     }) => adminUserProfile.confirmAccountDeletion(token, confirmationPhrase),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [...adminKeys.all, 'user-search'] })
+    },
+  })
+}
+
+export function useDiagnosticGroups(filters: diagnostics.DiagnosticGroupFilters) {
+  return useQuery({
+    queryKey: adminKeys.diagnostics(filters),
+    queryFn: () => diagnostics.fetchDiagnosticGroups(filters),
+  })
+}
+
+export function useResolveDiagnosticGroup() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: diagnostics.ResolveDiagnosticInput) =>
+      diagnostics.resolveDiagnosticGroup(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...adminKeys.all, 'diagnostics'] })
+    },
+  })
+}
+
+export function useDemandNearMiss(demandId: string | null) {
+  return useQuery({
+    queryKey: adminKeys.demandNearMiss(demandId ?? ''),
+    queryFn: () => diagnostics.fetchDemandNearMiss(demandId!),
+    enabled: Boolean(demandId),
+  })
+}
+
+export function useAddVariantSuggestion() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: {
+      categoryId: string
+      axisName: string
+      value: string
+      sourceGroupKey?: string
+    }) => diagnostics.addVariantValueSuggestion(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...adminKeys.all, 'diagnostics'] })
     },
   })
 }

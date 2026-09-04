@@ -1,4 +1,8 @@
 import { supabase } from '@/lib/supabase'
+import {
+  buildUploadFailureKey,
+  trackDiagnosticEvent,
+} from '@/lib/diagnostics'
 
 export async function uploadFile(
   bucket: string,
@@ -6,7 +10,20 @@ export async function uploadFile(
   file: File,
 ): Promise<string> {
   const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true })
-  if (error) throw error
+  if (error) {
+    void trackDiagnosticEvent(
+      'upload_failure',
+      buildUploadFailureKey(bucket, error.name ?? error.message ?? 'unknown'),
+      {
+        bucket,
+        code: error.name,
+        message: error.message,
+        path: path.split('/').slice(0, 2).join('/'),
+      },
+      { dedupeMs: 10_000 },
+    )
+    throw error
+  }
 
   if (bucket === 'product-images') {
     const { data } = supabase.storage.from(bucket).getPublicUrl(path)

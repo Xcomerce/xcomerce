@@ -157,6 +157,7 @@ export const router = createBrowserRouter([
             children: [
               { path: 'admin/users', element: adminPages.users },
               { path: 'admin/users/:userId', element: adminPages.userDetail },
+              { path: 'admin/diagnostics', element: adminPages.diagnostics },
             ],
           },
         ],

@@ -17,9 +17,9 @@ export function CarouselArrow({ side, visible, onClick, ariaLabel, className }: 
       type="button"
       onClick={onClick}
       className={cn(
-        'carousel-arrow absolute z-10 -translate-y-1/2',
+        'carousel-arrow absolute z-10 hidden -translate-y-1/2 md:flex',
         side === 'left' ? '-left-[21px]' : '-right-[21px]',
-        visible ? 'hidden md:flex' : 'hidden',
+        !visible && '!hidden',
         className,
       )}
       aria-label={ariaLabel}

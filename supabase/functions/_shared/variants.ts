@@ -1,8 +1,8 @@
 import {
   normalizeVariantValue,
   variantArrayContains,
-} from '../utils/variant-normalize'
-import type { VariantAxis } from '../utils/variant-axes'
+  type VariantAxis,
+} from './variant-normalize.ts'
 
 export type ProductVariantFields = {
   tem_cor: boolean

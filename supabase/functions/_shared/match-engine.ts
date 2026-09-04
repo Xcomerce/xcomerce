@@ -209,6 +209,14 @@ function formatDemandNotificationBody(demand: DemandRow): string {
   return `Solicitação compatível: ${parts.join(' ')}.`
 }
 
+type EvaluationLogRow = {
+  demand_id: string
+  supplier_id: string
+  outcome: 'matched' | 'skipped'
+  skip_reason: string | null
+  score: number | null
+}
+
 export async function runDemandMatch(
   supabase: SupabaseClient,
   demandId: string,
@@ -220,6 +228,7 @@ export async function runDemandMatch(
     out_of_region: 0,
     variant_mismatch: 0,
   }
+  const evaluationLogs: EvaluationLogRow[] = []
 
   const { data: demand, error: demandErr } = await supabase
     .from('demands')
@@ -238,6 +247,8 @@ export async function runDemandMatch(
   if (!OPEN_DEMAND_STATUSES.includes(demandRow.status)) {
     throw new Error('DEMAND_NOT_OPEN')
   }
+
+  await supabase.from('match_evaluation_logs').delete().eq('demand_id', demandId)
 
   const requiresVariantMatch = demandHasVariantSpecs(demandRow)
 
@@ -317,10 +328,26 @@ export async function runDemandMatch(
 
     if (requiresVariantMatch) {
       if (!supplierHasCompatibleProduct(row.user_id, productRows, demandRow)) {
-        if (hasCategoryProduct || hasSupplierCategory) skipped.variant_mismatch++
+        if (hasCategoryProduct || hasSupplierCategory) {
+          skipped.variant_mismatch++
+          evaluationLogs.push({
+            demand_id: demandId,
+            supplier_id: row.user_id,
+            outcome: 'skipped',
+            skip_reason: 'variant_mismatch',
+            score: null,
+          })
+        }
         continue
       }
     } else if (!hasCategoryProduct && !hasSupplierCategory) {
+      evaluationLogs.push({
+        demand_id: demandId,
+        supplier_id: row.user_id,
+        outcome: 'skipped',
+        skip_reason: 'no_category',
+        score: null,
+      })
       continue
     }
 
@@ -343,19 +370,35 @@ export async function runDemandMatch(
     }
 
     const geo = geoEligible(demandRow, supplier)
+    const score = computeScore(supplier, geo, demandRow.raio_km, demandRow)
+
     if (!geo.eligible) {
       skipped.out_of_region++
+      evaluationLogs.push({
+        demand_id: demandId,
+        supplier_id: row.user_id,
+        outcome: 'skipped',
+        skip_reason: 'out_of_region',
+        score,
+      })
       continue
     }
 
     if (alreadyMatched.has(row.user_id)) {
       skipped.already_matched++
+      evaluationLogs.push({
+        demand_id: demandId,
+        supplier_id: row.user_id,
+        outcome: 'skipped',
+        skip_reason: 'already_matched',
+        score,
+      })
       continue
     }
 
     candidates.push({
       supplier,
-      score: computeScore(supplier, geo, demandRow.raio_km, demandRow),
+      score,
     })
   }
 
@@ -383,6 +426,13 @@ export async function runDemandMatch(
     if (insertErr) {
       if (insertErr.code === '23505') {
         skipped.already_matched++
+        evaluationLogs.push({
+          demand_id: demandId,
+          supplier_id: supplier.user_id,
+          outcome: 'skipped',
+          skip_reason: 'already_matched',
+          score,
+        })
         continue
       }
       console.error('demand_matches insert:', insertErr)
@@ -390,6 +440,13 @@ export async function runDemandMatch(
     }
 
     matchesCreated++
+    evaluationLogs.push({
+      demand_id: demandId,
+      supplier_id: supplier.user_id,
+      outcome: 'matched',
+      skip_reason: null,
+      score,
+    })
 
     const { data: autoOfferResult, error: autoOfferErr } = await supabase.rpc(
       'try_create_auto_offer',
@@ -435,6 +492,11 @@ export async function runDemandMatch(
     .from('demands')
     .update({ match_processed_at: new Date().toISOString() })
     .eq('id', demandId)
+
+  if (evaluationLogs.length > 0) {
+    const { error: evalErr } = await supabase.from('match_evaluation_logs').insert(evaluationLogs)
+    if (evalErr) console.error('match_evaluation_logs insert:', evalErr)
+  }
 
   return {
     demand_id: demandId,

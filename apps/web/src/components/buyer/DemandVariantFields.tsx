@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { VariantValueAutocomplete } from '@/components/catalog/VariantValueAutocomplete'
+import { cn } from '@/lib/utils'
 
 type DemandVariantFieldsProps = {
   categoryId?: string
@@ -21,6 +22,7 @@ function QuantityInput({
   name,
   inputRef,
   onKeyDown,
+  className,
 }: {
   value: unknown
   onChange: (value: number | null) => void
@@ -28,6 +30,7 @@ function QuantityInput({
   name: string
   inputRef: Ref<HTMLInputElement>
   onKeyDown?: (event: React.KeyboardEvent<HTMLInputElement>) => void
+  className?: string
 }) {
   const formatValue = (nextValue: unknown) =>
     typeof nextValue === 'number' && Number.isFinite(nextValue) ? String(nextValue) : ''
@@ -47,6 +50,7 @@ function QuantityInput({
       type="text"
       inputMode="numeric"
       autoComplete="off"
+      className={className}
       value={text}
       onFocus={() => {
         isFocusedRef.current = true
@@ -198,12 +202,12 @@ export function DemandVariantFields({ categoryId, nativeFieldClass }: DemandVari
             <p className="text-sm font-semibold">Quantidade total</p>
             <p className="text-xs text-muted-foreground">Informe apenas a quantidade, sem variações.</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex min-h-11 items-center gap-3">
             <Switch
               checked={useVariations}
               onCheckedChange={(checked) => form.setValue('use_variations', checked, { shouldDirty: true })}
             />
-            <Label className="text-xs">Variações</Label>
+            <Label className="text-sm">Variações</Label>
           </div>
         </div>
         <FormField
@@ -218,6 +222,7 @@ export function DemandVariantFields({ categoryId, nativeFieldClass }: DemandVari
                   value={field.value}
                   onBlur={field.onBlur}
                   onChange={(v) => field.onChange(v ?? undefined)}
+                  className={nativeFieldClass}
                 />
               </FormControl>
               <FormMessage />
@@ -234,12 +239,12 @@ export function DemandVariantFields({ categoryId, nativeFieldClass }: DemandVari
         <div className="min-w-0 space-y-2">
           <div className="flex items-center gap-2">
             <p className="text-sm font-semibold text-foreground">Especificações</p>
-            <div className="flex items-center gap-2">
+            <div className="flex min-h-11 items-center gap-3">
               <Switch
                 checked={useVariations}
                 onCheckedChange={(checked) => form.setValue('use_variations', checked, { shouldDirty: true })}
               />
-              <Label className="text-xs text-muted-foreground">Variações</Label>
+              <Label className="text-sm text-muted-foreground">Variações</Label>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -248,12 +253,12 @@ export function DemandVariantFields({ categoryId, nativeFieldClass }: DemandVari
                 key={i}
                 value={axis.name}
                 onChange={(e) => updateAxisName(i, e.target.value)}
-                className="h-8 w-28 text-xs"
+                className={cn(nativeFieldClass, 'h-auto min-h-11 w-32 text-base md:min-h-8 md:text-xs')}
                 placeholder="Nome do eixo"
               />
             ))}
             {variantAxes.length < 4 ? (
-              <Button type="button" variant="ghost" size="sm" onClick={addAxis}>
+              <Button type="button" variant="ghost" className="min-h-11 px-3 md:min-h-9" onClick={addAxis}>
                 + Eixo
               </Button>
             ) : null}
@@ -265,8 +270,7 @@ export function DemandVariantFields({ categoryId, nativeFieldClass }: DemandVari
         <Button
           type="button"
           variant="outline"
-          size="sm"
-          className="w-full shrink-0 gap-1.5 sm:w-auto"
+          className="min-h-11 w-full shrink-0 gap-1.5 sm:w-auto md:min-h-9"
           onClick={() => addRow('group')}
         >
           <Plus className="h-4 w-4" />
@@ -342,6 +346,7 @@ export function DemandVariantFields({ categoryId, nativeFieldClass }: DemandVari
                                   handleQtyEnter(index)
                                 }
                               }}
+                              className={nativeFieldClass}
                             />
                           </FormControl>
                           <FormMessage />
@@ -354,7 +359,7 @@ export function DemandVariantFields({ categoryId, nativeFieldClass }: DemandVari
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="h-10 w-10 text-muted-foreground hover:text-destructive"
+                      className="min-h-11 min-w-11 text-muted-foreground hover:text-destructive"
                       onClick={() => remove(index)}
                     >
                       <Trash2 className="h-4 w-4" />

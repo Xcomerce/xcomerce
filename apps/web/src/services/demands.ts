@@ -1,6 +1,10 @@
 import { supabase } from '@/lib/supabase'
 import { requestDemandMatch } from '@/services/matches'
 import {
+  buildDemandNoMatchKey,
+  trackDiagnosticEvent,
+} from '@/lib/diagnostics'
+import {
   demandSpecificationsToLegacyFields,
   prepareDemandPayload,
   syncDemandQuantidadeFromSpecifications,
@@ -178,7 +182,22 @@ export async function publishDemand(id: string): Promise<Demand> {
   if (error) throw error
 
   try {
-    await requestDemandMatch(id)
+    const matchResult = await requestDemandMatch(id)
+    if (matchResult && matchResult.matches_created === 0) {
+      void trackDiagnosticEvent(
+        'demand_no_match',
+        buildDemandNoMatchKey(id),
+        {
+          demand_id: id,
+          titulo: data.titulo,
+          category_id: data.category_id,
+          cidade: data.cidade,
+          uf: data.uf,
+          skipped: matchResult.skipped,
+        },
+        { userRole: 'buyer' },
+      )
+    }
   } catch (matchError) {
     console.warn('Falha ao processar match do pedido:', matchError)
   }

@@ -71,6 +71,33 @@ export function AppShell({ role }: { role: UserRole }) {
     if (!isFullHeightLayout) return
     const html = document.documentElement
     const body = document.body
+    const viewport = window.visualViewport
+
+    function syncViewportHeight() {
+      const isMobileForm =
+        isBuyerNewDemandPage && window.matchMedia('(max-width: 1023px)').matches
+      if (!isMobileForm || !viewport) return false
+
+      html.style.height = `${viewport.height}px`
+      html.style.overflow = 'hidden'
+      body.style.overflow = 'hidden'
+      return true
+    }
+
+    if (syncViewportHeight() && viewport) {
+      const onViewportChange = () => {
+        syncViewportHeight()
+      }
+      viewport.addEventListener('resize', onViewportChange)
+      viewport.addEventListener('scroll', onViewportChange)
+      return () => {
+        viewport.removeEventListener('resize', onViewportChange)
+        viewport.removeEventListener('scroll', onViewportChange)
+        html.style.height = ''
+        html.style.overflow = ''
+        body.style.overflow = ''
+      }
+    }
 
     html.style.overflow = 'hidden'
     body.style.overflow = 'hidden'
@@ -79,7 +106,7 @@ export function AppShell({ role }: { role: UserRole }) {
       html.style.overflow = ''
       body.style.overflow = ''
     }
-  }, [isFullHeightLayout])
+  }, [isFullHeightLayout, isBuyerNewDemandPage])
 
   useEffect(() => {
     if (!isSupplierPending) return

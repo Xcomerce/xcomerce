@@ -11,6 +11,7 @@ export type EmailTemplate =
   | 'subscription_activated'
   | 'subscription_past_due'
   | 'profile_updated_by_admin'
+  | 'diagnostic_threshold_alert'
 
 export const EMAIL_TEMPLATES: EmailTemplate[] = [
   'demand_matched',
@@ -25,6 +26,7 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
   'subscription_activated',
   'subscription_past_due',
   'profile_updated_by_admin',
+  'diagnostic_threshold_alert',
 ]
 
 const TEMPLATE_TO_NOTIFICATION_TYPE: Partial<Record<EmailTemplate, string>> = {
@@ -221,6 +223,21 @@ export function renderEmail(
            <p>Se você não solicitou esta alteração ou não reconhece esta ação, entre em contato conosco imediatamente pelo canal de suporte.</p>`,
           actionUrl,
           'Ver meu perfil',
+        ),
+      }
+    case 'diagnostic_threshold_alert':
+      return {
+        subject: `Alerta: ${esc(data.issue_label)} afetou ${esc(data.affected_users)} pessoas`,
+        html: layout(
+          'Alerta de diagnóstico',
+          `<p>Um problema recorrente passou do limite de atenção:</p>
+           <ul>
+             <li><strong>${esc(data.issue_type)}</strong>: ${esc(data.issue_label)}</li>
+             <li><strong>Pessoas afetadas (24h):</strong> ${esc(data.affected_users)}</li>
+             <li><strong>Ocorrências totais (24h):</strong> ${esc(data.total_occurrences)}</li>
+           </ul>`,
+          actionUrl,
+          'Abrir painel de diagnóstico',
         ),
       }
     default:

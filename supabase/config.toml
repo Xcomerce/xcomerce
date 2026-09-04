@@ -59,3 +59,9 @@ verify_jwt = false
 
 [functions.check-sla-deadlines]
 verify_jwt = false
+
+[functions.expire-demands]
+verify_jwt = false
+
+[functions.check-diagnostic-alerts]
+verify_jwt = false

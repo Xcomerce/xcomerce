@@ -244,12 +244,17 @@
     border-radius: 50%;
     border: none;
     cursor: pointer;
-    display: flex;
     align-items: center;
     justify-content: center;
     color: #fff;
     background: linear-gradient(135deg, #7C3AED, #22A7F0);
     transition: transform 0.15s ease, filter 0.15s ease;
+  }
+
+  @media (max-width: 767px) {
+    .carousel-arrow {
+      display: none !important;
+    }
   }
 
   .carousel-arrow:hover {

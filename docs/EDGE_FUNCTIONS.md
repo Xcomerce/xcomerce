@@ -522,6 +522,73 @@ SLA_REMINDER_HOURS_BEFORE=4
 
 ---
 
+## 6b. `expire-demands`
+
+Expira solicitações vencidas e registra evento `demand_expired_no_offer` quando houve match sem proposta.
+
+### Trigger
+
+```http
+POST /functions/v1/expire-demands
+Authorization: Bearer {CRON_SECRET}
+```
+
+Agendamento: **diário às 06:00 UTC** (`0 6 * * *`) via `pg_cron`.
+
+### Request
+
+```json
+{ "dry_run": false }
+```
+
+---
+
+## 6c. `check-diagnostic-alerts`
+
+Envia e-mail para admins quando um problema afeta ≥5 pessoas distintas em 24h.
+
+### Trigger
+
+```http
+POST /functions/v1/check-diagnostic-alerts
+Authorization: Bearer {CRON_SECRET}
+```
+
+Agendamento: **a cada hora** (`0 * * * *`) via `pg_cron`.
+
+### Request
+
+```json
+{ "dry_run": false, "threshold": 5 }
+```
+
+---
+
+## Agendamento automático (pg_cron)
+
+Os crons rodam **dentro do Postgres** (não dependem do scheduler do Dashboard):
+
+| Job | Schedule | Function |
+|-----|----------|----------|
+| `check-sla-deadlines-hourly` | `0 * * * *` | `check-sla-deadlines` |
+| `expire-demands-daily` | `0 6 * * *` | `expire-demands` |
+| `check-diagnostic-alerts-hourly` | `0 * * * *` | `check-diagnostic-alerts` |
+
+Migrations: `20260904180000_schedule_edge_function_crons.sql`, `20260904180100_cron_vault_credentials.sql`.
+
+### Setup por ambiente
+
+1. Definir secret nas Edge Functions: `supabase secrets set CRON_SECRET=...`
+2. Gravar no Vault (mesmo valor):
+   ```bash
+   npx supabase db query --linked -f supabase/scripts/setup-cron-vault.sql
+   ```
+3. Verificar jobs: `select jobname, schedule, active from cron.job;`
+
+O helper `public.invoke_cron_edge_function(name, body)` lê URL e token do **Vault** (`supabase_functions_url`, `cron_secret`).
+
+---
+
 ## 7. `lookup-cnpj`
 
 Proxy para API de CNPJ (evita expor token no client e centraliza cache).

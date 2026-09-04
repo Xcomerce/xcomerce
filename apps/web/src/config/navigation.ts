@@ -1,4 +1,5 @@
 import {
+  Activity,
   BarChart3,
   Boxes,
   CreditCard,
@@ -175,6 +176,7 @@ export const adminNav: RoleNavConfig = {
         { to: '/admin/subscriptions', label: 'Assinaturas', icon: Receipt },
         { to: '/admin/categories', label: 'Categorias', icon: Tags },
         { to: '/admin/audit', label: 'Auditoria', icon: FileText },
+        { to: '/admin/diagnostics', label: 'Diagnóstico', icon: Activity },
       ],
     },
     {
@@ -201,7 +203,9 @@ export const adminNav: RoleNavConfig = {
 const commercialNav: RoleNavConfig = {
   sections: adminNav.sections.map((section) => ({
     ...section,
-    items: section.items.filter((item) => item.to !== '/admin/users'),
+    items: section.items.filter(
+      (item) => item.to !== '/admin/users' && item.to !== '/admin/diagnostics',
+    ),
   })),
   bottomNav: adminNav.bottomNav,
 }

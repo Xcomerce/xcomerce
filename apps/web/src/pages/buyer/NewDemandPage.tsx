@@ -29,6 +29,8 @@ import { CategoryPicker } from '@/components/buyer/CategoryPicker'
 import { ScrollPageShell, SCROLL_PAGE_SECTION_CLASS } from '@/components/layout/ScrollPageShell'
 import {
   NATIVE_FIELD_CLASS,
+  MOBILE_TOUCH_FIELD_CLASS,
+  MOBILE_TOUCH_BUTTON_CLASS,
 } from '@/pages/buyer/new-demand/constants'
 import { DemandFormActions } from '@/pages/buyer/new-demand/DemandFormActions'
 import { DemandLocationPanel } from '@/pages/buyer/new-demand/DemandLocationPanel'
@@ -36,6 +38,7 @@ import { useDemandLocationDefaults } from '@/hooks/use-demand-location-defaults'
 import { demandSpecificationsFromRecord, syncDemandQuantidadeFromSpecifications, getDemandPublishMissingFields } from '@/lib/demand-specifications'
 import { formatDateTimeLocalInput, parseDateTimeLocalInput } from '@/lib/datetime'
 import { useCategorySuggestion } from '@/hooks/use-category-suggestion'
+import { scrollFocusedFieldIntoView } from '@/hooks/use-mobile-keyboard-offset'
 
 export function NewDemandPage() {
   usePageTitle()
@@ -71,6 +74,7 @@ export function NewDemandPage() {
   const [categoryManuallySet, setCategoryManuallySet] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const hasAppliedProductPrefillRef = useRef(false)
+  const hasAppliedLocationDefaultRef = useRef(false)
 
   const form = useForm<DemandInput>({
     resolver: zodResolver(demandSchema),
@@ -114,6 +118,14 @@ export function NewDemandPage() {
     form.formState.isSubmitting
 
   useEffect(() => {
+    function handleFocusIn(event: FocusEvent) {
+      scrollFocusedFieldIntoView(event.target)
+    }
+    document.addEventListener('focusin', handleFocusIn)
+    return () => document.removeEventListener('focusin', handleFocusIn)
+  }, [])
+
+  useEffect(() => {
     if (categoryManuallySet || !hasSuggestion || !suggestedCategoryId) return
     if (!form.getValues('category_id')) {
       form.setValue('category_id', suggestedCategoryId, { shouldDirty: true })
@@ -150,14 +162,17 @@ export function NewDemandPage() {
   }, [stateData, isEditing, form])
 
   useEffect(() => {
-    if (isEditing || !demandLocation.ready) return
-    if (watchedCities.length === 0 && demandLocation.cidade && demandLocation.uf) {
+    if (isEditing || !demandLocation.ready || hasAppliedLocationDefaultRef.current) return
+    hasAppliedLocationDefaultRef.current = true
+
+    const currentCities = form.getValues('cidades') ?? []
+    if (currentCities.length === 0 && demandLocation.cidade && demandLocation.uf) {
       form.setValue('cidades', [{ cidade: demandLocation.cidade, uf: demandLocation.uf }])
     }
     if (!form.getValues('cidade')) form.setValue('cidade', demandLocation.cidade)
     if (!form.getValues('uf')) form.setValue('uf', demandLocation.uf)
     if (!form.getValues('raio_km')) form.setValue('raio_km', demandLocation.raio_km)
-  }, [demandLocation, isEditing, form, watchedCities.length])
+  }, [demandLocation, isEditing, form])
 
   useEffect(() => {
     if (!existingDemand) return
@@ -307,7 +322,7 @@ export function NewDemandPage() {
                       <FormItem>
                         <FormLabel>Título</FormLabel>
                         <FormControl>
-                          <Input placeholder="Ex.: Camisa adulto" {...field} />
+                          <Input className={MOBILE_TOUCH_FIELD_CLASS} placeholder="Ex.: Camisa adulto" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -329,6 +344,8 @@ export function NewDemandPage() {
                             }}
                             disabled={loadingCategories}
                             loading={loadingCategories}
+                            fieldClassName={MOBILE_TOUCH_FIELD_CLASS}
+                            optionClassName={MOBILE_TOUCH_BUTTON_CLASS}
                           />
                         </FormControl>
                         {hasSuggestion && suggestedCategory && !categoryManuallySet ? (
@@ -355,6 +372,7 @@ export function NewDemandPage() {
                         <FormLabel>Prazo desejado</FormLabel>
                         <FormControl>
                           <Input
+                            className={MOBILE_TOUCH_FIELD_CLASS}
                             type="datetime-local"
                             min={formatDateTimeLocalInput(new Date().toISOString())}
                             value={formatDateTimeLocalInput(field.value)}
@@ -377,7 +395,7 @@ export function NewDemandPage() {
                       <FormLabel>Descrição (opcional)</FormLabel>
                       <FormControl>
                         <textarea
-                          className={cn(NATIVE_FIELD_CLASS, 'min-h-[100px] py-2')}
+                          className={cn(NATIVE_FIELD_CLASS, 'min-h-[120px]')}
                           placeholder={descricaoPlaceholder}
                           {...field}
                         />
@@ -403,6 +421,7 @@ export function NewDemandPage() {
                 onPublish={() => void handlePublish()}
                 onCancel={() => navigate('/buyer/dashboard')}
                 missingFields={missingFields}
+                fieldClassName={MOBILE_TOUCH_FIELD_CLASS}
               />
             </section>
           </ScrollPageShell>

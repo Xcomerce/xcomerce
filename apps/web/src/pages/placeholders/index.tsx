@@ -19,6 +19,7 @@ import { ApprovalsPage } from '@/pages/admin/ApprovalsPage'
 import { MetricsPage } from '@/pages/admin/MetricsPage'
 import { CategoriesAdminPage } from '@/pages/admin/CategoriesAdminPage'
 import { AuditPage } from '@/pages/admin/AuditPage'
+import { DiagnosticsPage } from '@/pages/admin/DiagnosticsPage'
 import { PlansAdminPage } from '@/pages/admin/PlansAdminPage'
 import { FinancialReportsPage } from '@/pages/admin/FinancialReportsPage'
 import { SubscriptionsAdminPage } from '@/pages/admin/SubscriptionsAdminPage'
@@ -66,6 +67,7 @@ export const adminPages = {
   userDetail: <AdminUserDetailPage />,
   categories: <CategoriesAdminPage />,
   audit: <AuditPage />,
+  diagnostics: <DiagnosticsPage />,
   leads: <LeadsAdminPage />,
   leadDetail: <LeadDetailPage />,
   emailTemplates: <EmailTemplatesAdminPage />,

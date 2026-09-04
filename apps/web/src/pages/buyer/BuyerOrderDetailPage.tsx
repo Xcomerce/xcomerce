@@ -4,6 +4,7 @@ import {
   Clock,
   FileUp,
   Loader2,
+  MessageSquare,
   Printer,
   Upload,
 } from 'lucide-react'
@@ -28,6 +29,7 @@ import {
 import {
   createOrderAttachment,
   fetchOrderAttachments,
+  type BuyerOrderListItem,
   type OrderAttachment,
 } from '@/services/orders'
 import { orderAttachmentPath, uploadFile } from '@/lib/storage'
@@ -37,7 +39,18 @@ import {
   canShowBuyerPickupReceipt,
   type OrderPrintPreviewState,
 } from '@/lib/order-print'
+import { OrderPaymentChatPanel } from '@/components/buyer/OrderPaymentChatPanel'
 import { cn } from '@/lib/utils'
+
+type OrderDetailTab = 'pedido' | 'chat'
+
+function getSupplierDisplayName(buyerOrder: BuyerOrderListItem): string {
+  return (
+    buyerOrder.supplier?.store_name ??
+    buyerOrder.supplier?.profile?.full_name ??
+    'Fornecedor'
+  )
+}
 
 const SLA_ACTION_LABELS: Record<string, string> = {
   inform_payment: 'Informar pagamento',
@@ -109,6 +122,7 @@ export function BuyerOrderDetailPage() {
   const [cancelReason, setCancelReason] = useState('')
   const [showCancelForm, setShowCancelForm] = useState(false)
   const [printPreview, setPrintPreview] = useState<OrderPrintPreviewState>(null)
+  const [activeTab, setActiveTab] = useState<OrderDetailTab>('pedido')
 
   useEffect(() => {
     if (!id) return
@@ -213,6 +227,9 @@ export function BuyerOrderDetailPage() {
   }
 
   const isTerminal = ['CONCLUIDO', 'CANCELADO', 'EXPIRADO'].includes(order.status)
+  const showChat = Boolean(order.demand_id && order.supplier_id)
+  const awaitingPaymentProof = order.status === 'AGUARDANDO_CONFIRMACAO_EXTERNA'
+  const supplierName = buyerOrder ? getSupplierDisplayName(buyerOrder) : 'Fornecedor'
 
   return (
     <div className="space-y-6">
@@ -228,13 +245,99 @@ export function BuyerOrderDetailPage() {
         </Alert>
       )}
 
+      {showChat && (
+        <div className="border-b border-border/60 lg:hidden">
+          <div className="flex gap-6">
+            {(
+              [
+                { id: 'pedido' as const, label: 'Pedido' },
+                { id: 'chat' as const, label: 'Chat' },
+              ] as const
+            ).map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  'relative shrink-0 pb-3 text-sm font-semibold transition-colors',
+                  activeTab === tab.id
+                    ? 'text-primary'
+                    : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                <span className="inline-flex items-center gap-1.5">
+                  {tab.id === 'chat' && <MessageSquare className="h-4 w-4" />}
+                  {tab.label}
+                </span>
+                {activeTab === tab.id && (
+                  <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-primary" />
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div
+        className={cn(
+          'grid gap-4',
+          showChat && 'lg:grid-cols-2 xl:grid-cols-[1fr,min(420px,42%)]',
+        )}
+      >
+        <div
+          className={cn(
+            'space-y-4',
+            showChat && activeTab === 'chat' && 'hidden lg:block',
+          )}
+        >
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Status do pedido</CardTitle>
-            <CardDescription>Acompanhe o andamento do seu pedido.</CardDescription>
+            {awaitingPaymentProof ? (
+              <>
+                <CardTitle>Pagamento</CardTitle>
+                <CardDescription>
+                  O pagamento acontece fora da plataforma, direto com o fornecedor.
+                </CardDescription>
+              </>
+            ) : (
+              <>
+                <CardTitle>Status do pedido</CardTitle>
+                <CardDescription>Acompanhe o andamento do seu pedido.</CardDescription>
+              </>
+            )}
           </CardHeader>
           <CardContent className="space-y-4">
+            {awaitingPaymentProof && pendingBuyerSla && (
+              <Alert className="border-amber-200 bg-amber-50/80 dark:border-amber-800 dark:bg-amber-950/20">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="space-y-0.5">
+                    <p className="flex items-center gap-1.5 text-sm font-semibold text-amber-900 dark:text-amber-100">
+                      <Clock className="h-4 w-4 shrink-0" />
+                      Falta enviar o comprovante
+                    </p>
+                    <p className="text-xs text-amber-800/80 dark:text-amber-200/80">
+                      Combine o pagamento no chat, pague e anexe aqui para o pedido avançar.
+                    </p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <SlaCountdown
+                      deadlineAt={pendingBuyerSla.deadline_at}
+                      status={pendingBuyerSla.status}
+                    />
+                    <p className="mt-0.5 text-[10px] text-muted-foreground">
+                      até{' '}
+                      {new Date(pendingBuyerSla.deadline_at).toLocaleString('pt-BR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </p>
+                  </div>
+                </div>
+              </Alert>
+            )}
             {buyerOrder && canShowBuyerPickupReceipt(order.status) ? (
               <Button
                 variant="outline"
@@ -253,10 +356,7 @@ export function BuyerOrderDetailPage() {
 
             {order.status === 'AGUARDANDO_CONFIRMACAO_EXTERNA' && (
               <div className="space-y-3">
-                <p className="text-sm text-muted-foreground">
-                  Realize o pagamento externamente e anexe o comprovante para avançar.
-                </p>
-                <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border border-dashed p-6 hover:bg-muted/30">
+                <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border border-dashed border-primary/30 bg-primary/5 p-8 transition-colors hover:bg-primary/10">
                   <input
                     type="file"
                     accept="application/pdf,image/jpeg,image/png,image/webp"
@@ -269,13 +369,18 @@ export function BuyerOrderDetailPage() {
                     }}
                   />
                   {uploading ? (
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    <Loader2 className="h-10 w-10 animate-spin text-primary" />
                   ) : (
-                    <Upload className="h-8 w-8 text-muted-foreground" />
+                    <Upload className="h-10 w-10 text-primary" />
                   )}
-                  <span className="text-sm font-medium">Enviar comprovante de pagamento</span>
-                  <span className="text-xs text-muted-foreground">PDF ou imagem, máx. 5 MB</span>
+                  <span className="text-sm font-semibold">Enviar comprovante de pagamento</span>
+                  <span className="text-xs text-muted-foreground">PDF ou imagem, até 5 MB</span>
                 </label>
+                <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                  <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  O fornecedor recebe o comprovante e confirma. Só depois ele começa a separar a
+                  mercadoria.
+                </p>
               </div>
             )}
 
@@ -477,6 +582,24 @@ export function BuyerOrderDetailPage() {
           )}
         </CardContent>
       </Card>
+        </div>
+
+        {showChat && (
+          <div
+            className={cn(
+              'lg:sticky lg:top-4 lg:self-start',
+              activeTab === 'pedido' && 'hidden lg:block',
+            )}
+          >
+            <OrderPaymentChatPanel
+              demandId={order.demand_id}
+              supplierId={order.supplier_id}
+              offerId={order.offer_id}
+              supplierName={supplierName}
+            />
+          </div>
+        )}
+      </div>
     </div>
   )
 }

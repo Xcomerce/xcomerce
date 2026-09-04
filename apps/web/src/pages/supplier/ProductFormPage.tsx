@@ -34,6 +34,10 @@ import { updateProductImages } from '@/services/products'
 import type { OnboardingState } from '@/services/onboarding'
 import { uploadFile, productImagePath } from '@/lib/storage'
 import { formatSupabaseError, translateSupabaseError } from '@/lib/errors'
+import {
+  buildProductAbandonedKey,
+  trackDiagnosticEvent,
+} from '@/lib/diagnostics'
 import { cn } from '@/lib/utils'
 import { CATALOG_LIMITS_ENABLED } from '@/config/features'
 
@@ -78,6 +82,9 @@ export function ProductFormPage() {
   const [savedImageUrls, setSavedImageUrls] = useState<string[]>([])
   const [draftId, setDraftId] = useState<string | undefined>(id)
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const mountedAtRef = useRef(Date.now())
+  const publishedRef = useRef(false)
+  const furthestStepRef = useRef(1)
   const [draftSavedAt, setDraftSavedAt] = useState<Date | null>(null)
   const [pendingImages, setPendingImages] = useState<PendingProductImage[]>([])
 
@@ -147,6 +154,38 @@ export function ProductFormPage() {
       ? [{ key: 'default', label: 'Produto', imageUrl: previewImageUrl }]
       : []
   }, [formValues.tem_cor, formValues.cores, previewImageUrl])
+
+  useEffect(() => {
+    let step = 1
+    if ((formValues.variant_axes?.length ?? 0) > 0 || formValues.tem_cor || formValues.tem_tamanho) {
+      step = 2
+    }
+    if (pendingImages.length > 0 || savedImageUrls.length > 0) {
+      step = 3
+    }
+    furthestStepRef.current = Math.max(furthestStepRef.current, step)
+  }, [formValues, pendingImages.length, savedImageUrls.length])
+
+  useEffect(() => {
+    return () => {
+      if (publishedRef.current) return
+      const elapsed = Date.now() - mountedAtRef.current
+      if (elapsed < 5000) return
+      const isDraftProduct =
+        (product as { is_draft?: boolean } | undefined)?.is_draft ?? !isEdit
+      if (!isDraftProduct && isEdit) return
+
+      void trackDiagnosticEvent(
+        'product_form_abandoned',
+        buildProductAbandonedKey(furthestStepRef.current),
+        {
+          step: furthestStepRef.current,
+          product_id: draftId ?? id ?? null,
+        },
+        { userRole: 'supplier', dedupeMs: 120_000 },
+      )
+    }
+  }, [draftId, id, isEdit, product])
 
   useEffect(() => {
     if (product) {
@@ -251,8 +290,10 @@ export function ProductFormPage() {
         }
         if (!silent) toast.success(publish ? 'Produto publicado' : 'Rascunho salvo')
       }
-      if (publish) navigate('/supplier/catalog')
-      else setDraftSavedAt(new Date())
+      if (publish) {
+        publishedRef.current = true
+        navigate('/supplier/catalog')
+      } else setDraftSavedAt(new Date())
       return true
     } catch (err) {
       const msg = formatSupabaseError(err)

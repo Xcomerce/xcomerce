@@ -15,10 +15,11 @@ type CityProximityPickerProps = {
   value: CityLocation | null
   onChange: (next: CityLocation | null) => void
   className?: string
+  inputClassName?: string
 }
 
 
-export function CityProximityPicker({ value, onChange, className }: CityProximityPickerProps) {
+export function CityProximityPicker({ value, onChange, className, inputClassName }: CityProximityPickerProps) {
   const [query, setQuery] = useState(value ? `${value.cidade}, ${value.uf}` : '')
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -31,7 +32,9 @@ export function CityProximityPicker({ value, onChange, className }: CityProximit
   useEffect(() => {
     if (value) {
       setQuery(`${value.cidade}, ${value.uf}`)
+      return
     }
+    setQuery('')
   }, [value])
 
   useEffect(() => {
@@ -106,7 +109,7 @@ export function CityProximityPicker({ value, onChange, className }: CityProximit
         <Input
           value={query}
           placeholder="Ex.: Franca, SP"
-          className="pl-9"
+          className={cn('pl-9', inputClassName)}
           onFocus={() => setOpen(true)}
           onChange={(e) => {
             setQuery(e.target.value)
@@ -132,7 +135,7 @@ export function CityProximityPicker({ value, onChange, className }: CityProximit
               <button
                 key={`${city.nome}-${city.uf}`}
                 type="button"
-                className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-muted"
+                className="flex min-h-11 w-full items-center justify-between gap-2 px-3 py-2.5 text-left text-base md:min-h-10 md:text-sm hover:bg-muted"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => selectCity(city)}
               >
@@ -159,8 +162,7 @@ export function CityProximityPicker({ value, onChange, className }: CityProximit
       <Button
         type="button"
         variant="outline"
-        size="sm"
-        className="gap-1.5"
+        className="min-h-11 gap-1.5 text-sm md:min-h-9"
         disabled={detecting}
         onClick={() => void handleDetectLocation()}
       >

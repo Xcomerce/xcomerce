@@ -1,10 +1,19 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useImperativeHandle, forwardRef } from 'react'
 import { getLeafCategories, type CategoryNode } from '@keve/shared'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/auth-context'
 import { useBuyerFavoriteCategories } from '@/hooks/use-buyer-favorites'
+
+export type CategoryPickerAbandonState = {
+  query: string
+  hadNoResults: boolean
+} | null
+
+export type CategoryPickerHandle = {
+  getAbandonState: () => CategoryPickerAbandonState
+}
 
 type CategoryPickerProps = {
   categories: Array<CategoryNode & { name: string }>
@@ -13,17 +22,23 @@ type CategoryPickerProps = {
   disabled?: boolean
   loading?: boolean
   listClassName?: string
+  fieldClassName?: string
+  optionClassName?: string
 }
 
-export function CategoryPicker({
-  categories,
-  value,
-  onValueChange,
-  disabled = false,
-  loading = false,
-  listClassName,
-}: CategoryPickerProps) {
-  const { user } = useAuth()
+export const CategoryPicker = forwardRef<CategoryPickerHandle, CategoryPickerProps>(function CategoryPicker(
+  {
+    categories,
+    value,
+    onValueChange,
+    disabled = false,
+    loading = false,
+    listClassName,
+    fieldClassName,
+    optionClassName,
+  },
+  ref,
+) {  const { user } = useAuth()
   const [tab, setTab] = useState<'suggested' | 'all'>('suggested')
   const [search, setSearch] = useState('')
   const { data: favoriteIds = [] } = useBuyerFavoriteCategories(user?.id)
@@ -45,14 +60,22 @@ export function CategoryPicker({
 
   const selectedCategory = leafCategories.find((category) => category.id === value)
 
-  return (
-    <div className="space-y-3 rounded-xl border border-border/60 bg-background p-3">
+  useImperativeHandle(ref, () => ({
+    getAbandonState: () => {
+      const query = search.trim()
+      if (tab !== 'all' || !query) return null
+      const hadNoResults = filteredCategories.length === 0
+      if (!hadNoResults) return null
+      return { query, hadNoResults: true }
+    },
+  }), [search, tab, filteredCategories.length])
+
+  return (    <div className="space-y-3 rounded-xl border border-border/60 bg-background p-3">
       <div className="flex gap-2">
         <Button
           type="button"
-          size="sm"
           variant={tab === 'suggested' ? 'default' : 'outline'}
-          className="rounded-lg"
+          className={cn('rounded-lg min-h-11 md:min-h-9', optionClassName)}
           onClick={() => setTab('suggested')}
           disabled={disabled}
         >
@@ -60,9 +83,8 @@ export function CategoryPicker({
         </Button>
         <Button
           type="button"
-          size="sm"
           variant={tab === 'all' ? 'default' : 'outline'}
-          className="rounded-lg"
+          className={cn('rounded-lg min-h-11 md:min-h-9', optionClassName)}
           onClick={() => setTab('all')}
           disabled={disabled}
         >
@@ -72,6 +94,7 @@ export function CategoryPicker({
 
       {tab === 'all' ? (
         <Input
+          className={fieldClassName}
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           placeholder="Buscar categoria..."
@@ -99,7 +122,8 @@ export function CategoryPicker({
                 key={category.id}
                 type="button"
                 className={cn(
-                  'flex w-full items-center rounded-lg border px-2 py-1.5 text-left text-sm text-foreground',
+                  'flex w-full items-center rounded-lg border px-3 py-2.5 text-left text-base text-foreground md:min-h-10 md:py-1.5 md:text-sm min-h-11',
+                  optionClassName,
                   isSelected ? 'border-primary bg-primary/5' : 'border-transparent hover:bg-muted/40',
                 )}
                 disabled={disabled}
@@ -113,4 +137,4 @@ export function CategoryPicker({
       </div>
     </div>
   )
-}
+})
