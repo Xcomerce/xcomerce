@@ -254,12 +254,12 @@ export function DemandVariantFields({ categoryId, nativeFieldClass }: DemandVari
                 value={axis.name}
                 onChange={(e) => updateAxisName(i, e.target.value)}
                 className={cn(nativeFieldClass, 'h-auto min-h-11 w-32 text-base md:min-h-8 md:text-xs')}
-                placeholder="Nome do eixo"
+                placeholder="Nome da variação (Cor, Tamanho...)"
               />
             ))}
             {variantAxes.length < 4 ? (
               <Button type="button" variant="ghost" className="min-h-11 px-3 md:min-h-9" onClick={addAxis}>
-                + Eixo
+                + Variação
               </Button>
             ) : null}
           </div>

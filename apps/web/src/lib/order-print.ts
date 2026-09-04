@@ -1,9 +1,16 @@
-import { ORDER_STATUS_LABELS, type Tables } from '@keve/shared'
+import { ORDER_STATUS_LABELS, type DemandSpecification, type OfferSpecification, type Tables } from '@keve/shared'
 import {
   buildGoogleMapsDirectionsUrl,
   formatCompanyAddress,
   formatCompanyAddressPrintLines,
 } from '@/lib/address'
+import {
+  buildOfferLineItemsFromOffer,
+  roundCurrency,
+  sumOfferLineQuantity,
+  sumOfferLineTotal,
+  type OfferLineItem,
+} from '@/lib/offer-variant-pricing'
 import { formatPhone } from '@/lib/utils'
 import type { BuyerOrderListItem, SupplierOrderListItem } from '@/services/orders'
 import type { UserProfile } from '@/services/profile'
@@ -17,24 +24,30 @@ export type OrderPrintSupplier = {
   phone?: string | null
 }
 
+export type OrderPrintDemand = {
+  titulo: string
+  descricao?: string | null
+  cidade?: string
+  uf?: string
+  unidade: string
+  quantidade: number
+  especificacoes?: DemandSpecification[] | null
+}
+
+export type OrderPrintOffer = {
+  valor: number
+  quantidade: number
+  prazo_entrega_dias: number
+  prazo_entrega_em?: string | null
+  mensagem?: string | null
+  especificacoes?: OfferSpecification[] | null
+}
+
 export type OrderPrintData = {
   order: Tables<'orders'> & { created_at?: string }
   pickupAt?: string | null
-  demand?: {
-    titulo: string
-    descricao?: string | null
-    cidade: string
-    uf: string
-    unidade: string
-    quantidade: number
-  } | null
-  offer?: {
-    valor: number
-    quantidade: number
-    prazo_entrega_dias: number
-    prazo_entrega_em?: string | null
-    mensagem?: string | null
-  } | null
+  demand?: OrderPrintDemand | null
+  offer?: OrderPrintOffer | null
   buyer?: {
     full_name: string
     phone?: string | null
@@ -46,9 +59,8 @@ export type OrderPrintData = {
 export type BuyerOrderPrintData = {
   order: Tables<'orders'> & { created_at?: string }
   pickupAt?: string | null
-  offer?: {
-    prazo_entrega_dias?: number | null
-  } | null
+  demand?: OrderPrintDemand | null
+  offer?: Pick<OrderPrintOffer, 'valor' | 'quantidade' | 'prazo_entrega_dias' | 'especificacoes'> | null
   pickupLocation: {
     storeName: string
     addressLine1: string | null
@@ -91,6 +103,21 @@ export function buildSupplierOrderPrintData(
   }
 }
 
+function mapOrderPrintDemand(
+  demand: BuyerOrderListItem['demand'],
+): OrderPrintDemand | null {
+  if (!demand) return null
+  return {
+    titulo: demand.titulo,
+    descricao: demand.descricao,
+    cidade: demand.cidade,
+    uf: demand.uf,
+    unidade: demand.unidade,
+    quantidade: demand.quantidade,
+    especificacoes: demand.especificacoes,
+  }
+}
+
 export function buildBuyerOrderPrintData(order: BuyerOrderListItem): BuyerOrderPrintData {
   const storeName =
     order.supplier?.store_name ?? order.supplier?.profile?.full_name ?? 'Fornecedor'
@@ -100,6 +127,7 @@ export function buildBuyerOrderPrintData(order: BuyerOrderListItem): BuyerOrderP
   return {
     order,
     pickupAt: order.offer?.prazo_entrega_em ?? null,
+    demand: mapOrderPrintDemand(order.demand),
     offer: order.offer,
     pickupLocation: {
       storeName,
@@ -158,6 +186,84 @@ function formatPickupForPrint(
   }
 
   return '—'
+}
+
+function formatPrintCurrency(value: number): string {
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
+}
+
+function resolveOrderLineItems(
+  demand: OrderPrintDemand | null | undefined,
+  offer: OrderPrintOffer | null | undefined,
+): OfferLineItem[] {
+  if (!offer && !demand) return []
+  if (offer) {
+    return buildOfferLineItemsFromOffer(offer, demand ?? undefined)
+  }
+  return []
+}
+
+function buildOrderItemsSectionHtml(
+  demand: OrderPrintDemand | null | undefined,
+  offer: OrderPrintOffer | null | undefined,
+): string {
+  const items = resolveOrderLineItems(demand, offer)
+  const unidade = demand?.unidade ?? 'un'
+  const title = demand?.titulo ?? 'Pedido'
+  const description = demand?.descricao?.trim()
+  const totalQty = offer?.quantidade ?? sumOfferLineQuantity(items)
+  const totalValue = offer?.valor ?? roundCurrency(sumOfferLineTotal(items))
+  const hasVariants = items.some((item) => item.cor || item.tamanho)
+
+  const rows = items
+    .map((item) => {
+      const rowTotal = roundCurrency(item.quantidade * item.precoUnitario)
+      const variantCells = hasVariants
+        ? `<td>${esc(item.cor || '—')}</td><td>${esc(item.tamanho || '—')}</td>`
+        : ''
+      return `<tr>
+        ${variantCells}
+        <td>${esc(item.quantidade)} ${esc(unidade)}</td>
+        <td>${esc(formatPrintCurrency(item.precoUnitario))}</td>
+        <td>${esc(formatPrintCurrency(rowTotal))}</td>
+      </tr>`
+    })
+    .join('')
+
+  const variantHeaders = hasVariants
+    ? '<th>Cor</th><th>Tamanho</th>'
+    : ''
+  const footerColspan = hasVariants ? 2 : 1
+
+  const tableBody =
+    items.length > 0
+      ? `<table class="items-table">
+          <thead>
+            <tr>
+              ${variantHeaders}
+              <th>Quantidade</th>
+              <th>Preço unit.</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+          <tfoot>
+            <tr>
+              <td colspan="${footerColspan}" class="items-total-label">Total geral</td>
+              <td>${esc(totalQty)} ${esc(unidade)}</td>
+              <td></td>
+              <td class="items-total-value">${esc(formatPrintCurrency(totalValue))}</td>
+            </tr>
+          </tfoot>
+        </table>`
+      : `<p class="items-fallback">${esc(totalQty)} ${esc(unidade)} — ${esc(formatPrintCurrency(totalValue))}</p>`
+
+  return `<section class="items-section">
+    <p class="label">Itens do pedido</p>
+    <p class="items-title">${esc(title)}</p>
+    ${description ? `<p class="items-description">${esc(description)}</p>` : ''}
+    ${tableBody}
+  </section>`
 }
 
 function getOrderPrintBaseStyles(): string {
@@ -343,6 +449,68 @@ function getOrderPrintBaseStyles(): string {
       font-size: 11px;
       color: #6b7280;
     }
+    .items-section {
+      margin-top: 18px;
+      border: 1px solid #d1d5db;
+      border-radius: 14px;
+      padding: 16px 18px;
+    }
+    .items-title {
+      margin: 8px 0 0;
+      font-size: 18px;
+      font-weight: 700;
+      color: #111827;
+      word-break: break-word;
+    }
+    .items-description {
+      margin: 6px 0 0;
+      font-size: 13px;
+      color: #6b7280;
+      word-break: break-word;
+    }
+    .items-table {
+      width: 100%;
+      margin-top: 14px;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .items-table th {
+      padding: 8px 10px;
+      text-align: left;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #9ca3af;
+      border-bottom: 1px solid #d1d5db;
+    }
+    .items-table td {
+      padding: 10px;
+      border-bottom: 1px solid #e5e7eb;
+      color: #374151;
+      vertical-align: top;
+    }
+    .items-table tfoot td {
+      border-bottom: 0;
+      border-top: 2px solid #111827;
+      font-weight: 700;
+      color: #111827;
+    }
+    .items-total-label {
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 0.06em;
+    }
+    .items-total-value {
+      color: #111827;
+      font-size: 14px;
+    }
+    .items-fallback {
+      margin: 12px 0 0;
+      font-size: 14px;
+      font-weight: 600;
+      color: #374151;
+    }
     @media print {
       body { padding: 16px; }
       .page { max-width: none; }
@@ -425,6 +593,8 @@ export function buildOrderPrintHtml(data: OrderPrintData): string {
         ${supplierResponsible ? `<p class="card-detail">Responsável ${esc(supplierResponsible)}</p>` : ''}
       </article>
     </section>
+
+    ${buildOrderItemsSectionHtml(data.demand, data.offer)}
   </div>
 </body>
 </html>`
@@ -494,6 +664,8 @@ export function buildBuyerOrderPrintHtml(data: BuyerOrderPrintData): string {
         <p class="qr-hint">Aponte a câmera</p>
       </div>
     </section>
+
+    ${buildOrderItemsSectionHtml(data.demand, data.offer)}
   </div>
 </body>
 </html>`

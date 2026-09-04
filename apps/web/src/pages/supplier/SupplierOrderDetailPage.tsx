@@ -277,6 +277,7 @@ export function SupplierOrderDetailPage() {
                         uf: demand.uf,
                         unidade: demand.unidade,
                         quantidade: demand.quantidade,
+                        especificacoes: demand.especificacoes ?? null,
                       }
                     : null,
                   offer: offer
@@ -286,6 +287,7 @@ export function SupplierOrderDetailPage() {
                         prazo_entrega_dias: offer.prazo_entrega_dias,
                         prazo_entrega_em: offer.prazo_entrega_em,
                         mensagem: offer.mensagem,
+                        especificacoes: offer.especificacoes ?? null,
                       }
                     : null,
                   buyer: buyerProfile

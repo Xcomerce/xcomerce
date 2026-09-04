@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase'
-import type { Tables } from '@keve/shared'
+import type { DemandSpecification, OfferSpecification, Tables } from '@keve/shared'
 
 export type Order = Tables<'orders'>
 export type OrderStatus = Order['status']
@@ -17,6 +17,7 @@ export type SupplierOrderListItem = Order & {
     uf: string
     unidade: string
     quantidade: number
+    especificacoes: DemandSpecification[] | null
   } | null
   offer: {
     valor: number
@@ -24,6 +25,7 @@ export type SupplierOrderListItem = Order & {
     prazo_entrega_em: string | null
     quantidade: number
     mensagem: string | null
+    especificacoes: OfferSpecification[] | null
   } | null
   buyer: {
     full_name: string
@@ -48,14 +50,19 @@ export type BuyerOrderCompany = {
 export type BuyerOrderListItem = Order & {
   demand: {
     titulo: string
+    descricao: string | null
     cidade: string
     uf: string
+    unidade: string
+    quantidade: number
+    especificacoes: DemandSpecification[] | null
   } | null
   offer: {
     valor: number
     prazo_entrega_dias: number
     prazo_entrega_em: string | null
     quantidade: number
+    especificacoes: OfferSpecification[] | null
   } | null
   supplier: {
     store_name: string | null
@@ -155,8 +162,8 @@ export async function fetchSupplierOrdersWithDetails(userId: string): Promise<Su
     .select(
       `
       *,
-      demand:demands(titulo, descricao, cidade, uf, unidade, quantidade),
-      offer:offers(valor, prazo_entrega_dias, prazo_entrega_em, quantidade, mensagem),
+      demand:demands(titulo, descricao, cidade, uf, unidade, quantidade, especificacoes),
+      offer:offers(valor, prazo_entrega_dias, prazo_entrega_em, quantidade, mensagem, especificacoes),
       buyer:buyer_profiles!orders_buyer_id_fkey(
         profiles(full_name, phone, email)
       ),
@@ -176,8 +183,8 @@ export async function fetchBuyerOrdersWithDetails(userId: string): Promise<Buyer
     .select(
       `
       *,
-      demand:demands(titulo, cidade, uf),
-      offer:offers(valor, prazo_entrega_dias, prazo_entrega_em, quantidade),
+      demand:demands(titulo, descricao, cidade, uf, unidade, quantidade, especificacoes),
+      offer:offers(valor, prazo_entrega_dias, prazo_entrega_em, quantidade, especificacoes),
       supplier:supplier_profiles!orders_supplier_id_fkey(
         store_name,
         avg_rating,
@@ -201,8 +208,8 @@ export async function fetchBuyerOrderById(orderId: string): Promise<BuyerOrderLi
     .select(
       `
       *,
-      demand:demands(titulo, cidade, uf),
-      offer:offers(valor, prazo_entrega_dias, prazo_entrega_em, quantidade),
+      demand:demands(titulo, descricao, cidade, uf, unidade, quantidade, especificacoes),
+      offer:offers(valor, prazo_entrega_dias, prazo_entrega_em, quantidade, especificacoes),
       supplier:supplier_profiles!orders_supplier_id_fkey(
         store_name,
         avg_rating,

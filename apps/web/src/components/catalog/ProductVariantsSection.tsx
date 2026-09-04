@@ -373,7 +373,7 @@ export function ProductVariantsSection({
             <Input
               value={axis.name}
               onChange={(e) => updateAxisName(axisIndex, e.target.value)}
-              placeholder="Nome do eixo (Cor, Tamanho, Voltagem...)"
+              placeholder="Nome da variação (Cor, Tamanho, Voltagem...)"
               className="max-w-xs font-medium"
             />
             {axes.length > 1 ? (

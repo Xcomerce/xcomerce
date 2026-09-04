@@ -546,7 +546,7 @@ export function ProductFormPage() {
                 <ProductFormSection
                   step={2}
                   title="Variações e estoque"
-                  description="Configure eixos de variação, imagens e estoque por combinação."
+                  description="Configure variações, imagens e estoque por combinação."
                 >
                   <ProductVariantsSection
                     categoryId={formValues.category_id}

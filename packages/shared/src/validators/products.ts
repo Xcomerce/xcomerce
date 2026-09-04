@@ -16,7 +16,7 @@ import {
 import { isValidShoeSize, sortSizeValues, type ProductSizeType } from '../constants/product-sizes'
 
 export const variantAxisSchema = z.object({
-  name: z.string().trim().min(1, 'Nome do eixo obrigatório'),
+  name: z.string().trim().min(1, 'Nome da variação obrigatório'),
   options: z.array(z.string().trim().min(1)).default([]),
   images: z.record(z.string()).optional().default({}),
 })
@@ -77,14 +77,14 @@ export const productSchema = z
       if (axis.options.length > MAX_OPTIONS_PER_AXIS) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: `Máximo de ${MAX_OPTIONS_PER_AXIS} opções por eixo (${axis.name})`,
+          message: `Máximo de ${MAX_OPTIONS_PER_AXIS} opções por variação (${axis.name})`,
           path: ['variant_axes'],
         })
       }
       if (axis.name && axis.options.length === 0 && axes.length > 0) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: `O eixo "${axis.name}" precisa de ao menos uma opção`,
+          message: `A variação "${axis.name}" precisa de ao menos uma opção`,
           path: ['variant_axes'],
         })
       }
